@@ -629,6 +629,84 @@ textarea {
   box-shadow: 0 14px 28px rgba(20, 35, 29, 0.16);
 }
 
+.staff-order-toast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 90;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.9rem;
+  width: min(28rem, calc(100vw - 1.5rem));
+  border: 1px solid rgba(217, 185, 122, 0.2);
+  border-radius: 1.6rem;
+  background:
+    linear-gradient(180deg, rgba(20, 35, 29, 0.97), rgba(14, 25, 21, 0.94)),
+    rgba(20, 35, 29, 0.94);
+  color: var(--cream);
+  box-shadow: 0 24px 60px rgba(9, 16, 13, 0.28);
+  padding: 1rem;
+  backdrop-filter: blur(18px);
+}
+
+.staff-order-toast-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: 999px;
+  background: rgba(217, 185, 122, 0.14);
+  color: var(--gold-soft);
+}
+
+.staff-order-toast-copy {
+  min-width: 0;
+}
+
+.staff-order-toast-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+}
+
+.staff-order-toast-message {
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: white;
+  overflow-wrap: anywhere;
+}
+
+.staff-order-toast-detail {
+  margin-top: 0.2rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: rgba(255, 247, 232, 0.74);
+  overflow-wrap: anywhere;
+}
+
+.staff-order-toast-link {
+  grid-column: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  margin-top: 0.2rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--gold-soft), #e7cca0);
+  color: var(--forest);
+  padding: 0.72rem 1rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  box-shadow: 0 12px 26px rgba(217, 185, 122, 0.22);
+}
+
 .content-copy-safe {
   overflow-wrap: anywhere;
   word-break: normal;
@@ -760,6 +838,17 @@ textarea {
 
   .nav-pill {
     border-radius: 1.8rem;
+  }
+
+  .staff-order-toast {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    width: calc(100vw - 1rem);
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .staff-order-toast-link {
+    width: 100%;
   }
 }
 

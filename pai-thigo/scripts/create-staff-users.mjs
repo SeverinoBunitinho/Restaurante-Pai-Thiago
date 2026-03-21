@@ -58,19 +58,19 @@ const staffAccounts = [
     email: "garcom@paithiago.com.br",
     full_name: "Caio Atendimento",
     role: "waiter",
-    password: "123",
+    password: "123123",
   },
   {
     email: "gerente@paithiago.com.br",
     full_name: "Marina Gestao",
     role: "manager",
-    password: "123",
+    password: "123123",
   },
   {
     email: "dono@paithiago.com.br",
     full_name: "Thiago Proprietario",
     role: "owner",
-    password: "123",
+    password: "123123",
   },
 ];
 
@@ -155,4 +155,4 @@ for (const account of staffAccounts) {
   console.log(`Usuario criado: ${account.email}`);
 }
 
-console.log("\nFuncionarios preparados com senha 123.");
+console.log("\nFuncionarios preparados com senha 123123.");

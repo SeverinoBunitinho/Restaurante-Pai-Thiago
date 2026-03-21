@@ -74,9 +74,9 @@ O schema ja semeia a tabela `staff_directory`, entao qualquer usuario criado com
 Importante: se o schema ja tinha sido rodado antes, execute novamente a versao atual para incluir as tabelas na publicacao `supabase_realtime`. Isso e o que permite atualizacao imediata entre cliente e equipe sem precisar atualizar a pagina.
 Tambem e importante definir `NEXT_PUBLIC_SITE_URL` para que os links de confirmacao e recuperacao de senha voltem para o dominio certo do site.
 
-## Criar funcionarios com senha 123
+## Criar funcionarios com senha 123123
 
-Se voce quiser automatizar a criacao da equipe com senha `123`, adicione tambem a chave `SUPABASE_SERVICE_ROLE_KEY` no `.env.local` e rode:
+Se voce quiser automatizar a criacao da equipe com senha `123123`, adicione tambem a chave `SUPABASE_SERVICE_ROLE_KEY` no `.env.local` e rode:
 
 ```bash
 npm run staff:seed
@@ -88,7 +88,7 @@ Esse comando cria ou atualiza:
 - `gerente@paithiago.com.br`
 - `dono@paithiago.com.br`
 
-Todos com senha `123`.
+Todos com senha `123123`.
 
 ## Fluxo de acesso
 
