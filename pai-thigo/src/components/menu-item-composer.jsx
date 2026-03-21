@@ -1,0 +1,170 @@
+"use client";
+
+import { useActionState } from "react";
+
+import { initialMenuItemState } from "@/app/operacao/menu/action-state";
+import { createMenuItemAction } from "@/app/operacao/actions";
+import { SubmitButton } from "@/components/submit-button";
+import { cn } from "@/lib/utils";
+
+export function MenuItemComposer({ categories = [] }) {
+  const [state, formAction] = useActionState(
+    createMenuItemAction,
+    initialMenuItemState,
+  );
+
+  if (!categories.length) {
+    return (
+      <div className="rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.56)] p-6 text-sm leading-7 text-[rgba(21,35,29,0.7)]">
+        Nenhuma categoria foi encontrada no sistema. Cadastre ou recupere as
+        categorias do cardapio para liberar o cadastro de novos pratos.
+      </div>
+    );
+  }
+
+  return (
+    <form action={formAction} className="grid gap-5">
+      <div className="grid gap-4 md:grid-cols-2">
+        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+          Categoria
+          <select
+            name="categoryId"
+            required
+            defaultValue={categories[0]?.id ?? ""}
+            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          >
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+          Nome do prato
+          <input
+            name="name"
+            required
+            placeholder="Ex.: Ravioli de cordeiro"
+            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          />
+        </label>
+      </div>
+
+      <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        Descricao
+        <textarea
+          name="description"
+          rows={4}
+          required
+          placeholder="Descreva composicao, tecnica e acabamento do prato."
+          className="rounded-[1.6rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+        />
+      </label>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+          Preco
+          <input
+            name="price"
+            type="number"
+            min="0"
+            step="0.01"
+            required
+            placeholder="79.90"
+            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+          Tempo de preparo
+          <input
+            name="prepTime"
+            placeholder="18 min"
+            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+          Intensidade
+          <input
+            name="spiceLevel"
+            placeholder="suave"
+            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          />
+        </label>
+
+        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+          Ordem
+          <input
+            name="sortOrder"
+            type="number"
+            min="0"
+            defaultValue="0"
+            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          />
+        </label>
+      </div>
+
+      <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        Tags
+        <input
+          name="tags"
+          placeholder="brasa, assinatura, compartilhar"
+          className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+        />
+      </label>
+
+      <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        Alergenicos
+        <input
+          name="allergens"
+          placeholder="gluten, lacteos, crustaceos"
+          className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+        />
+      </label>
+
+      <div className="flex flex-wrap gap-3">
+        <label className="inline-flex items-center gap-3 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-sm font-medium text-[var(--forest)]">
+          <input type="checkbox" name="isSignature" className="accent-[var(--gold)]" />
+          Prato assinatura
+        </label>
+        <label className="inline-flex items-center gap-3 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-sm font-medium text-[var(--forest)]">
+          <input
+            type="checkbox"
+            name="isAvailable"
+            defaultChecked
+            className="accent-[var(--gold)]"
+          />
+          Entrar ativo no cardapio
+        </label>
+      </div>
+
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <SubmitButton
+          idleLabel="Adicionar prato"
+          pendingLabel="Salvando prato..."
+          className="xl:w-auto"
+        />
+        <p className="max-w-xl text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+          O prato entra no Supabase e aparece no cardapio do cliente sem
+          precisar atualizar manualmente a pagina.
+        </p>
+      </div>
+
+      {state.status !== "idle" ? (
+        <div
+          className={cn(
+            "rounded-[1.4rem] border px-4 py-3 text-sm leading-6",
+            state.status === "success"
+              ? "border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.08)] text-[var(--forest)]"
+              : "border-[rgba(138,93,59,0.22)] bg-[rgba(138,93,59,0.08)] text-[var(--clay)]",
+          )}
+        >
+          {state.message}
+        </div>
+      ) : null}
+    </form>
+  );
+}

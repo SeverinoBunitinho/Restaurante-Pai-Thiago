@@ -1,0 +1,174 @@
+"use client";
+
+import {
+  createContext,
+  startTransition,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+const STORAGE_KEY = "paithiago-cart-v1";
+const CartContext = createContext(null);
+
+function sanitizeCartItems(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((item) => ({
+      menuItemId: String(item.menuItemId ?? "").trim(),
+      name: String(item.name ?? "").trim(),
+      price: Number(item.price ?? 0),
+      prepTime: String(item.prepTime ?? "").trim(),
+      signature: Boolean(item.signature),
+      quantity: Number(item.quantity ?? 1),
+      notes: String(item.notes ?? "").trim(),
+    }))
+    .filter(
+      (item) =>
+        item.menuItemId &&
+        item.name &&
+        Number.isFinite(item.price) &&
+        Number.isFinite(item.quantity) &&
+        item.quantity >= 1 &&
+        item.quantity <= 20,
+    );
+}
+
+export function CartProvider({ children }) {
+  const [items, setItems] = useState([]);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const storedValue = window.localStorage.getItem(STORAGE_KEY);
+      if (storedValue) {
+        setItems(sanitizeCartItems(JSON.parse(storedValue)));
+      }
+    } catch {
+      setItems([]);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch {}
+  }, [isHydrated, items]);
+
+  const value = useMemo(() => {
+    const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+    const totalPrice = items.reduce(
+      (sum, item) => sum + item.quantity * item.price,
+      0,
+    );
+
+    return {
+      items,
+      itemCount,
+      totalPrice,
+      isHydrated,
+      addItem(item) {
+        const normalizedItem = sanitizeCartItems([item])[0];
+
+        if (!normalizedItem) {
+          return;
+        }
+
+        startTransition(() => {
+          setItems((currentItems) => {
+            const existingItem = currentItems.find(
+              (currentItem) => currentItem.menuItemId === normalizedItem.menuItemId,
+            );
+
+            if (!existingItem) {
+              return [...currentItems, normalizedItem];
+            }
+
+            return currentItems.map((currentItem) =>
+              currentItem.menuItemId === normalizedItem.menuItemId
+                ? {
+                    ...currentItem,
+                    quantity: Math.min(
+                      currentItem.quantity + normalizedItem.quantity,
+                      20,
+                    ),
+                    notes: normalizedItem.notes || currentItem.notes,
+                  }
+                : currentItem,
+            );
+          });
+        });
+      },
+      removeItem(menuItemId) {
+        startTransition(() => {
+          setItems((currentItems) =>
+            currentItems.filter((item) => item.menuItemId !== menuItemId),
+          );
+        });
+      },
+      updateQuantity(menuItemId, quantity) {
+        const nextQuantity = Number(quantity);
+
+        if (!Number.isFinite(nextQuantity)) {
+          return;
+        }
+
+        startTransition(() => {
+          setItems((currentItems) =>
+            currentItems
+              .map((item) =>
+                item.menuItemId === menuItemId
+                  ? {
+                      ...item,
+                      quantity: Math.max(1, Math.min(nextQuantity, 20)),
+                    }
+                  : item,
+              )
+              .filter(Boolean),
+          );
+        });
+      },
+      updateNotes(menuItemId, notes) {
+        startTransition(() => {
+          setItems((currentItems) =>
+            currentItems.map((item) =>
+              item.menuItemId === menuItemId
+                ? { ...item, notes: String(notes ?? "").trimStart() }
+                : item,
+            ),
+          );
+        });
+      },
+      clearCart() {
+        startTransition(() => {
+          setItems([]);
+        });
+      },
+      getItemQuantity(menuItemId) {
+        return items.find((item) => item.menuItemId === menuItemId)?.quantity ?? 0;
+      },
+    };
+  }, [isHydrated, items]);
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+}
+
+export function useCart() {
+  const context = useContext(CartContext);
+
+  if (!context) {
+    throw new Error("useCart must be used within CartProvider");
+  }
+
+  return context;
+}
