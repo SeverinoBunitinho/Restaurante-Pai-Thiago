@@ -613,17 +613,26 @@ textarea {
   transform: scaleX(1);
 }
 
+.mobile-nav-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
 .mobile-nav-link {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  min-width: 0;
   border-radius: 999px;
   border: 1px solid rgba(20, 35, 29, 0.08);
   background: rgba(255, 255, 255, 0.46);
-  padding: 0.7rem 1rem;
+  padding: 0.72rem 0.95rem;
   font-size: 0.9rem;
   font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+  text-wrap: balance;
   color: rgba(21, 35, 29, 0.78);
   box-shadow: 0 10px 18px rgba(39, 30, 18, 0.05);
   transition:
@@ -1237,6 +1246,10 @@ textarea {
 }
 
 @media (min-width: 640px) {
+  .mobile-nav-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .feature-stat-grid.feature-stat-grid-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

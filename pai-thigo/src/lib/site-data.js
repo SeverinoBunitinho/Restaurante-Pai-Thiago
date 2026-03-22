@@ -21,6 +21,40 @@ const fallbackReservationAreas = [
   "Varanda",
 ];
 
+const DEFAULT_MENU_ITEM_IMAGE =
+  "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=1200&q=80";
+
+function normalizeMenuImageKey(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const fallbackMenuImageById = new Map();
+const fallbackMenuImageByName = new Map();
+
+for (const category of fallbackMenuCategories) {
+  for (const item of category.items ?? []) {
+    if (!item?.imageUrl) {
+      continue;
+    }
+
+    fallbackMenuImageById.set(item.id, item.imageUrl);
+    fallbackMenuImageByName.set(normalizeMenuImageKey(item.name), item.imageUrl);
+  }
+}
+
+function resolveMenuItemImage(itemId, itemName) {
+  return (
+    fallbackMenuImageById.get(itemId) ??
+    fallbackMenuImageByName.get(normalizeMenuImageKey(itemName)) ??
+    DEFAULT_MENU_ITEM_IMAGE
+  );
+}
+
 function getTodayInBrazil() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
@@ -113,6 +147,7 @@ function mapMenuCategory(category, includeUnavailable = false) {
         name: item.name,
         description: item.description,
         price: Number(item.price),
+        imageUrl: item.image_url || resolveMenuItemImage(item.id, item.name),
         prepTime: item.prep_time ?? "12 min",
         spiceLevel: item.spice_level ?? "suave",
         tags: item.tags ?? [],

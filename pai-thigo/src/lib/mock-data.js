@@ -157,6 +157,8 @@ export const menuCategories = [
         description:
           "Ancho grelhado na brasa, demi-glace de rapadura e batatas crocantes com alecrim.",
         price: 92,
+        imageUrl:
+          "https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=1200&q=80",
         prepTime: "18 min",
         spiceLevel: "suave",
         tags: ["carne", "brasa", "chef"],
@@ -170,6 +172,8 @@ export const menuCategories = [
         description:
           "Costela bovina assada por longas horas, finalizada com glaze de melaco e farofa amanteigada.",
         price: 86,
+        imageUrl:
+          "https://images.unsplash.com/photo-1529692236671-f1de4f5b2fba?auto=format&fit=crop&w=1200&q=80",
         prepTime: "22 min",
         spiceLevel: "suave",
         tags: ["slow cooked", "brasileiro"],
@@ -182,6 +186,8 @@ export const menuCategories = [
         description:
           "Galeto marinado em limao-cravo, manteiga de ervas e legumes tostados.",
         price: 64,
+        imageUrl:
+          "https://images.unsplash.com/photo-1532550907401-a500c9a57435?auto=format&fit=crop&w=1200&q=80",
         prepTime: "16 min",
         spiceLevel: "suave",
         tags: ["aves", "leve"],
@@ -203,6 +209,8 @@ export const menuCategories = [
         description:
           "Polvo grelhado com arroz de coco tostado, vinagrete morno de tomate e coentro.",
         price: 98,
+        imageUrl:
+          "https://images.unsplash.com/photo-1559847844-5315695dadae?auto=format&fit=crop&w=1200&q=80",
         prepTime: "20 min",
         spiceLevel: "medio",
         tags: ["frutos do mar", "assinatura"],
@@ -216,6 +224,8 @@ export const menuCategories = [
         description:
           "Camaroes salteados com molho cremoso de coco, pimentoes assados e arroz de castanhas.",
         price: 82,
+        imageUrl:
+          "https://images.unsplash.com/photo-1565299585323-38174c4a6471?auto=format&fit=crop&w=1200&q=80",
         prepTime: "17 min",
         spiceLevel: "medio",
         tags: ["mar", "cremoso"],
@@ -228,6 +238,8 @@ export const menuCategories = [
         description:
           "File do dia, pure de banana-da-terra e emulsao citrica de manteiga noisette.",
         price: 78,
+        imageUrl:
+          "https://images.unsplash.com/photo-1544943910-4c1dc44aab44?auto=format&fit=crop&w=1200&q=80",
         prepTime: "15 min",
         spiceLevel: "suave",
         tags: ["peixe", "leve"],
@@ -249,6 +261,8 @@ export const menuCategories = [
         description:
           "Arroz caldoso, queijo coalho tostado, ciboulette e crocante de castanha.",
         price: 34,
+        imageUrl:
+          "https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=1200&q=80",
         prepTime: "10 min",
         spiceLevel: "suave",
         tags: ["cremoso", "compartilhar"],
@@ -261,6 +275,8 @@ export const menuCategories = [
         description:
           "Textura aveludada, finalizada com azeite verde e toque de limao.",
         price: 28,
+        imageUrl:
+          "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=1200&q=80",
         prepTime: "8 min",
         spiceLevel: "suave",
         tags: ["tradicional", "casa"],
@@ -273,6 +289,8 @@ export const menuCategories = [
         description:
           "Mix de vegetais braseados com molho citrico e sementes tostadas.",
         price: 26,
+        imageUrl:
+          "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80",
         prepTime: "9 min",
         spiceLevel: "suave",
         tags: ["vegetais", "leve"],
@@ -294,6 +312,8 @@ export const menuCategories = [
         description:
           "Pudim liso de baunilha com crosta fina caramelizada e flor de sal.",
         price: 28,
+        imageUrl:
+          "https://images.unsplash.com/photo-1587241321921-91a834d6d191?auto=format&fit=crop&w=1200&q=80",
         prepTime: "6 min",
         spiceLevel: "sem picancia",
         tags: ["classico", "casa"],
@@ -307,6 +327,8 @@ export const menuCategories = [
         description:
           "Bananas caramelizadas, massa amanteigada e sorvete artesanal de creme.",
         price: 31,
+        imageUrl:
+          "https://images.unsplash.com/photo-1568571780765-9276ac8b75a2?auto=format&fit=crop&w=1200&q=80",
         prepTime: "9 min",
         spiceLevel: "sem picancia",
         tags: ["quente", "sorvete"],
@@ -319,6 +341,8 @@ export const menuCategories = [
         description:
           "Chocolate intenso, cumaru e crocante de nibs com toque de cafe.",
         price: 29,
+        imageUrl:
+          "https://images.unsplash.com/photo-1541783245831-57d6fb0926d3?auto=format&fit=crop&w=1200&q=80",
         prepTime: "5 min",
         spiceLevel: "sem picancia",
         tags: ["chocolate", "assinatura"],

@@ -24,13 +24,14 @@ export async function SiteHeader() {
   const staffSession = isStaffRole(session?.role);
   const navItems = staffSession
     ? [
-        { href: "/painel", label: "Painel", exact: true },
+        { href: "/painel", label: "Inicio", exact: true },
         { href: "/operacao/comandas", label: "Pedidos" },
         { href: "/operacao/reservas", label: "Reservas" },
         { href: "/operacao", label: "Central", exact: true },
         { href: "/area-funcionario", label: "Minha area", exact: true },
       ]
     : [
+        { href: "/", label: "Inicio", exact: true },
         { href: "/cardapio", label: "Cardapio", exact: true },
         { href: "/pedidos", label: "Pedidos", exact: true },
         { href: "/reservas", label: "Reservas", exact: true },
@@ -78,7 +79,7 @@ export async function SiteHeader() {
                 ))}
               </nav>
 
-              <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
+              <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end">
                 {session ? (
                   <>
                     {session.role === "customer" ? (
@@ -117,7 +118,7 @@ export async function SiteHeader() {
               </div>
             </div>
 
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            <div className="mobile-nav-grid mt-4 lg:hidden">
               {navItems.map((item) => (
                 <ActiveLink
                   key={item.href}
