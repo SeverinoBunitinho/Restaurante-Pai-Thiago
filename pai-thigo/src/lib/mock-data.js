@@ -173,7 +173,7 @@ export const menuCategories = [
           "Costela bovina assada por longas horas, finalizada com glaze de melaco e farofa amanteigada.",
         price: 86,
         imageUrl:
-          "https://images.unsplash.com/photo-1529692236671-f1de4f5b2fba?auto=format&fit=crop&w=1200&q=80",
+          "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=1200&q=80",
         prepTime: "22 min",
         spiceLevel: "suave",
         tags: ["slow cooked", "brasileiro"],
@@ -225,7 +225,7 @@ export const menuCategories = [
           "Camaroes salteados com molho cremoso de coco, pimentoes assados e arroz de castanhas.",
         price: 82,
         imageUrl:
-          "https://images.unsplash.com/photo-1565299585323-38174c4a6471?auto=format&fit=crop&w=1200&q=80",
+          "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=1200&q=80",
         prepTime: "17 min",
         spiceLevel: "medio",
         tags: ["mar", "cremoso"],
