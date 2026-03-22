@@ -187,15 +187,15 @@ function persistSoundPreference(enabled) {
   } catch {}
 }
 
-function playOrderAlertSound(audioContextRef) {
+function getOrCreateAudioContext(audioContextRef) {
   if (typeof window === "undefined") {
-    return;
+    return null;
   }
 
   const ContextConstructor = window.AudioContext || window.webkitAudioContext;
 
   if (!ContextConstructor) {
-    return;
+    return null;
   }
 
   let context = audioContextRef.current;
@@ -205,26 +205,71 @@ function playOrderAlertSound(audioContextRef) {
     audioContextRef.current = context;
   }
 
-  if (context.state === "suspended") {
-    context.resume().catch(() => {});
+  return context;
+}
+
+async function warmupAudioContext(audioContextRef) {
+  const context = getOrCreateAudioContext(audioContextRef);
+
+  if (!context) {
+    return false;
   }
 
-  const now = context.currentTime;
-  const oscillator = context.createOscillator();
-  const gainNode = context.createGain();
+  if (context.state === "suspended") {
+    try {
+      await context.resume();
+    } catch {
+      return false;
+    }
+  }
 
-  oscillator.type = "sine";
-  oscillator.frequency.setValueAtTime(900, now);
-  oscillator.frequency.exponentialRampToValueAtTime(620, now + 0.26);
+  return context.state === "running";
+}
 
-  gainNode.gain.setValueAtTime(0.0001, now);
-  gainNode.gain.exponentialRampToValueAtTime(0.08, now + 0.03);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+async function playOrderAlertSound(audioContextRef) {
+  const context = getOrCreateAudioContext(audioContextRef);
 
-  oscillator.connect(gainNode);
-  gainNode.connect(context.destination);
-  oscillator.start(now);
-  oscillator.stop(now + 0.31);
+  if (!context) {
+    return;
+  }
+
+  if (context.state === "suspended") {
+    try {
+      await context.resume();
+    } catch {
+      return;
+    }
+  }
+
+  if (context.state !== "running") {
+    return;
+  }
+
+  const now = context.currentTime + 0.02;
+
+  const playBeep = (startAt, frequency, duration = 0.16, maxGain = 0.16) => {
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(frequency, startAt);
+    oscillator.frequency.exponentialRampToValueAtTime(
+      Math.max(260, frequency - 220),
+      startAt + duration,
+    );
+
+    gainNode.gain.setValueAtTime(0.0001, startAt);
+    gainNode.gain.exponentialRampToValueAtTime(maxGain, startAt + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.02);
+  };
+
+  playBeep(now, 980, 0.14, 0.18);
+  playBeep(now + 0.18, 740, 0.16, 0.16);
 }
 
 export function AppLiveSync() {
@@ -242,6 +287,10 @@ export function AppLiveSync() {
   useEffect(() => {
     soundEnabledRef.current = isSoundEnabled;
     persistSoundPreference(isSoundEnabled);
+
+    if (isSoundEnabled) {
+      void warmupAudioContext(audioContextRef);
+    }
   }, [isSoundEnabled]);
 
   useEffect(() => {
@@ -252,6 +301,26 @@ export function AppLiveSync() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!isStaffWorkspace(pathname)) {
+      return undefined;
+    }
+
+    const unlockAudio = () => {
+      void warmupAudioContext(audioContextRef);
+    };
+
+    window.addEventListener("pointerdown", unlockAudio);
+    window.addEventListener("keydown", unlockAudio);
+    window.addEventListener("touchstart", unlockAudio);
+
+    return () => {
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const routes = getPrefetchRoutes(pathname);
@@ -342,7 +411,7 @@ export function AppLiveSync() {
         setOrderAlert(nextAlert);
 
         if (soundEnabledRef.current) {
-          playOrderAlertSound(audioContextRef);
+          void playOrderAlertSound(audioContextRef);
         }
 
         if (alertTimeoutRef.current) {
@@ -385,7 +454,15 @@ export function AppLiveSync() {
   }, [pathname, supabase]);
 
   const toggleSound = () => {
-    setIsSoundEnabled((currentValue) => !currentValue);
+    setIsSoundEnabled((currentValue) => {
+      const nextValue = !currentValue;
+
+      if (nextValue) {
+        void playOrderAlertSound(audioContextRef);
+      }
+
+      return nextValue;
+    });
   };
 
   return orderAlert ? (
