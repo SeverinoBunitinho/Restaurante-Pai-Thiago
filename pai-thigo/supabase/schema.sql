@@ -83,11 +83,15 @@ create table if not exists public.restaurant_settings (
   pickup_eta_minutes integer not null default 20 check (pickup_eta_minutes >= 0),
   delivery_hotline text not null default '(11) 98765-4321',
   delivery_coverage_note text not null default 'Entregas disponiveis em bairros proximos com taxa calculada no checkout.',
+  waiter_commission_rate numeric(5, 2) not null default 10 check (waiter_commission_rate >= 0 and waiter_commission_rate <= 100),
   about_story text,
   about_mission text,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.restaurant_settings
+add column if not exists waiter_commission_rate numeric(5, 2) not null default 10;
 
 create table if not exists public.delivery_zones (
   id uuid primary key default gen_random_uuid(),
@@ -145,6 +149,45 @@ create table if not exists public.orders (
   source text not null default 'website' check (source in ('website', 'customer', 'staff')),
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.service_checks (
+  id uuid primary key default gen_random_uuid(),
+  table_id uuid not null references public.restaurant_tables(id) on delete restrict,
+  opened_by_user_id uuid not null references public.profiles(user_id) on delete restrict,
+  closed_by_user_id uuid references public.profiles(user_id) on delete set null,
+  cancelled_by_user_id uuid references public.profiles(user_id) on delete set null,
+  guest_name text,
+  notes text,
+  status text not null default 'open' check (status in ('open', 'closed', 'cancelled')),
+  payment_method text check (payment_method in ('pix', 'credit_card', 'debit_card', 'cash')),
+  subtotal numeric(10, 2) not null default 0 check (subtotal >= 0),
+  total numeric(10, 2) not null default 0 check (total >= 0),
+  commission_rate numeric(5, 2) not null default 0 check (commission_rate >= 0 and commission_rate <= 100),
+  commission_amount numeric(10, 2) not null default 0 check (commission_amount >= 0),
+  report_reference text not null unique,
+  opened_at timestamptz not null default timezone('utc', now()),
+  closed_at timestamptz,
+  cancelled_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create unique index if not exists service_checks_one_open_per_table_idx
+on public.service_checks (table_id)
+where status = 'open';
+
+create table if not exists public.service_check_items (
+  id uuid primary key default gen_random_uuid(),
+  check_id uuid not null references public.service_checks(id) on delete cascade,
+  menu_item_id uuid references public.menu_items(id) on delete set null,
+  created_by_user_id uuid not null references public.profiles(user_id) on delete restrict,
+  item_name text not null,
+  quantity integer not null check (quantity >= 1 and quantity <= 50),
+  unit_price numeric(10, 2) not null check (unit_price >= 0),
+  total_price numeric(10, 2) not null check (total_price >= 0),
+  notes text,
+  created_at timestamptz not null default timezone('utc', now())
 );
 
 alter table public.orders
@@ -217,6 +260,12 @@ execute procedure public.touch_updated_at();
 drop trigger if exists touch_orders_updated_at on public.orders;
 create trigger touch_orders_updated_at
 before update on public.orders
+for each row
+execute procedure public.touch_updated_at();
+
+drop trigger if exists touch_service_checks_updated_at on public.service_checks;
+create trigger touch_service_checks_updated_at
+before update on public.service_checks
 for each row
 execute procedure public.touch_updated_at();
 
@@ -393,6 +442,8 @@ alter table public.restaurant_settings enable row level security;
 alter table public.delivery_zones enable row level security;
 alter table public.reservations enable row level security;
 alter table public.orders enable row level security;
+alter table public.service_checks enable row level security;
+alter table public.service_check_items enable row level security;
 
 drop policy if exists "Managers and owners can read staff directory" on public.staff_directory;
 create policy "Managers and owners can read staff directory"
@@ -558,6 +609,50 @@ to authenticated
 using (public.current_app_role() in ('waiter', 'manager', 'owner'))
 with check (public.current_app_role() in ('waiter', 'manager', 'owner'));
 
+drop policy if exists "Staff can read service checks" on public.service_checks;
+create policy "Staff can read service checks"
+on public.service_checks
+for select
+to authenticated
+using (public.current_app_role() in ('waiter', 'manager', 'owner'));
+
+drop policy if exists "Staff can create service checks" on public.service_checks;
+create policy "Staff can create service checks"
+on public.service_checks
+for insert
+to authenticated
+with check (public.current_app_role() in ('waiter', 'manager', 'owner'));
+
+drop policy if exists "Staff can update service checks" on public.service_checks;
+create policy "Staff can update service checks"
+on public.service_checks
+for update
+to authenticated
+using (public.current_app_role() in ('waiter', 'manager', 'owner'))
+with check (public.current_app_role() in ('waiter', 'manager', 'owner'));
+
+drop policy if exists "Staff can read service check items" on public.service_check_items;
+create policy "Staff can read service check items"
+on public.service_check_items
+for select
+to authenticated
+using (public.current_app_role() in ('waiter', 'manager', 'owner'));
+
+drop policy if exists "Staff can create service check items" on public.service_check_items;
+create policy "Staff can create service check items"
+on public.service_check_items
+for insert
+to authenticated
+with check (public.current_app_role() in ('waiter', 'manager', 'owner'));
+
+drop policy if exists "Staff can update service check items" on public.service_check_items;
+create policy "Staff can update service check items"
+on public.service_check_items
+for update
+to authenticated
+using (public.current_app_role() in ('waiter', 'manager', 'owner'))
+with check (public.current_app_role() in ('waiter', 'manager', 'owner'));
+
 alter table public.profiles replica identity full;
 alter table public.staff_directory replica identity full;
 alter table public.restaurant_tables replica identity full;
@@ -567,6 +662,8 @@ alter table public.restaurant_settings replica identity full;
 alter table public.delivery_zones replica identity full;
 alter table public.reservations replica identity full;
 alter table public.orders replica identity full;
+alter table public.service_checks replica identity full;
+alter table public.service_check_items replica identity full;
 
 do $$
 begin
@@ -660,6 +757,26 @@ begin
     ) then
       execute 'alter publication supabase_realtime add table public.orders';
     end if;
+
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'service_checks'
+    ) then
+      execute 'alter publication supabase_realtime add table public.service_checks';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'service_check_items'
+    ) then
+      execute 'alter publication supabase_realtime add table public.service_check_items';
+    end if;
   end if;
 end;
 $$;
@@ -695,6 +812,7 @@ insert into public.restaurant_settings (
   service_notes,
   delivery_minimum_order,
   pickup_eta_minutes,
+  waiter_commission_rate,
   delivery_hotline,
   delivery_coverage_note,
   about_story,
@@ -717,9 +835,9 @@ values (
   '@paithiago.restaurante',
   '/paithiago.restaurante',
   array[
-    'Ter a Qui · 12h as 15h | 19h as 23h',
-    'Sex e Sab · 12h as 16h | 19h as 0h',
-    'Dom · 12h as 17h'
+    'Ter a Qui - 12h as 15h | 19h as 23h',
+    'Sex e Sab - 12h as 16h | 19h as 0h',
+    'Dom - 12h as 17h'
   ],
   'Feriados e datas especiais funcionam sob agenda da casa e disponibilidade de reservas.',
   array[
@@ -730,6 +848,7 @@ values (
   ],
   45,
   20,
+  10,
   '(11) 98765-4321',
   'Entregas disponiveis em bairros proximos com taxa calculada no checkout.',
   'Nascido da ideia de juntar cozinha brasileira contemporanea, servico atento e atmosfera calorosa, o Pai Thiago foi desenhado para ser uma casa onde cada detalhe importa: fogo bem tratado, salao elegante e relacao duradoura com o cliente.',
@@ -755,6 +874,7 @@ set restaurant_name = excluded.restaurant_name,
     service_notes = excluded.service_notes,
     delivery_minimum_order = excluded.delivery_minimum_order,
     pickup_eta_minutes = excluded.pickup_eta_minutes,
+    waiter_commission_rate = excluded.waiter_commission_rate,
     delivery_hotline = excluded.delivery_hotline,
     delivery_coverage_note = excluded.delivery_coverage_note,
     about_story = excluded.about_story,

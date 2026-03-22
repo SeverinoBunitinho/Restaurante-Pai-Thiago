@@ -247,12 +247,16 @@ export const getProductionReadinessReport = cache(
           menuResult,
           tablesResult,
           reservationsResult,
+          serviceChecksResult,
+          serviceCheckItemsResult,
         ] = await Promise.all([
           supabase.from("restaurant_settings").select("id").limit(1),
           supabase.from("delivery_zones").select("id").limit(1),
           supabase.from("menu_categories").select("id").limit(1),
           supabase.from("restaurant_tables").select("id").limit(1),
           supabase.from("reservations").select("id").limit(1),
+          supabase.from("service_checks").select("id").limit(1),
+          supabase.from("service_check_items").select("id").limit(1),
         ]);
 
         const queryResults = [
@@ -261,6 +265,8 @@ export const getProductionReadinessReport = cache(
           menuResult,
           tablesResult,
           reservationsResult,
+          serviceChecksResult,
+          serviceCheckItemsResult,
         ];
         const queryErrors = queryResults.filter((result) => result.error);
 
@@ -299,7 +305,7 @@ export const getProductionReadinessReport = cache(
               label: "Estrutura critica do banco",
               status: "ok",
               detail:
-                "restaurant_settings, delivery_zones, menu_categories, restaurant_tables e reservations responderam corretamente.",
+                "restaurant_settings, delivery_zones, menu_categories, restaurant_tables, reservations, service_checks e service_check_items responderam corretamente.",
               category: "infra",
             });
       }

@@ -46,6 +46,8 @@ function getRealtimeTables(pathname) {
     tables.add("menu_categories");
     tables.add("restaurant_settings");
     tables.add("delivery_zones");
+    tables.add("service_checks");
+    tables.add("service_check_items");
   }
 
   if (pathname === "/cardapio") {
@@ -92,6 +94,7 @@ function getPrefetchRoutes(pathname) {
       "/operacao/comandas",
       "/operacao/menu",
       "/operacao/equipe",
+      "/operacao/relatorios",
       "/operacao/configuracoes",
       "/operacao/executivo",
     ];
@@ -230,7 +233,7 @@ export function AppLiveSync() {
         const nextAlert = {
           id: orderKey,
           title: "Novo pedido recebido",
-          message: `${getFulfillmentLabel(order.fulfillment_type)} • ${order.checkout_reference || "pedido sem referencia"}`,
+          message: `${getFulfillmentLabel(order.fulfillment_type)} | ${order.checkout_reference || "pedido sem referencia"}`,
           detail: order.guest_name
             ? `Cliente: ${order.guest_name}`
             : "A equipe ja pode abrir a fila de pedidos.",

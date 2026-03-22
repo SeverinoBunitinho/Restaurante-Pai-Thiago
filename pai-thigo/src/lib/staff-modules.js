@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   BellRing,
   BriefcaseBusiness,
   CalendarClock,
@@ -41,9 +42,9 @@ const allModules = [
   {
     key: "comandas",
     href: "/operacao/comandas",
-    title: "Hospitalidade e experiencia",
+    title: "Comandas e fechamento",
     description:
-      "Ler ocasioes, observacoes e rituais de atendimento para conduzir melhor cada visita.",
+      "Abrir contas por mesa, lancar produtos, localizar contas abertas e fechar com impressao.",
     icon: ClipboardList,
     roles: ["waiter", "manager", "owner"],
   },
@@ -63,6 +64,15 @@ const allModules = [
     description:
       "Controlar perfis internos e acompanhar quem esta liberado para operar o sistema.",
     icon: UsersRound,
+    roles: ["manager", "owner"],
+  },
+  {
+    key: "relatorios",
+    href: "/operacao/relatorios",
+    title: "Relatorios e comissoes",
+    description:
+      "Calcular comissoes dos garcons e acompanhar ocupacao das mesas por periodo.",
+    icon: BarChart3,
     roles: ["manager", "owner"],
   },
   {
@@ -98,57 +108,57 @@ const rolePanels = {
   waiter: {
     title: "Fluxo do salao e atendimento",
     description:
-      "O garcom recebe o cliente, distribui o salao e acompanha a experiencia mesa a mesa.",
-    quickKeys: ["mesas", "reservas", "comandas"],
-    focusKeys: ["mesas", "reservas", "comandas", "painel"],
+      "O garcom recebe o cliente, abre a conta da mesa, lanca pedidos e acompanha o fechamento.",
+    quickKeys: ["comandas", "mesas", "reservas"],
+    focusKeys: ["comandas", "mesas", "reservas", "painel"],
     highlights: [
       {
         icon: BellRing,
         title: "Ritmo de piso",
-        text: "Organize chegada, setor e sequencia de atendimento sem perder o compasso do turno.",
+        text: "Organize chegada, setor, conta da mesa e sequencia de atendimento sem perder o compasso do turno.",
       },
       {
         icon: ShieldCheck,
         title: "Padrao de servico",
-        text: "Cada acao no sistema ajuda a manter a experiencia consistente e segura no salao.",
+        text: "Cada conta aberta e fechada corretamente ajuda a manter a experiencia segura e auditavel no salao.",
       },
     ],
   },
   manager: {
     title: "Supervisao da equipe e da operacao",
     description:
-      "O gerente distribui o time, ajusta setores, acompanha reservas sensiveis e alinha cardapio e acessos.",
-    quickKeys: ["equipe", "mesas", "configuracoes"],
-    focusKeys: ["equipe", "mesas", "reservas", "menu", "configuracoes", "painel"],
+      "O gerente distribui o time, cadastra garcons, acompanha comandas, comissoes, reservas e a leitura do salao.",
+    quickKeys: ["equipe", "comandas", "relatorios"],
+    focusKeys: ["equipe", "comandas", "relatorios", "mesas", "reservas", "menu", "configuracoes", "painel"],
     highlights: [
       {
         icon: BriefcaseBusiness,
         title: "Cobertura da casa",
-        text: "Equilibre equipe, setores e disponibilidade da operacao antes dos horarios de pico.",
+        text: "Equilibre equipe, setores, comandas e disponibilidade da operacao antes dos horarios de pico.",
       },
       {
         icon: ShieldCheck,
         title: "Decisao do turno",
-        text: "Menu, reservas, hospitalidade e equipe agora ficam em rotas mais separadas e objetivas.",
+        text: "Equipe, comissao, ocupacao e fechamento agora ficam em rotas mais claras e objetivas.",
       },
     ],
   },
   owner: {
     title: "Controle executivo do restaurante",
     description:
-      "O dono acompanha a operacao inteira, corrige gargalos e observa os sinais estrategicos da casa.",
-    quickKeys: ["executivo", "configuracoes", "painel"],
-    focusKeys: ["executivo", "configuracoes", "equipe", "menu", "mesas", "reservas", "painel"],
+      "O dono acompanha a operacao inteira, cadastra gerentes, corrige gargalos e observa os sinais estrategicos da casa.",
+    quickKeys: ["executivo", "relatorios", "equipe"],
+    focusKeys: ["executivo", "relatorios", "equipe", "comandas", "configuracoes", "menu", "mesas", "reservas", "painel"],
     highlights: [
       {
         icon: WalletCards,
         title: "Leitura comercial",
-        text: "Entenda a saude da casa com apoio do operacional, do cardapio e da equipe.",
+        text: "Entenda a saude da casa com apoio das comandas, das comissoes, do cardapio e da equipe.",
       },
       {
         icon: Crown,
         title: "Comando da casa",
-        text: "Acesse rotas diferentes para estrategia, operacao, equipe e leitura de experiencia.",
+        text: "Acesse rotas diferentes para estrategia, operacao, equipe, comissao e leitura de experiencia.",
       },
     ],
   },

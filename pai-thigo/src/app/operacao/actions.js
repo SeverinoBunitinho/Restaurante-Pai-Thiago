@@ -1,9 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import { requireRole } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
+import { paymentMethodOptions } from "@/lib/utils";
 
 const reservationStatuses = [
   "pending",
@@ -21,6 +24,9 @@ const orderStatuses = [
   "delivered",
   "cancelled",
 ];
+
+const staffRoles = ["waiter", "manager"];
+const paymentMethods = new Set(paymentMethodOptions.map((option) => option.value));
 
 function normalizeLines(value) {
   return String(value ?? "")
@@ -47,6 +53,89 @@ function parseCurrencyValue(value) {
   return Number.isFinite(amount) ? amount : NaN;
 }
 
+function buildRouteWithParams(pathname, params = {}) {
+  const searchParams = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") {
+      continue;
+    }
+
+    searchParams.set(key, String(value));
+  }
+
+  const search = searchParams.toString();
+
+  return search ? `${pathname}?${search}` : pathname;
+}
+
+function normalizeEmail(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function getComandasRedirect(tableName, extras = {}) {
+  return buildRouteWithParams("/operacao/comandas", {
+    mesa: tableName,
+    ...extras,
+  });
+}
+
+async function getWaiterCommissionRate(supabase) {
+  const { data, error } = await supabase
+    .from("restaurant_settings")
+    .select("waiter_commission_rate")
+    .eq("id", "main")
+    .maybeSingle();
+
+  if (error) {
+    return 10;
+  }
+
+  return Number(data?.waiter_commission_rate ?? 10);
+}
+
+async function syncServiceCheckTotals(supabase, checkId) {
+  const itemsResult = await supabase
+    .from("service_check_items")
+    .select("id, total_price")
+    .eq("check_id", checkId);
+
+  if (itemsResult.error) {
+    return {
+      ok: false,
+      subtotal: 0,
+      itemCount: 0,
+    };
+  }
+
+  const subtotal = (itemsResult.data ?? []).reduce(
+    (total, item) => total + Number(item.total_price ?? 0),
+    0,
+  );
+  const itemCount = (itemsResult.data ?? []).length;
+  const updateResult = await supabase
+    .from("service_checks")
+    .update({
+      subtotal,
+      total: subtotal,
+    })
+    .eq("id", checkId);
+
+  if (updateResult.error) {
+    return {
+      ok: false,
+      subtotal,
+      itemCount,
+    };
+  }
+
+  return {
+    ok: true,
+    subtotal,
+    itemCount,
+  };
+}
+
 function revalidateStaffPaths() {
   revalidatePath("/");
   revalidatePath("/area-cliente");
@@ -61,10 +150,496 @@ function revalidateStaffPaths() {
   revalidatePath("/operacao/comandas");
   revalidatePath("/operacao/equipe");
   revalidatePath("/operacao/menu");
+  revalidatePath("/operacao/relatorios");
   revalidatePath("/operacao/executivo");
+  revalidatePath("/impressao/conta");
   revalidatePath("/cardapio");
   revalidatePath("/carrinho");
   revalidatePath("/reservas");
+}
+
+export async function createStaffAccountAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+
+  const fullName = String(formData.get("fullName") ?? "").trim();
+  const email = normalizeEmail(formData.get("email"));
+  const password = String(formData.get("password") ?? "").trim();
+  const role = String(formData.get("role") ?? "").trim();
+
+  if (!fullName || !email || !password || !staffRoles.includes(role)) {
+    redirect(
+      buildRouteWithParams("/operacao/equipe", {
+        staffError: "Preencha nome, e-mail, senha e cargo para salvar a conta interna.",
+      }),
+    );
+  }
+
+  if (password.length < 6) {
+    redirect(
+      buildRouteWithParams("/operacao/equipe", {
+        staffError: "A senha da equipe precisa ter no minimo 6 caracteres.",
+      }),
+    );
+  }
+
+  if (session.role === "manager" && role !== "waiter") {
+    redirect(
+      buildRouteWithParams("/operacao/equipe", {
+        staffError: "O gerente pode cadastrar apenas garcons.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const adminClient = getSupabaseAdminClient();
+
+  if (!supabase || !adminClient) {
+    redirect(
+      buildRouteWithParams("/operacao/equipe", {
+        staffError:
+          "Nao foi possivel conectar ao Supabase administrativo para criar a conta.",
+      }),
+    );
+  }
+
+  const { error: directoryError } = await supabase.from("staff_directory").upsert(
+    {
+      email,
+      full_name: fullName,
+      role,
+      active: true,
+    },
+    { onConflict: "email" },
+  );
+
+  if (directoryError) {
+    redirect(
+      buildRouteWithParams("/operacao/equipe", {
+        staffError: "Nao foi possivel atualizar a base interna da equipe agora.",
+      }),
+    );
+  }
+
+  const {
+    data: { users },
+    error: listUsersError,
+  } = await adminClient.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (listUsersError) {
+    redirect(
+      buildRouteWithParams("/operacao/equipe", {
+        staffError: "Nao foi possivel verificar as contas internas existentes.",
+      }),
+    );
+  }
+
+  const existingUser = users.find(
+    (user) => user.email?.toLowerCase() === email,
+  );
+
+  if (existingUser) {
+    const { error } = await adminClient.auth.admin.updateUserById(existingUser.id, {
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+      },
+    });
+
+    if (error) {
+      redirect(
+        buildRouteWithParams("/operacao/equipe", {
+          staffError: "A conta interna existe, mas nao foi possivel atualizar a senha.",
+        }),
+      );
+    }
+  } else {
+    const { error } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName,
+      },
+    });
+
+    if (error) {
+      redirect(
+        buildRouteWithParams("/operacao/equipe", {
+          staffError: "Nao foi possivel criar a conta interna no Auth agora.",
+        }),
+      );
+    }
+  }
+
+  revalidateStaffPaths();
+
+  redirect(
+    buildRouteWithParams("/operacao/equipe", {
+      staffNotice:
+        role === "manager"
+          ? "Conta de gerente salva com sucesso."
+          : "Conta de garcom salva com sucesso.",
+    }),
+  );
+}
+
+export async function openServiceCheckAction(formData) {
+  const session = await requireRole(["waiter", "manager", "owner"]);
+
+  const tableId = String(formData.get("tableId") ?? "").trim();
+  const guestName = String(formData.get("guestName") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  if (!tableId) {
+    redirect(
+      buildRouteWithParams("/operacao/comandas", {
+        comandaError: "Selecione uma mesa para abrir a conta.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      buildRouteWithParams("/operacao/comandas", {
+        comandaError: "Nao foi possivel conectar ao Supabase para abrir a conta.",
+      }),
+    );
+  }
+
+  const { data: table, error: tableError } = await supabase
+    .from("restaurant_tables")
+    .select("id, name, is_active")
+    .eq("id", tableId)
+    .maybeSingle();
+
+  if (tableError || !table) {
+    redirect(
+      buildRouteWithParams("/operacao/comandas", {
+        comandaError: "A mesa escolhida nao existe mais no sistema.",
+      }),
+    );
+  }
+
+  if (!table.is_active) {
+    redirect(
+      getComandasRedirect(table.name, {
+        comandaError: "A mesa escolhida esta pausada e nao pode receber conta agora.",
+      }),
+    );
+  }
+
+  const existingCheckResult = await supabase
+    .from("service_checks")
+    .select("id")
+    .eq("table_id", tableId)
+    .eq("status", "open")
+    .maybeSingle();
+
+  if (existingCheckResult.error) {
+    redirect(
+      getComandasRedirect(table.name, {
+        comandaError: "Nao foi possivel verificar se a mesa ja tem conta aberta.",
+      }),
+    );
+  }
+
+  if (existingCheckResult.data) {
+    redirect(
+      getComandasRedirect(table.name, {
+        comandaError: "Essa mesa ja possui uma conta aberta.",
+      }),
+    );
+  }
+
+  const reportReference = `CMD-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+
+  const { error } = await supabase.from("service_checks").insert({
+    table_id: table.id,
+    opened_by_user_id: session.profile.user_id,
+    guest_name: guestName || null,
+    notes: notes || null,
+    report_reference: reportReference,
+  });
+
+  if (error) {
+    redirect(
+      getComandasRedirect(table.name, {
+        comandaError: "Nao foi possivel abrir a conta desta mesa agora.",
+      }),
+    );
+  }
+
+  revalidateStaffPaths();
+
+  redirect(
+    getComandasRedirect(table.name, {
+      comandaNotice: "Conta aberta com sucesso.",
+    }),
+  );
+}
+
+export async function addServiceCheckItemAction(formData) {
+  const session = await requireRole(["waiter", "manager", "owner"]);
+  const checkId = String(formData.get("checkId") ?? "").trim();
+  const tableName = String(formData.get("tableName") ?? "").trim();
+  const menuItemId = String(formData.get("menuItemId") ?? "").trim();
+  const quantity = Number(String(formData.get("quantity") ?? "").trim() || "0");
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  if (!checkId || !menuItemId || !Number.isInteger(quantity) || quantity < 1) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Selecione um produto valido e a quantidade desejada.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel conectar ao Supabase para lancar o item.",
+      }),
+    );
+  }
+
+  const [checkResult, menuItemResult] = await Promise.all([
+    supabase
+      .from("service_checks")
+      .select("id, status")
+      .eq("id", checkId)
+      .maybeSingle(),
+    supabase
+      .from("menu_items")
+      .select("id, name, price, is_available")
+      .eq("id", menuItemId)
+      .maybeSingle(),
+  ]);
+
+  if (checkResult.error || !checkResult.data || checkResult.data.status !== "open") {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "A conta precisa estar aberta para receber novos itens.",
+      }),
+    );
+  }
+
+  if (
+    menuItemResult.error ||
+    !menuItemResult.data ||
+    !menuItemResult.data.is_available
+  ) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "O item escolhido nao esta mais disponivel no cardapio.",
+      }),
+    );
+  }
+
+  const unitPrice = Number(menuItemResult.data.price);
+  const totalPrice = unitPrice * quantity;
+  const insertResult = await supabase.from("service_check_items").insert({
+    check_id: checkId,
+    menu_item_id: menuItemResult.data.id,
+    created_by_user_id: session.profile.user_id,
+    item_name: menuItemResult.data.name,
+    quantity,
+    unit_price: unitPrice,
+    total_price: totalPrice,
+    notes: notes || null,
+  });
+
+  if (insertResult.error) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel associar o produto a conta agora.",
+      }),
+    );
+  }
+
+  const totals = await syncServiceCheckTotals(supabase, checkId);
+
+  if (!totals.ok) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "O item entrou, mas o total da conta nao pode ser recalculado agora.",
+      }),
+    );
+  }
+
+  revalidateStaffPaths();
+
+  redirect(
+    getComandasRedirect(tableName, {
+      comandaNotice: "Produto associado a conta com sucesso.",
+    }),
+  );
+}
+
+export async function cancelServiceCheckAction(formData) {
+  const session = await requireRole(["waiter", "manager", "owner"]);
+
+  const checkId = String(formData.get("checkId") ?? "").trim();
+  const tableName = String(formData.get("tableName") ?? "").trim();
+
+  if (!checkId) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel identificar a conta a ser cancelada.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel conectar ao Supabase para cancelar a conta.",
+      }),
+    );
+  }
+
+  const checkResult = await supabase
+    .from("service_checks")
+    .select("id, status")
+    .eq("id", checkId)
+    .maybeSingle();
+
+  if (checkResult.error || !checkResult.data || checkResult.data.status !== "open") {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Somente contas abertas podem ser canceladas.",
+      }),
+    );
+  }
+
+  await syncServiceCheckTotals(supabase, checkId);
+
+  const { error } = await supabase
+    .from("service_checks")
+    .update({
+      status: "cancelled",
+      cancelled_by_user_id: session.profile.user_id,
+      cancelled_at: new Date().toISOString(),
+    })
+    .eq("id", checkId);
+
+  if (error) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel cancelar a conta desta mesa agora.",
+      }),
+    );
+  }
+
+  revalidateStaffPaths();
+
+  redirect(
+    getComandasRedirect(tableName, {
+      comandaNotice: "Conta cancelada com sucesso.",
+    }),
+  );
+}
+
+export async function closeServiceCheckAction(formData) {
+  const session = await requireRole(["waiter", "manager", "owner"]);
+
+  const checkId = String(formData.get("checkId") ?? "").trim();
+  const tableName = String(formData.get("tableName") ?? "").trim();
+  const paymentMethod = String(formData.get("paymentMethod") ?? "").trim();
+
+  if (!checkId || !paymentMethods.has(paymentMethod)) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Escolha uma forma de pagamento valida para fechar a conta.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel conectar ao Supabase para fechar a conta.",
+      }),
+    );
+  }
+
+  const checkResult = await supabase
+    .from("service_checks")
+    .select(
+      "id, status, opened_by_user_id, opened_by:profiles!service_checks_opened_by_user_id_fkey(user_id, role)",
+    )
+    .eq("id", checkId)
+    .maybeSingle();
+
+  if (checkResult.error || !checkResult.data || checkResult.data.status !== "open") {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Somente contas abertas podem ser fechadas.",
+      }),
+    );
+  }
+
+  const totals = await syncServiceCheckTotals(supabase, checkId);
+
+  if (!totals.ok) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel recalcular o total da conta antes do fechamento.",
+      }),
+    );
+  }
+
+  if (!totals.itemCount) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Adicione ao menos um item antes de fechar a conta.",
+      }),
+    );
+  }
+
+  const commissionRate =
+    checkResult.data.opened_by?.role === "waiter"
+      ? await getWaiterCommissionRate(supabase)
+      : 0;
+  const commissionAmount = totals.subtotal * (commissionRate / 100);
+
+  const { error } = await supabase
+    .from("service_checks")
+    .update({
+      status: "closed",
+      payment_method: paymentMethod,
+      subtotal: totals.subtotal,
+      total: totals.subtotal,
+      commission_rate: commissionRate,
+      commission_amount: commissionAmount,
+      closed_by_user_id: session.profile.user_id,
+      closed_at: new Date().toISOString(),
+    })
+    .eq("id", checkId);
+
+  if (error) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel fechar a conta desta mesa agora.",
+      }),
+    );
+  }
+
+  revalidateStaffPaths();
+
+  redirect(buildRouteWithParams("/impressao/conta", { check: checkId }));
 }
 
 export async function createMenuItemAction(_previousState, formData) {
