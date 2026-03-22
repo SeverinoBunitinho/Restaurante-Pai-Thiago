@@ -64,7 +64,7 @@ export default async function CardapioPage() {
                   Abrir carrinho
                 </Link>
                 <Link href="/area-cliente" className="button-secondary w-full justify-center sm:w-auto">
-                  Ver meus pedidos
+                  Abrir perfil
                 </Link>
               </div>
             ) : null}

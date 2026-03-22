@@ -52,7 +52,7 @@ function getHomeVoice(session, firstName) {
     description:
       "Sua conta centraliza reservas, pedidos e dados de atendimento em uma jornada simples, elegante e preparada para facilitar cada visita ao Pai Thiago.",
     primaryHref: "/area-cliente",
-    primaryLabel: "Abrir minha conta",
+    primaryLabel: "Abrir perfil",
     secondaryHref: "/reservas",
     secondaryLabel: "Reservar mesa",
   };

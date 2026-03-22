@@ -36,7 +36,7 @@ export async function SiteHeader() {
         { href: "/reservas", label: "Reservas", exact: true },
         { href: "/eventos", label: "Eventos", exact: true },
         { href: "/contato", label: "Contato", exact: true },
-        { href: "/area-cliente", label: "Minha area", exact: true },
+        { href: "/area-cliente", label: "Perfil", exact: true },
       ];
 
   const dashboardHref = session ? getRouteForRole(session.role) : "/login";
