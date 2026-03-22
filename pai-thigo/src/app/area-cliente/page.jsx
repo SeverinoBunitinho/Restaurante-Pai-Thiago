@@ -3,7 +3,6 @@ import {
   CalendarHeart,
   ChefHat,
   ChevronRight,
-  Clock3,
   HeartHandshake,
   Mail,
   ShoppingBag,
@@ -117,9 +116,9 @@ export default async function AreaClientePage() {
         : "O cardapio online fica disponivel sempre que quiser pedir.",
     },
     {
-      label: "Status da conta",
-      value: loyaltyTier.label,
-      description: "Nivel atual do relacionamento para apoiar reservas, atendimento e recorrencia.",
+      label: "Pontos acumulados",
+      value: `${dashboard.profile.loyaltyPoints} pontos`,
+      description: "Pontuacao atual usada para reconhecer recorrencia e agilizar a proxima experiencia.",
     },
   ];
 
@@ -133,19 +132,10 @@ export default async function AreaClientePage() {
     },
     {
       icon: Star,
-      eyebrow: "Relacionamento",
-      title: `${dashboard.profile.loyaltyPoints} pontos`,
-      description: loyaltyTier.description,
-    },
-    {
-      icon: Clock3,
-      eyebrow: "Ritmo da conta",
-      title: activeOrders
-        ? `${activeOrders} pedido(s) em acompanhamento`
-        : "Sem pedido pendente",
-      description: completedVisits
-        ? `${completedVisits} visita(s) ja finalizada(s) na casa.`
-        : "Sua proxima experiencia pode ser organizada por aqui.",
+      eyebrow: "Preferencia registrada",
+      title: dashboard.profile.preferredRoom,
+      description:
+        "Este ambiente vira a referencia principal quando a equipe prepara sua proxima visita.",
     },
   ];
 
@@ -178,12 +168,6 @@ export default async function AreaClientePage() {
 
   const profileSignals = [
     {
-      eyebrow: "Ambiente com mais afinidade",
-      title: dashboard.profile.preferredRoom,
-      description:
-        "Essa preferencia vira o ponto de partida para a equipe sugerir onde sua experiencia pode ficar mais confortavel.",
-    },
-    {
       eyebrow: "Proximo movimento recomendado",
       title: upcomingReservation
         ? "Preparar a proxima visita"
@@ -197,7 +181,20 @@ export default async function AreaClientePage() {
           : "Sua conta esta pronta para reservar, pedir novamente ou explorar novas sugestoes da casa.",
     },
     {
-      eyebrow: "Ritmo da jornada",
+      eyebrow: "Canal em destaque",
+      title: latestOrder
+        ? getFulfillmentTypeLabel(latestOrder.fulfillmentType)
+        : upcomingReservation
+          ? "Reserva presencial"
+          : "Conta pronta para explorar",
+      description: latestOrder
+        ? "Seu fluxo mais recente ja esta registrado com pagamento, status e acompanhamento da equipe."
+        : upcomingReservation
+          ? "Sua proxima experiencia esta organizada pela agenda da casa, com data, horario e ambiente definidos."
+          : "Quando voce fizer um pedido ou reservar uma mesa, o sistema passa a destacar esse caminho aqui.",
+    },
+    {
+      eyebrow: "Ritmo de visitas",
       title: completedVisits
         ? `${completedVisits} visita(s) ja concluidas`
         : "Historico em construcao",
@@ -308,9 +305,9 @@ export default async function AreaClientePage() {
 
               <div className="luxury-card rounded-[2.4rem] p-7 md:p-8">
                 <SectionHeading
-                  eyebrow="Conta e relacionamento"
-                  title="Um perfil pensado para deixar a visita mais fluida"
-                  description="Os dados abaixo ajudam o atendimento a reconhecer preferencia, contato e historico sem perder a elegancia da experiencia."
+                  eyebrow="Dados de atendimento"
+                  title="Informacoes base para receber voce com mais contexto"
+                  description="Contato principal e preferencia registrada ficam reunidos aqui, sem repetir o que ja esta nos blocos de agenda e pedidos."
                   compact
                 />
 
@@ -580,15 +577,15 @@ export default async function AreaClientePage() {
           <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
             <div className="luxury-card-dark rounded-[2.4rem] p-7 text-[var(--cream)] md:p-8">
               <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-                Leitura da conta
+                Curadoria da experiencia
               </p>
               <h2 className="display-title page-section-title mt-4 text-white">
-                Um perfil mais inteligente, sem repetir informacao e com foco no que importa
+                Sinais uteis da sua jornada, sem repetir cadastro nem historico
               </h2>
               <p className="mt-5 max-w-2xl text-base leading-8 text-[rgba(255,247,232,0.76)]">
-                Aqui a conta deixa de repetir cadastro e passa a mostrar sinais
-                uteis da sua jornada com a casa: ambiente preferido, proximo passo
-                recomendado e o ritmo atual do relacionamento.
+                Esta faixa foi reservada para leitura editorial da conta: proximo
+                passo, canal em destaque e ritmo das visitas. Os dados praticos
+                continuam separados nas secoes de reservas e pedidos.
               </p>
 
               <div className="mt-8 grid gap-4">
@@ -616,17 +613,17 @@ export default async function AreaClientePage() {
                   {experiences[1]?.title ?? "Jantar degustacao"}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                  Uma sugestao pensada para continuar a experiencia com o ritmo e
-                  a identidade da casa, sem repetir os mesmos dados do perfil.
+                  Uma sugestao pensada para variar a experiencia da semana sem
+                  repetir as informacoes praticas que ja aparecem acima.
                 </p>
               </div>
             </div>
 
             <div className="luxury-card rounded-[2.4rem] p-6 md:p-8">
               <SectionHeading
-                eyebrow="Atalhos elegantes"
-                title="Os caminhos mais uteis da sua conta"
-                description="Acessos pensados para o cliente circular pelo sistema sem esforco, tanto no celular quanto no desktop."
+                eyebrow="Atalhos uteis"
+                title="Os caminhos essenciais da sua conta"
+                description="Acessos diretos para circular pelo sistema com clareza, sem duplicar informacao nem esconder o que importa."
                 compact
               />
 
@@ -661,17 +658,17 @@ export default async function AreaClientePage() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                      Acabamento da conta
+                      Organizacao da jornada
                     </p>
                     <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
-                      Seu perfil foi desenhado para reunir tudo em um lugar so
+                      Cada parte da experiencia agora fica separada pela funcao certa
                     </p>
                   </div>
                 </div>
                 <p className="mt-4 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
-                  Reserve, acompanhe pedidos, consulte o relacionamento com a casa
-                  e volte ao cardapio sem se perder no sistema. Essa area foi
-                  reorganizada para ficar mais clara, premium e util no dia a dia.
+                  Agenda, pedidos, sinais da jornada e atalhos rapidos foram
+                  distribuidos em blocos diferentes para a leitura ficar mais limpa
+                  no celular e no desktop.
                 </p>
               </div>
             </div>

@@ -32,7 +32,6 @@ export async function SiteHeader() {
       ]
     : [
         { href: "/cardapio", label: "Cardapio", exact: true },
-        { href: "/carrinho", label: "Carrinho", exact: true },
         { href: "/reservas", label: "Reservas", exact: true },
         { href: "/eventos", label: "Eventos", exact: true },
         { href: "/contato", label: "Contato", exact: true },
@@ -81,7 +80,12 @@ export async function SiteHeader() {
               <div className="flex items-center gap-2">
                 {session ? (
                   <>
-                    {session.role === "customer" ? <CartHeaderLink className="hidden md:inline-flex" /> : null}
+                    {session.role === "customer" ? (
+                      <>
+                        <CartHeaderLink compact className="md:hidden" />
+                        <CartHeaderLink className="hidden md:inline-flex" />
+                      </>
+                    ) : null}
                     {staffSession ? (
                       <Link
                         href={dashboardHref}
