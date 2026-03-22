@@ -5,7 +5,6 @@ import {
   LogOut,
   Shield,
   Sparkles,
-  UserRound,
 } from "lucide-react";
 
 import { logoutAction } from "@/app/login/actions";
@@ -83,13 +82,15 @@ export async function SiteHeader() {
                 {session ? (
                   <>
                     {session.role === "customer" ? <CartHeaderLink className="hidden md:inline-flex" /> : null}
-                    <Link
-                      href={dashboardHref}
-                      className="floating-badge hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-[var(--forest)] md:inline-flex"
-                    >
-                      {staffSession ? <Shield size={16} /> : <UserRound size={16} />}
-                      {staffSession ? getStaffRoleLabel(session.role) : "Minha conta"}
-                    </Link>
+                    {staffSession ? (
+                      <Link
+                        href={dashboardHref}
+                        className="floating-badge hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-[var(--forest)] md:inline-flex"
+                      >
+                        <Shield size={16} />
+                        {getStaffRoleLabel(session.role)}
+                      </Link>
+                    ) : null}
                     <form action={logoutAction}>
                       <button type="submit" className="button-primary px-4 py-2.5">
                         <LogOut size={16} />
