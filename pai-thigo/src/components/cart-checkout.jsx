@@ -142,8 +142,8 @@ export function CartCheckout({ customerName, restaurantInfo }) {
           <Link href="/cardapio" className="button-primary w-full justify-center sm:w-auto">
             Voltar ao cardapio
           </Link>
-          <Link href="/area-cliente" className="button-secondary w-full justify-center sm:w-auto">
-            Ver perfil
+          <Link href="/pedidos" className="button-secondary w-full justify-center sm:w-auto">
+            Ver pedidos
           </Link>
         </div>
       </section>
@@ -195,8 +195,8 @@ export function CartCheckout({ customerName, restaurantInfo }) {
             ) : null}
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/area-cliente" className="button-primary w-full justify-center sm:w-auto">
-                Abrir perfil
+              <Link href="/pedidos" className="button-primary w-full justify-center sm:w-auto">
+                Abrir pedidos
               </Link>
               <Link href="/cardapio" className="button-secondary w-full justify-center sm:w-auto">
                 Pedir novamente

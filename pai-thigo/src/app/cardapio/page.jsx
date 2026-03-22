@@ -36,15 +36,14 @@ export default async function CardapioPage() {
               Sabores pensados para almoco, jantar e ocasioes especiais
             </h1>
             <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(255,247,232,0.74)]">
-              O cliente enxerga aqui apenas o que esta realmente disponivel no
-              menu, com uma leitura refinada e pronta para fechar delivery ou
-              retirada no mesmo fluxo.
+              Esta pagina mostra somente o menu ativo da casa, com categorias,
+              precos, preparo e alergenicos para uma escolha clara.
             </p>
 
             <div className="mt-8 inline-flex max-w-2xl rounded-full border border-[rgba(217,185,122,0.18)] bg-[rgba(255,255,255,0.05)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.22em] text-[rgba(255,247,232,0.8)]">
               {canOrder
-                ? "Carrinho ativo com delivery e retirada integrados ao painel da equipe"
-                : "Equipe interna acompanha os pedidos diretamente pela operacao"}
+                ? "Escolha os pratos e finalize no carrinho"
+                : "Visualizacao oficial do menu com disponibilidade atual"}
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
@@ -54,7 +53,7 @@ export default async function CardapioPage() {
               </span>
               <span className="info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
                 <Sparkles size={14} />
-                selecao de pratos com fechamento em um unico carrinho
+                categorias organizadas para leitura rapida
               </span>
             </div>
 

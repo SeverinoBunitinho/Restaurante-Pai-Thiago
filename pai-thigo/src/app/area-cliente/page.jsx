@@ -2,9 +2,9 @@ import Link from "next/link";
 import {
   CalendarHeart,
   ChefHat,
-  ChevronRight,
   HeartHandshake,
   Mail,
+  ReceiptText,
   ShoppingBag,
   Sparkles,
   Star,
@@ -14,24 +14,8 @@ import { SectionHeading } from "@/components/section-heading";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { requireRole } from "@/lib/auth";
-import { experiences } from "@/lib/mock-data";
 import { getCustomerDashboard } from "@/lib/site-data";
-import { orderStatusMeta, reservationStatusMeta } from "@/lib/staff-data";
-import {
-  formatCurrency,
-  formatReservationMoment,
-  getFulfillmentTypeLabel,
-  getPaymentMethodLabel,
-} from "@/lib/utils";
-
-function formatOrderMoment(value) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
+import { getFulfillmentTypeLabel } from "@/lib/utils";
 
 function getInitials(name) {
   return name
@@ -46,7 +30,7 @@ function getLoyaltyTier(points) {
   if (points >= 120) {
     return {
       label: "Cliente assinatura",
-      description: "Conta reconhecida pela recorrencia e pelo historico de experiencias.",
+      description: "Conta reconhecida pela recorrencia e historico consistente de visitas.",
     };
   }
 
@@ -59,21 +43,8 @@ function getLoyaltyTier(points) {
 
   return {
     label: "Conta ativa",
-    description: "Base pronta para organizar reservas, pedidos e o relacionamento com a casa.",
+    description: "Base pronta para organizar reservas, pedidos e relacionamento com a casa.",
   };
-}
-
-function getUpcomingReservation(reservations) {
-  return (
-    reservations.find(
-      (reservation) =>
-        reservation.status !== "cancelled" && reservation.status !== "completed",
-    ) ?? reservations[0] ?? null
-  );
-}
-
-function getLatestOrder(orderGroups) {
-  return orderGroups[0] ?? null;
 }
 
 export default async function AreaClientePage() {
@@ -83,42 +54,41 @@ export default async function AreaClientePage() {
   const firstName = profileName.split(" ")[0];
   const initials = getInitials(profileName) || "PT";
   const orderGroups = dashboard.orderGroups ?? [];
+  const reservations = dashboard.reservations ?? [];
   const loyaltyTier = getLoyaltyTier(dashboard.profile.loyaltyPoints ?? 0);
-  const upcomingReservation = getUpcomingReservation(dashboard.reservations);
-  const latestOrder = getLatestOrder(orderGroups);
-  const latestOrderStatusLabel = latestOrder
-    ? orderStatusMeta[latestOrder.status]?.label ?? latestOrder.status
-    : "";
   const activeOrders = orderGroups.filter(
     (order) => !["delivered", "cancelled"].includes(order.status),
   ).length;
-  const completedVisits = dashboard.reservations.filter(
+  const activeReservations = reservations.filter(
+    (reservation) =>
+      reservation.status !== "cancelled" && reservation.status !== "completed",
+  ).length;
+  const completedVisits = reservations.filter(
     (reservation) => reservation.status === "completed",
   ).length;
+  const latestOrder = orderGroups[0] ?? null;
 
   const summaryHighlights = [
     {
-      label: "Proxima reserva",
-      value: upcomingReservation
-        ? formatReservationMoment(upcomingReservation.date, upcomingReservation.time)
-        : "Sem visita agendada",
-      description: upcomingReservation
-        ? `${upcomingReservation.guests} pessoa(s) em ${upcomingReservation.area}.`
-        : "Escolha uma nova data para deixar a casa preparada.",
+      label: "Status da conta",
+      value: loyaltyTier.label,
+      description: loyaltyTier.description,
     },
     {
-      label: "Ultimo pedido",
-      value: latestOrder
-        ? latestOrder.checkoutReference
-        : "Nenhum pedido recente",
-      description: latestOrder
-        ? `${getFulfillmentTypeLabel(latestOrder.fulfillmentType)} com total de ${formatCurrency(latestOrder.grandTotal)}.`
-        : "O cardapio online fica disponivel sempre que quiser pedir.",
+      label: "Reservas em andamento",
+      value: `${activeReservations}`,
+      description:
+        activeReservations > 0
+          ? "Sua agenda ativa esta sendo acompanhada pela equipe."
+          : "Sem reservas ativas no momento.",
     },
     {
-      label: "Pontos acumulados",
-      value: `${dashboard.profile.loyaltyPoints} pontos`,
-      description: "Pontuacao atual usada para reconhecer recorrencia e agilizar a proxima experiencia.",
+      label: "Pedidos em andamento",
+      value: `${activeOrders}`,
+      description:
+        activeOrders > 0
+          ? "Pedidos em preparo, rota ou retirada na fila da operacao."
+          : "Sem pedidos pendentes no momento.",
     },
   ];
 
@@ -135,72 +105,75 @@ export default async function AreaClientePage() {
       eyebrow: "Preferencia registrada",
       title: dashboard.profile.preferredRoom,
       description:
-        "Este ambiente vira a referencia principal quando a equipe prepara sua proxima visita.",
+        "Este ambiente vira referencia para organizar sua proxima experiencia.",
+    },
+    {
+      icon: Sparkles,
+      eyebrow: "Pontos acumulados",
+      title: `${dashboard.profile.loyaltyPoints} pontos`,
+      description: "Pontuacao usada para reconhecer recorrencia e historico da conta.",
+    },
+  ];
+
+  const profileSignals = [
+    {
+      eyebrow: "Jornada recente",
+      title: completedVisits
+        ? `${completedVisits} visita(s) concluidas`
+        : "Historico em construcao",
+      description:
+        "O perfil registra seu ritmo de visitas para a casa receber voce com mais contexto.",
+    },
+    {
+      eyebrow: "Canal em destaque",
+      title: latestOrder
+        ? getFulfillmentTypeLabel(latestOrder.fulfillmentType)
+        : "Reserva presencial",
+      description: latestOrder
+        ? "Seu pedido mais recente define o canal atual de atendimento."
+        : "Sem pedido recente, a jornada fica centrada nas reservas da casa.",
+    },
+    {
+      eyebrow: "Proxima recomendacao",
+      title:
+        activeReservations > 0
+          ? "Acompanhar a reserva"
+          : activeOrders > 0
+            ? "Acompanhar os pedidos"
+            : "Escolher a proxima experiencia",
+      description:
+        activeReservations > 0
+          ? "Abra Reservas para conferir horario, ambiente e status da agenda."
+          : activeOrders > 0
+            ? "Abra Pedidos para acompanhar status, itens e forma de atendimento."
+            : "Use Cardapio, Reservas ou Eventos para iniciar uma nova jornada.",
     },
   ];
 
   const actionCards = [
     {
       icon: CalendarHeart,
-      title: "Reservar uma mesa",
-      text: "Agende a proxima visita com data, horario e area favorita em poucos passos.",
+      title: "Reservas",
+      text: "Gerencie datas, horarios e ambientes em uma pagina dedicada.",
       href: "/reservas",
     },
     {
-      icon: ShoppingBag,
-      title: "Acompanhar carrinho",
-      text: "Revise itens do pedido, forma de pagamento e o fluxo entre delivery e retirada.",
-      href: "/carrinho",
+      icon: ReceiptText,
+      title: "Pedidos",
+      text: "Acompanhe status, pagamento e itens em uma aba exclusiva.",
+      href: "/pedidos",
     },
     {
       icon: ChefHat,
-      title: "Voltar ao cardapio",
-      text: "Retome o menu da casa e envie um novo pedido quando quiser.",
+      title: "Cardapio",
+      text: "Explore os pratos ativos e envie novos pedidos para o carrinho.",
       href: "/cardapio",
     },
     {
       icon: HeartHandshake,
-      title: "Falar com a casa",
-      text: "Use nossos contatos para combinar detalhes especiais antes da experiencia.",
+      title: "Contato",
+      text: "Use os canais oficiais para ajustes de atendimento e ocasioes especiais.",
       href: "/contato",
-    },
-  ];
-
-  const profileSignals = [
-    {
-      eyebrow: "Proximo movimento recomendado",
-      title: upcomingReservation
-        ? "Preparar a proxima visita"
-        : latestOrder
-          ? "Acompanhar o pedido atual"
-          : "Escolher a proxima experiencia",
-      description: upcomingReservation
-        ? `Sua reserva em ${upcomingReservation.area} ja pode ser acompanhada pela equipe com antecedencia.`
-        : latestOrder
-          ? `${getFulfillmentTypeLabel(latestOrder.fulfillmentType)} com status ${latestOrderStatusLabel.toLowerCase()}.`
-          : "Sua conta esta pronta para reservar, pedir novamente ou explorar novas sugestoes da casa.",
-    },
-    {
-      eyebrow: "Canal em destaque",
-      title: latestOrder
-        ? getFulfillmentTypeLabel(latestOrder.fulfillmentType)
-        : upcomingReservation
-          ? "Reserva presencial"
-          : "Conta pronta para explorar",
-      description: latestOrder
-        ? "Seu fluxo mais recente ja esta registrado com pagamento, status e acompanhamento da equipe."
-        : upcomingReservation
-          ? "Sua proxima experiencia esta organizada pela agenda da casa, com data, horario e ambiente definidos."
-          : "Quando voce fizer um pedido ou reservar uma mesa, o sistema passa a destacar esse caminho aqui.",
-    },
-    {
-      eyebrow: "Ritmo de visitas",
-      title: completedVisits
-        ? `${completedVisits} visita(s) ja concluidas`
-        : "Historico em construcao",
-      description: activeOrders
-        ? `${activeOrders} fluxo(s) seguem em acompanhamento pela operacao neste momento.`
-        : "A recorrencia da conta ajuda a casa a receber voce com mais contexto a cada nova visita.",
     },
   ];
 
@@ -219,16 +192,15 @@ export default async function AreaClientePage() {
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-                      Perfil privado
+                      Perfil
                     </p>
                     <h1 className="display-title page-hero-title mt-3 text-white">
-                      {firstName}, sua experiencia no Pai Thiago agora fica ainda
-                      mais organizada
+                      {firstName}, sua conta agora fica organizada por pagina
                     </h1>
                     <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(255,247,232,0.76)]">
-                      Seu perfil concentra reservas, pedidos, dados da conta e
-                      detalhes que ajudam a casa a receber voce com mais cuidado,
-                      clareza e continuidade entre uma visita e outra.
+                      Aqui voce acompanha apenas os sinais da sua conta. Pedidos,
+                      reservas, eventos e contato seguem em abas proprias para
+                      manter a navegacao clara.
                     </p>
                   </div>
                 </div>
@@ -242,20 +214,20 @@ export default async function AreaClientePage() {
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
                     {dashboard.usingSupabase
-                      ? "Dados sincronizados com pedidos, reservas e atendimento em tempo real."
+                      ? "Dados sincronizados com o sistema em tempo real."
                       : dashboard.notice}
                   </p>
                 </div>
               </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/reservas" className="button-primary">
-                  <CalendarHeart size={16} />
-                  Reservar mesa
+                <Link href="/pedidos" className="button-primary">
+                  <ReceiptText size={16} />
+                  Ver pedidos
                 </Link>
-                <Link href="/cardapio" className="button-secondary">
-                  <ChefHat size={16} />
-                  Ver cardapio
+                <Link href="/reservas" className="button-secondary">
+                  <CalendarHeart size={16} />
+                  Ver reservas
                 </Link>
                 <Link href="/carrinho" className="button-secondary">
                   <ShoppingBag size={16} />
@@ -307,7 +279,7 @@ export default async function AreaClientePage() {
                 <SectionHeading
                   eyebrow="Dados de atendimento"
                   title="Informacoes base para receber voce com mais contexto"
-                  description="Contato principal e preferencia registrada ficam reunidos aqui, sem repetir o que ja esta nos blocos de agenda e pedidos."
+                  description="Contato, preferencia e pontuacao ficam concentrados no perfil, sem misturar fluxos de outras paginas."
                   compact
                 />
 
@@ -342,250 +314,17 @@ export default async function AreaClientePage() {
         </section>
 
         <section className="shell pt-20">
-          <div className="grid gap-5 xl:grid-cols-[1fr_1.02fr]">
-            <div className="luxury-card rounded-[2.4rem] p-6 md:p-8">
-              <SectionHeading
-                eyebrow="Reservas"
-                title="Sua agenda com a casa"
-                description="Acompanhe proximas visitas, o status de cada reserva e a leitura da equipe sobre o ambiente selecionado."
-                compact
-              />
-
-              <div className="mt-8 space-y-4">
-                {dashboard.reservations.length ? (
-                  dashboard.reservations.map((reservation, index) => {
-                    const statusView =
-                      reservationStatusMeta[reservation.status] ?? {
-                        label: reservation.status,
-                        badge: "bg-[rgba(20,35,29,0.08)] text-[var(--forest)]",
-                      };
-
-                    return (
-                      <article
-                        key={reservation.id}
-                        className="rounded-[1.7rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(182,135,66,0.14)] bg-[rgba(255,255,255,0.64)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--gold)]">
-                              <CalendarHeart size={14} />
-                              {index === 0 ? "Proxima experiencia" : "Historico da conta"}
-                            </div>
-                            <h2 className="mt-4 text-xl font-semibold text-[var(--forest)]">
-                              {reservation.occasion}
-                            </h2>
-                            <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                              {formatReservationMoment(reservation.date, reservation.time)}{" "}
-                              para {reservation.guests} pessoa(s).
-                            </p>
-                          </div>
-                          <span
-                            className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] ${statusView.badge}`}
-                          >
-                            {statusView.label}
-                          </span>
-                        </div>
-
-                        <div className="mt-5 grid gap-3 md:grid-cols-2">
-                          <div className="rounded-[1.35rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.5)] px-4 py-3">
-                            <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                              Ambiente
-                            </p>
-                            <p className="mt-2 text-sm font-semibold text-[var(--forest)]">
-                              {reservation.area}
-                            </p>
-                          </div>
-                          <div className="rounded-[1.35rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.5)] px-4 py-3">
-                            <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                              Observacao
-                            </p>
-                            <p className="mt-2 text-sm font-semibold text-[var(--forest)]">
-                              {reservation.notes || "Sem observacao adicional nesta reserva."}
-                            </p>
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })
-                ) : (
-                  <article className="rounded-[1.7rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
-                    <p className="text-lg font-semibold text-[var(--forest)]">
-                      Sua agenda ainda nao tem reservas
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.7)]">
-                      Quando voce agendar a primeira visita, ela aparece aqui com
-                      data, horario, ambiente escolhido e status atualizado pela
-                      equipe.
-                    </p>
-                    <Link
-                      href="/reservas"
-                      className="mt-5 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--forest)]"
-                    >
-                      Criar reserva
-                      <ChevronRight size={16} />
-                    </Link>
-                  </article>
-                )}
-              </div>
-            </div>
-
-            <div className="luxury-card rounded-[2.4rem] p-6 md:p-8">
-              <SectionHeading
-                eyebrow="Pedidos"
-                title="Tudo o que entrou pela sua conta"
-                description="Cada pedido fica agrupado com status, forma de pagamento, itens e leitura de entrega ou retirada."
-                compact
-              />
-
-              <div className="mt-8 space-y-4">
-                {orderGroups.length ? (
-                  orderGroups.map((orderGroup, index) => {
-                    const statusView = orderStatusMeta[orderGroup.status] ?? {
-                      label: orderGroup.status,
-                      badge: "bg-[rgba(20,35,29,0.08)] text-[var(--forest)]",
-                    };
-
-                    return (
-                      <article
-                        key={orderGroup.id}
-                        className="rounded-[1.7rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(182,135,66,0.14)] bg-[rgba(255,255,255,0.64)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--gold)]">
-                              <ShoppingBag size={14} />
-                              {index === 0 ? "Pedido mais recente" : "Historico de pedidos"}
-                            </div>
-                            <h2 className="mt-4 text-xl font-semibold text-[var(--forest)]">
-                              {orderGroup.checkoutReference}
-                            </h2>
-                            <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                              {orderGroup.totalItems} item(ns) com total de{" "}
-                              {formatCurrency(orderGroup.grandTotal)}.
-                            </p>
-                          </div>
-                          <span
-                            className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.2em] ${statusView.badge}`}
-                          >
-                            {statusView.label}
-                          </span>
-                        </div>
-
-                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-[1.35rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.5)] px-4 py-3">
-                            <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                              Fluxo
-                            </p>
-                            <p className="mt-2 text-sm font-semibold text-[var(--forest)]">
-                              {getFulfillmentTypeLabel(orderGroup.fulfillmentType)}
-                            </p>
-                            <p className="mt-1 text-sm text-[rgba(21,35,29,0.7)]">
-                              {getPaymentMethodLabel(orderGroup.paymentMethod)}
-                            </p>
-                          </div>
-                          <div className="rounded-[1.35rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.5)] px-4 py-3">
-                            <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                              Entrada no sistema
-                            </p>
-                            <p className="mt-2 text-sm font-semibold text-[var(--forest)]">
-                              {formatOrderMoment(orderGroup.createdAt)}
-                            </p>
-                            {orderGroup.fulfillmentType === "delivery" ? (
-                              <p className="mt-1 text-sm text-[rgba(21,35,29,0.7)]">
-                                Previsao de {orderGroup.deliveryEtaMinutes} min
-                              </p>
-                            ) : (
-                              <p className="mt-1 text-sm text-[rgba(21,35,29,0.7)]">
-                                Retirada alinhada com a equipe
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {orderGroup.fulfillmentType === "delivery" ? (
-                          <div className="mt-4 rounded-[1.35rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.5)] px-4 py-3">
-                            <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                              Entrega
-                            </p>
-                            <p className="mt-2 text-sm font-semibold text-[var(--forest)]">
-                              {orderGroup.deliveryAddress} - {orderGroup.deliveryNeighborhood}
-                            </p>
-                            {orderGroup.deliveryReference ? (
-                              <p className="mt-1 text-sm text-[rgba(21,35,29,0.7)]">
-                                Referencia: {orderGroup.deliveryReference}
-                              </p>
-                            ) : null}
-                            <p className="mt-1 text-sm text-[rgba(21,35,29,0.7)]">
-                              Taxa de entrega: {formatCurrency(orderGroup.deliveryFee)}
-                            </p>
-                          </div>
-                        ) : null}
-
-                        <div className="mt-4 space-y-2 rounded-[1.35rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.52)] px-4 py-4">
-                          {orderGroup.items.map((item) => (
-                            <div
-                              key={item.id}
-                              className="flex items-start justify-between gap-4"
-                            >
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-[var(--forest)]">
-                                  {item.itemName}
-                                </p>
-                                <p className="text-sm text-[rgba(21,35,29,0.7)]">
-                                  {item.quantity} item(ns)
-                                </p>
-                                {item.notes ? (
-                                  <p className="mt-1 text-sm text-[rgba(21,35,29,0.7)]">
-                                    Observacao: {item.notes}
-                                  </p>
-                                ) : null}
-                              </div>
-                              <p className="shrink-0 text-sm font-semibold text-[var(--forest)]">
-                                {formatCurrency(item.totalPrice)}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      </article>
-                    );
-                  })
-                ) : (
-                  <article className="rounded-[1.7rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
-                    <p className="text-lg font-semibold text-[var(--forest)]">
-                      Nenhum pedido foi enviado ainda
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.7)]">
-                      Assim que voce fizer um pedido pelo cardapio, ele aparece
-                      aqui com itens, pagamento, forma de atendimento e status
-                      informado pela equipe.
-                    </p>
-                    <Link
-                      href="/cardapio"
-                      className="mt-5 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--forest)]"
-                    >
-                      Fazer pedido
-                      <ChevronRight size={16} />
-                    </Link>
-                  </article>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="shell pt-20">
           <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
             <div className="luxury-card-dark rounded-[2.4rem] p-7 text-[var(--cream)] md:p-8">
               <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-                Curadoria da experiencia
+                Leitura da conta
               </p>
               <h2 className="display-title page-section-title mt-4 text-white">
-                Sinais uteis da sua jornada, sem repetir cadastro nem historico
+                Sinais da sua jornada sem misturar os outros fluxos
               </h2>
               <p className="mt-5 max-w-2xl text-base leading-8 text-[rgba(255,247,232,0.76)]">
-                Esta faixa foi reservada para leitura editorial da conta: proximo
-                passo, canal em destaque e ritmo das visitas. Os dados praticos
-                continuam separados nas secoes de reservas e pedidos.
+                Pedidos e reservas ficam em paginas proprias. O perfil mostra
+                apenas leitura da conta para manter a experiencia mais limpa.
               </p>
 
               <div className="mt-8 grid gap-4">
@@ -604,26 +343,13 @@ export default async function AreaClientePage() {
                   </article>
                 ))}
               </div>
-
-              <div className="mt-5 rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
-                <p className="text-xs uppercase tracking-[0.22em] text-[rgba(217,185,122,0.92)]">
-                  Curadoria da semana
-                </p>
-                <p className="mt-3 text-lg font-semibold text-white">
-                  {experiences[1]?.title ?? "Jantar degustacao"}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                  Uma sugestao pensada para variar a experiencia da semana sem
-                  repetir as informacoes praticas que ja aparecem acima.
-                </p>
-              </div>
             </div>
 
             <div className="luxury-card rounded-[2.4rem] p-6 md:p-8">
               <SectionHeading
                 eyebrow="Atalhos uteis"
-                title="Os caminhos essenciais da sua conta"
-                description="Acessos diretos para circular pelo sistema com clareza, sem duplicar informacao nem esconder o que importa."
+                title="Cada tarefa no lugar certo"
+                description="Use os caminhos abaixo para entrar na pagina correta sem repetir conteudo."
                 compact
               />
 
@@ -643,33 +369,8 @@ export default async function AreaClientePage() {
                     <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
                       {item.text}
                     </p>
-                    <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
-                      Abrir caminho
-                      <ChevronRight size={16} />
-                    </div>
                   </Link>
                 ))}
-              </div>
-
-              <div className="mt-5 rounded-[1.8rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.5)] p-5">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(182,135,66,0.16)] bg-[rgba(255,255,255,0.74)] text-[var(--gold)]">
-                    <Sparkles size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                      Organizacao da jornada
-                    </p>
-                    <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
-                      Cada parte da experiencia agora fica separada pela funcao certa
-                    </p>
-                  </div>
-                </div>
-                <p className="mt-4 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
-                  Agenda, pedidos, sinais da jornada e atalhos rapidos foram
-                  distribuidos em blocos diferentes para a leitura ficar mais limpa
-                  no celular e no desktop.
-                </p>
               </div>
             </div>
           </div>

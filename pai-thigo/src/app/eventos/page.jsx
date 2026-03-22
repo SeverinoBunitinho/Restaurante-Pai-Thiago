@@ -15,7 +15,6 @@ import { SiteHeader } from "@/components/site-header";
 import { requireRole } from "@/lib/auth";
 import { experiences } from "@/lib/mock-data";
 import { getRestaurantProfile } from "@/lib/restaurant-profile";
-import { getCustomerDashboard } from "@/lib/site-data";
 
 const eventJourneys = [
   {
@@ -45,11 +44,8 @@ const eventJourneys = [
 ];
 
 export default async function EventosPage() {
-  const session = await requireRole("customer");
-  const [dashboard, restaurantInfo] = await Promise.all([
-    getCustomerDashboard(session.user.id),
-    getRestaurantProfile(),
-  ]);
+  await requireRole("customer");
+  const restaurantInfo = await getRestaurantProfile();
 
   return (
     <div className="min-h-screen">
@@ -75,26 +71,26 @@ export default async function EventosPage() {
                 <div className="feature-stat-card rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
                   <Gift className="text-[var(--gold-soft)]" size={18} />
                   <p className="feature-stat-label mt-4 text-sm font-semibold uppercase tracking-[0.22em] text-[rgba(217,185,122,0.9)]">
-                    Relacionamento
+                    Formatos de evento
                   </p>
-                  <p className="feature-stat-value mt-3 text-2xl font-semibold text-white">
-                    {dashboard.profile.loyaltyPoints} pontos
+                  <p className="feature-stat-value mt-3 text-3xl font-semibold text-white">
+                    {eventJourneys.length}
                   </p>
                   <p className="feature-stat-body mt-2 text-sm text-[rgba(255,247,232,0.74)]">
-                    Sua conta preserva historico e preferencias para agilizar o atendimento.
+                    Roteiros prontos para celebrar, reunir ou receber clientes.
                   </p>
                 </div>
 
                 <div className="feature-stat-card rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
                   <HeartHandshake className="text-[var(--gold-soft)]" size={18} />
                   <p className="feature-stat-label mt-4 text-sm font-semibold uppercase tracking-[0.22em] text-[rgba(217,185,122,0.9)]">
-                    Ambiente favorito
+                    Capacidade recomendada
                   </p>
-                  <p className="feature-stat-value mt-3 text-2xl font-semibold text-white">
-                    {dashboard.profile.preferredRoom}
+                  <p className="feature-stat-value mt-3 text-lg font-semibold text-white">
+                    pequenos grupos e mesas especiais
                   </p>
                   <p className="feature-stat-body mt-2 text-sm text-[rgba(255,247,232,0.74)]">
-                    A equipe usa isso para sugerir o melhor clima para sua visita.
+                    O planejamento fica orientado para conforto e ritmo de servico.
                   </p>
                 </div>
 
@@ -136,7 +132,7 @@ export default async function EventosPage() {
                   {
                     icon: HeartHandshake,
                     title: "Volte com mais praticidade",
-                    text: "Sua conta preserva preferencias de ambiente e historico de visitas.",
+                    text: "O contexto do evento segue para a reserva com leitura mais clara da equipe.",
                   },
                 ].map((item) => (
                   <article

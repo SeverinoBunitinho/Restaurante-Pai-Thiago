@@ -32,6 +32,7 @@ export async function SiteHeader() {
       ]
     : [
         { href: "/cardapio", label: "Cardapio", exact: true },
+        { href: "/pedidos", label: "Pedidos", exact: true },
         { href: "/reservas", label: "Reservas", exact: true },
         { href: "/eventos", label: "Eventos", exact: true },
         { href: "/contato", label: "Contato", exact: true },

@@ -122,8 +122,10 @@ export default async function ReservasPage() {
               },
               {
                 icon: Clock3,
-                title: "Fluxo pronto para producao",
-                text: "Server actions, banco Supabase e papeis separados para clientes e funcionarios.",
+                title: "Confirmacao clara",
+                text: isStaff
+                  ? "A reserva entra no fluxo operacional com status e prioridade definidos."
+                  : "Depois do envio, voce acompanha o status da reserva na sua conta.",
               },
             ].map((item) => (
               <article key={item.title} className="luxury-card rounded-[2rem] p-6">
