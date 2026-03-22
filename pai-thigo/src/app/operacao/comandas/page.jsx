@@ -192,7 +192,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
             <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
               Comandas do salao
             </p>
-            <h1 className="display-title page-section-title mt-4 max-w-[15ch] text-white sm:max-w-[17ch]">
+            <h1 className="display-title page-section-title mt-4 max-w-[18ch] leading-[1.02] text-white">
               Buscar mesa, conferir conta e fechar com relatorio para impressao
             </h1>
             <p className="mt-4 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
@@ -203,7 +203,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
 
             <form
               method="get"
-              className="mt-8 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_auto]"
+              className="mt-8 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
             >
               <label className="grid gap-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[rgba(217,185,122,0.88)]">
@@ -212,7 +212,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
                 <input
                   name="mesa"
                   defaultValue={tableQuery ?? ""}
-                  placeholder="Ex.: 01, Mesa 01 ou Sala reservada"
+                  placeholder="Ex.: 01 ou Mesa 01"
                   className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm text-white outline-none placeholder:text-[rgba(255,247,232,0.46)]"
                 />
               </label>

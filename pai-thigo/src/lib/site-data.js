@@ -21,8 +21,29 @@ const fallbackReservationAreas = [
   "Varanda",
 ];
 
-const DEFAULT_MENU_ITEM_IMAGE =
-  "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f?auto=format&fit=crop&w=1200&q=80";
+const DEFAULT_MENU_ITEM_IMAGE = "/images/menu-placeholder.svg";
+
+function sanitizeMenuItemImageUrl(value) {
+  const rawValue = String(value ?? "").trim();
+
+  if (!rawValue) {
+    return "";
+  }
+
+  if (rawValue.startsWith("/")) {
+    return rawValue;
+  }
+
+  try {
+    const parsedUrl = new URL(rawValue);
+
+    if (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") {
+      return parsedUrl.toString();
+    }
+  } catch {}
+
+  return "";
+}
 
 function normalizeMenuImageKey(value) {
   return String(value ?? "")
@@ -47,10 +68,16 @@ for (const category of fallbackMenuCategories) {
   }
 }
 
-function resolveMenuItemImage(itemId, itemName) {
+function resolveMenuItemImage(itemId, itemName, imageUrl) {
+  const directImageUrl = sanitizeMenuItemImageUrl(imageUrl);
+
+  if (directImageUrl) {
+    return directImageUrl;
+  }
+
   return (
-    fallbackMenuImageById.get(itemId) ??
-    fallbackMenuImageByName.get(normalizeMenuImageKey(itemName)) ??
+    sanitizeMenuItemImageUrl(fallbackMenuImageById.get(itemId)) ||
+    sanitizeMenuItemImageUrl(fallbackMenuImageByName.get(normalizeMenuImageKey(itemName))) ||
     DEFAULT_MENU_ITEM_IMAGE
   );
 }
@@ -147,7 +174,7 @@ function mapMenuCategory(category, includeUnavailable = false) {
         name: item.name,
         description: item.description,
         price: Number(item.price),
-        imageUrl: item.image_url || resolveMenuItemImage(item.id, item.name),
+        imageUrl: resolveMenuItemImage(item.id, item.name, item.image_url),
         prepTime: item.prep_time ?? "12 min",
         spiceLevel: item.spice_level ?? "suave",
         tags: item.tags ?? [],

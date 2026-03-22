@@ -1,14 +1,22 @@
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-  process.env.SITE_URL?.trim() ||
-  "http://localhost:3000";
+import { resolvePublicSiteUrl } from "@/lib/site-url";
+
+const siteUrl = resolvePublicSiteUrl();
 
 export default function robots() {
   return {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/cardapio", "/reservas", "/eventos", "/contato"],
+        allow: [
+          "/",
+          "/cardapio",
+          "/reservas",
+          "/eventos",
+          "/contato",
+          "/privacidade",
+          "/termos",
+          "/cancelamentos",
+        ],
         disallow: [
           "/login",
           "/cadastro",
@@ -22,5 +30,6 @@ export default function robots() {
       },
     ],
     sitemap: `${siteUrl.replace(/\/$/, "")}/sitemap.xml`,
+    host: siteUrl.replace(/\/$/, ""),
   };
 }

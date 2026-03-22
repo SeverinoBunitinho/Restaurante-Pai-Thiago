@@ -4,7 +4,8 @@ export default function manifest() {
     short_name: "Pai Thiago",
     description:
       "Restaurante contemporaneo com reservas, delivery, operacao interna e atendimento digital integrado.",
-    start_url: "/login",
+    start_url: "/",
+    scope: "/",
     display: "standalone",
     background_color: "#efe3d1",
     theme_color: "#14231d",

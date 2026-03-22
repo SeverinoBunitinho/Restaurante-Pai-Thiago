@@ -247,11 +247,11 @@ async function playOrderAlertSound(audioContextRef) {
 
   const now = context.currentTime + 0.02;
 
-  const playBeep = (startAt, frequency, duration = 0.16, maxGain = 0.16) => {
+  const playBeep = (startAt, frequency, duration = 0.18, maxGain = 0.22) => {
     const oscillator = context.createOscillator();
     const gainNode = context.createGain();
 
-    oscillator.type = "sine";
+    oscillator.type = "triangle";
     oscillator.frequency.setValueAtTime(frequency, startAt);
     oscillator.frequency.exponentialRampToValueAtTime(
       Math.max(260, frequency - 220),
@@ -268,8 +268,17 @@ async function playOrderAlertSound(audioContextRef) {
     oscillator.stop(startAt + duration + 0.02);
   };
 
-  playBeep(now, 980, 0.14, 0.18);
-  playBeep(now + 0.18, 740, 0.16, 0.16);
+  playBeep(now, 980, 0.16, 0.24);
+  playBeep(now + 0.19, 760, 0.17, 0.22);
+  playBeep(now + 0.4, 1100, 0.15, 0.2);
+}
+
+function playOrderAlertPattern(audioContextRef) {
+  void playOrderAlertSound(audioContextRef);
+
+  setTimeout(() => {
+    void playOrderAlertSound(audioContextRef);
+  }, 260);
 }
 
 export function AppLiveSync() {
@@ -307,8 +316,21 @@ export function AppLiveSync() {
       return undefined;
     }
 
+    const ensureNotificationPermission = () => {
+      if (typeof window === "undefined" || !("Notification" in window)) {
+        return;
+      }
+
+      if (Notification.permission !== "default") {
+        return;
+      }
+
+      Notification.requestPermission().catch(() => {});
+    };
+
     const unlockAudio = () => {
       void warmupAudioContext(audioContextRef);
+      ensureNotificationPermission();
     };
 
     window.addEventListener("pointerdown", unlockAudio);
@@ -411,7 +433,11 @@ export function AppLiveSync() {
         setOrderAlert(nextAlert);
 
         if (soundEnabledRef.current) {
-          void playOrderAlertSound(audioContextRef);
+          playOrderAlertPattern(audioContextRef);
+
+          if ("vibrate" in navigator) {
+            navigator.vibrate([160, 80, 160]);
+          }
         }
 
         if (alertTimeoutRef.current) {
@@ -458,7 +484,7 @@ export function AppLiveSync() {
       const nextValue = !currentValue;
 
       if (nextValue) {
-        void playOrderAlertSound(audioContextRef);
+        playOrderAlertPattern(audioContextRef);
       }
 
       return nextValue;

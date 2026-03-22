@@ -1,11 +1,19 @@
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-  process.env.SITE_URL?.trim() ||
-  "http://localhost:3000";
+import { resolvePublicSiteUrl } from "@/lib/site-url";
+
+const siteUrl = resolvePublicSiteUrl();
 
 export default function sitemap() {
   const baseUrl = siteUrl.replace(/\/$/, "");
-  const routes = ["/", "/cardapio", "/reservas", "/eventos", "/contato"];
+  const routes = [
+    "/",
+    "/cardapio",
+    "/reservas",
+    "/eventos",
+    "/contato",
+    "/privacidade",
+    "/termos",
+    "/cancelamentos",
+  ];
 
   return routes.map((route) => ({
     url: `${baseUrl}${route}`,
