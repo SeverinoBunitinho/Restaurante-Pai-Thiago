@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { BellRing } from "lucide-react";
+import { BellRing, Volume2, VolumeX } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -17,6 +17,7 @@ function getRealtimeTables(pathname) {
   if (
     pathname === "/" ||
     pathname === "/area-cliente" ||
+    pathname === "/pedidos" ||
     pathname === "/eventos" ||
     pathname === "/reservas" ||
     pathname === "/contato" ||
@@ -69,13 +70,23 @@ function getPrefetchRoutes(pathname) {
   if (
     pathname === "/" ||
     pathname === "/area-cliente" ||
+    pathname === "/pedidos" ||
     pathname === "/cardapio" ||
     pathname === "/carrinho" ||
     pathname === "/reservas" ||
     pathname === "/eventos" ||
     pathname === "/contato"
   ) {
-    return ["/", "/area-cliente", "/cardapio", "/carrinho", "/reservas", "/eventos", "/contato"];
+    return [
+      "/",
+      "/area-cliente",
+      "/pedidos",
+      "/cardapio",
+      "/carrinho",
+      "/reservas",
+      "/eventos",
+      "/contato",
+    ];
   }
 
   if (
@@ -144,14 +155,103 @@ function rememberOrderAlert(orderKey) {
   } catch {}
 }
 
+const STAFF_SOUND_STORAGE_KEY = "staff-order-sound-enabled";
+
+function readSoundPreference() {
+  if (typeof window === "undefined") {
+    return true;
+  }
+
+  try {
+    const storedValue = window.localStorage.getItem(STAFF_SOUND_STORAGE_KEY);
+
+    if (storedValue === "0") {
+      return false;
+    }
+
+    if (storedValue === "1") {
+      return true;
+    }
+  } catch {}
+
+  return true;
+}
+
+function persistSoundPreference(enabled) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(STAFF_SOUND_STORAGE_KEY, enabled ? "1" : "0");
+  } catch {}
+}
+
+function playOrderAlertSound(audioContextRef) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const ContextConstructor = window.AudioContext || window.webkitAudioContext;
+
+  if (!ContextConstructor) {
+    return;
+  }
+
+  let context = audioContextRef.current;
+
+  if (!context) {
+    context = new ContextConstructor();
+    audioContextRef.current = context;
+  }
+
+  if (context.state === "suspended") {
+    context.resume().catch(() => {});
+  }
+
+  const now = context.currentTime;
+  const oscillator = context.createOscillator();
+  const gainNode = context.createGain();
+
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(900, now);
+  oscillator.frequency.exponentialRampToValueAtTime(620, now + 0.26);
+
+  gainNode.gain.setValueAtTime(0.0001, now);
+  gainNode.gain.exponentialRampToValueAtTime(0.08, now + 0.03);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+
+  oscillator.connect(gainNode);
+  gainNode.connect(context.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.31);
+}
+
 export function AppLiveSync() {
   const pathname = usePathname();
   const router = useRouter();
   const timeoutRef = useRef(null);
   const alertTimeoutRef = useRef(null);
+  const audioContextRef = useRef(null);
   const prefetchedRef = useRef(new Set());
   const [orderAlert, setOrderAlert] = useState(null);
+  const [isSoundEnabled, setIsSoundEnabled] = useState(() => readSoundPreference());
+  const soundEnabledRef = useRef(isSoundEnabled);
   const [supabase] = useState(() => getSupabaseBrowserClient());
+
+  useEffect(() => {
+    soundEnabledRef.current = isSoundEnabled;
+    persistSoundPreference(isSoundEnabled);
+  }, [isSoundEnabled]);
+
+  useEffect(() => {
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const routes = getPrefetchRoutes(pathname);
@@ -241,6 +341,10 @@ export function AppLiveSync() {
 
         setOrderAlert(nextAlert);
 
+        if (soundEnabledRef.current) {
+          playOrderAlertSound(audioContextRef);
+        }
+
         if (alertTimeoutRef.current) {
           clearTimeout(alertTimeoutRef.current);
         }
@@ -280,6 +384,10 @@ export function AppLiveSync() {
     };
   }, [pathname, supabase]);
 
+  const toggleSound = () => {
+    setIsSoundEnabled((currentValue) => !currentValue);
+  };
+
   return orderAlert ? (
     <div className="staff-order-toast" role="status" aria-live="polite">
       <div className="staff-order-toast-icon">
@@ -290,9 +398,19 @@ export function AppLiveSync() {
         <p className="staff-order-toast-message">{orderAlert.message}</p>
         <p className="staff-order-toast-detail">{orderAlert.detail}</p>
       </div>
-      <Link href="/operacao/comandas" className="staff-order-toast-link">
-        Abrir pedidos
-      </Link>
+      <div className="staff-order-toast-actions">
+        <Link href="/operacao/comandas" className="staff-order-toast-link">
+          Abrir pedidos
+        </Link>
+        <button
+          type="button"
+          className={`staff-order-sound-toggle ${isSoundEnabled ? "staff-order-sound-toggle-active" : ""}`}
+          onClick={toggleSound}
+        >
+          {isSoundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          {isSoundEnabled ? "Som ligado" : "Som desligado"}
+        </button>
+      </div>
     </div>
   ) : null;
 }

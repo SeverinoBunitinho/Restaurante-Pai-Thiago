@@ -107,6 +107,8 @@ export const restaurantInfo = {
         "Luz quente, mesas bem distribuidas e leitura elegante para almoco e jantar.",
       caption: "Ambiente principal pensado para ritmo continuo com conforto visual.",
       tone: "warm",
+      imageUrl:
+        "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=1400&q=80",
     },
     {
       key: "cozinha",
@@ -115,6 +117,8 @@ export const restaurantInfo = {
         "A brasa, os acabamentos e a precisao do passe sustentam o ritmo da casa.",
       caption: "Tecnica, mise en place e saida coordenada durante o servico.",
       tone: "ember",
+      imageUrl:
+        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1400&q=80",
     },
     {
       key: "prato",
@@ -123,6 +127,8 @@ export const restaurantInfo = {
         "Composicao, textura e finalizacao trabalhadas para entregar memoria e identidade.",
       caption: "Cardapio autoral, enxuto e alinhado com a operacao.",
       tone: "sage",
+      imageUrl:
+        "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1400&q=80",
     },
     {
       key: "varanda",
@@ -131,6 +137,8 @@ export const restaurantInfo = {
         "Lounge, sala reservada e recortes mais intimistas para encontros especiais.",
       caption: "Cenarios certos para celebracoes, negocios e experiencias privadas.",
       tone: "night",
+      imageUrl:
+        "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?auto=format&fit=crop&w=1400&q=80",
     },
   ],
 };

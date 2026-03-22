@@ -4,6 +4,7 @@ import {
   menuCategories as fallbackMenuCategories,
   operationsModules,
   restaurantInfo as fallbackRestaurantInfo,
+  testimonials as fallbackTestimonials,
 } from "@/lib/mock-data";
 import { getRestaurantProfile } from "@/lib/restaurant-profile";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
@@ -280,6 +281,33 @@ export async function getMenuCategories(options = {}) {
   return data
     .map((category) => mapMenuCategory(category, includeUnavailable))
     .filter((category) => includeUnavailable || category.items.length > 0);
+}
+
+export async function getPublicTestimonials() {
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    return fallbackTestimonials;
+  }
+
+  const { data, error } = await supabase
+    .from("customer_testimonials")
+    .select("id, customer_name, customer_role, quote, rating, approved, sort_order")
+    .eq("approved", true)
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true })
+    .limit(8);
+
+  if (error || !data?.length) {
+    return fallbackTestimonials;
+  }
+
+  return data.map((item) => ({
+    name: item.customer_name,
+    role: item.customer_role,
+    quote: item.quote,
+    rating: Number(item.rating ?? 5),
+  }));
 }
 
 export async function getReservationAreaOptions() {

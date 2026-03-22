@@ -23,6 +23,7 @@ export const reportPeriodOptions = [
   { value: "7d", label: "Ultimos 7 dias" },
   { value: "30d", label: "Ultimos 30 dias" },
   { value: "90d", label: "Ultimos 90 dias" },
+  { value: "custom", label: "Periodo customizado" },
 ];
 
 function getBrazilDateString() {
@@ -54,11 +55,52 @@ function getStartIsoForPeriod(period) {
   return start.toISOString();
 }
 
-function getPeriodLabel(period) {
+function getPeriodLabel(period, customStartDate = "", customEndDate = "") {
+  if (period === "custom" && customStartDate && customEndDate) {
+    return `${customStartDate} ate ${customEndDate}`;
+  }
+
   return (
     reportPeriodOptions.find((option) => option.value === period)?.label ??
     "Ultimos 30 dias"
   );
+}
+
+function isDateOnlyValid(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ""));
+}
+
+function resolveReportRange(period, customStartDate = "", customEndDate = "") {
+  const normalizedPeriod = reportPeriodOptions.some(
+    (option) => option.value === period,
+  )
+    ? period
+    : "30d";
+
+  if (
+    normalizedPeriod === "custom" &&
+    isDateOnlyValid(customStartDate) &&
+    isDateOnlyValid(customEndDate) &&
+    customStartDate <= customEndDate
+  ) {
+    return {
+      period: "custom",
+      startIso: `${customStartDate}T00:00:00-03:00`,
+      endIso: `${customEndDate}T23:59:59-03:00`,
+      startDate: customStartDate,
+      endDate: customEndDate,
+      periodLabel: getPeriodLabel("custom", customStartDate, customEndDate),
+    };
+  }
+
+  return {
+    period: normalizedPeriod === "custom" ? "30d" : normalizedPeriod,
+    startIso: getStartIsoForPeriod(normalizedPeriod === "custom" ? "30d" : normalizedPeriod),
+    endIso: "",
+    startDate: "",
+    endDate: "",
+    periodLabel: getPeriodLabel(normalizedPeriod === "custom" ? "30d" : normalizedPeriod),
+  };
 }
 
 function normalizeTableQuery(value) {
@@ -214,10 +256,14 @@ function buildFallbackChecksBoard(searchQuery = "") {
   };
 }
 
-function buildFallbackReportsBoard(period) {
+function buildFallbackReportsBoard(period, customStartDate = "", customEndDate = "") {
+  const range = resolveReportRange(period, customStartDate, customEndDate);
+
   return {
-    period,
-    periodLabel: getPeriodLabel(period),
+    period: range.period,
+    periodLabel: range.periodLabel,
+    startDate: range.startDate,
+    endDate: range.endDate,
     commissionRate: 10,
     summary: [
       {
@@ -345,19 +391,16 @@ export async function getServiceChecksBoard(searchQuery = "") {
   };
 }
 
-export async function getServiceReportsBoard(period = "30d") {
+export async function getServiceReportsBoard(period = "30d", options = {}) {
   const supabase = await getSupabaseServerClient();
+  const customStartDate = options.startDate ?? "";
+  const customEndDate = options.endDate ?? "";
 
   if (!supabase) {
-    return buildFallbackReportsBoard(period);
+    return buildFallbackReportsBoard(period, customStartDate, customEndDate);
   }
 
-  const normalizedPeriod = reportPeriodOptions.some(
-    (option) => option.value === period,
-  )
-    ? period
-    : "30d";
-  const startIso = getStartIsoForPeriod(normalizedPeriod);
+  const range = resolveReportRange(period, customStartDate, customEndDate);
 
   const [commissionRate, tablesResult, closedChecksResult, periodChecksResult, openNowResult] =
     await Promise.all([
@@ -373,18 +416,32 @@ export async function getServiceReportsBoard(period = "30d") {
           "id, total, commission_rate, commission_amount, closed_at, table:restaurant_tables!service_checks_table_id_fkey(id, name, area), opened_by:profiles!service_checks_opened_by_user_id_fkey(user_id, full_name, email, role)",
         )
         .eq("status", "closed")
-        .gte("closed_at", startIso),
+        .gte("closed_at", range.startIso),
       supabase
         .from("service_checks")
         .select(
           "id, status, total, opened_at, table:restaurant_tables!service_checks_table_id_fkey(id, name, area)",
         )
-        .gte("opened_at", startIso),
+        .gte("opened_at", range.startIso),
       supabase
         .from("service_checks")
         .select("id, table_id")
         .eq("status", "open"),
     ]);
+
+  if (range.endIso && !closedChecksResult.error) {
+    const filtered = (closedChecksResult.data ?? []).filter(
+      (check) => new Date(check.closed_at) <= new Date(range.endIso),
+    );
+    closedChecksResult.data = filtered;
+  }
+
+  if (range.endIso && !periodChecksResult.error) {
+    const filtered = (periodChecksResult.data ?? []).filter(
+      (check) => new Date(check.opened_at) <= new Date(range.endIso),
+    );
+    periodChecksResult.data = filtered;
+  }
 
   if (
     tablesResult.error ||
@@ -392,7 +449,7 @@ export async function getServiceReportsBoard(period = "30d") {
     periodChecksResult.error ||
     openNowResult.error
   ) {
-    return buildFallbackReportsBoard(period);
+    return buildFallbackReportsBoard(period, customStartDate, customEndDate);
   }
 
   const closedChecks = closedChecksResult.data ?? [];
@@ -509,8 +566,10 @@ export async function getServiceReportsBoard(period = "30d") {
   );
 
   return {
-    period: normalizedPeriod,
-    periodLabel: getPeriodLabel(normalizedPeriod),
+    period: range.period,
+    periodLabel: range.periodLabel,
+    startDate: range.startDate,
+    endDate: range.endDate,
     commissionRate,
     summary: [
       {
@@ -521,7 +580,7 @@ export async function getServiceReportsBoard(period = "30d") {
       {
         label: "Contas fechadas",
         value: String(closedChecks.length),
-        description: `Fechamentos registrados em ${getPeriodLabel(normalizedPeriod).toLowerCase()}.`,
+        description: `Fechamentos registrados em ${range.periodLabel.toLowerCase()}.`,
       },
       {
         label: "Faturamento em comandas",

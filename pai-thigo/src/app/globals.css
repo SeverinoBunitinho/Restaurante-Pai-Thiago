@@ -421,6 +421,10 @@ textarea {
   pointer-events: none;
 }
 
+.quote-panel::before {
+  content: "\"";
+}
+
 .contact-chip {
   display: flex;
   flex-direction: column;
@@ -1001,12 +1005,10 @@ textarea {
 }
 
 .staff-order-toast-link {
-  grid-column: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: fit-content;
-  margin-top: 0.2rem;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--gold-soft), #e7cca0);
   color: var(--forest);
@@ -1016,6 +1018,42 @@ textarea {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   box-shadow: 0 12px 26px rgba(217, 185, 122, 0.22);
+}
+
+.staff-order-toast-actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.2rem;
+}
+
+.staff-order-sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 185, 122, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 247, 232, 0.84);
+  padding: 0.72rem 1rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.staff-order-sound-toggle-active {
+  border-color: rgba(95, 123, 109, 0.5);
+  background: rgba(95, 123, 109, 0.2);
+  color: white;
 }
 
 .content-copy-safe {
@@ -1039,10 +1077,6 @@ textarea {
 
 .pill-wrap-safe svg {
   flex-shrink: 0;
-}
-
-.quote-panel::before {
-  content: "\"";
 }
 
 .loading-shell {
@@ -1125,6 +1159,12 @@ textarea {
   .filter-chip-active:hover {
     background: linear-gradient(135deg, rgba(20, 35, 29, 0.96), rgba(33, 55, 47, 0.92));
   }
+
+  .staff-order-sound-toggle:hover {
+    transform: translateY(-1px);
+    border-color: rgba(217, 185, 122, 0.34);
+    background: rgba(255, 255, 255, 0.1);
+  }
 }
 
 @media (max-width: 640px) {
@@ -1176,6 +1216,14 @@ textarea {
   }
 
   .staff-order-toast-link {
+    width: 100%;
+  }
+
+  .staff-order-toast-actions {
+    gap: 0.45rem;
+  }
+
+  .staff-order-toast-actions > * {
     width: 100%;
   }
 

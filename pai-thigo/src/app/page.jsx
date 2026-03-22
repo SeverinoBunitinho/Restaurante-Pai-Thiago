@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   CalendarRange,
@@ -22,11 +23,12 @@ import {
   isStaffRole,
   requireAuth,
 } from "@/lib/auth";
-import { experiences, testimonials } from "@/lib/mock-data";
+import { experiences } from "@/lib/mock-data";
 import { getRestaurantProfile } from "@/lib/restaurant-profile";
 import {
   getCustomerDashboard,
   getMenuCategories,
+  getPublicTestimonials,
   getStaffDashboard,
 } from "@/lib/site-data";
 import { getStaffModules } from "@/lib/staff-modules";
@@ -76,12 +78,13 @@ function getGalleryToneClass(tone) {
 
 export default async function Home() {
   const session = await requireAuth();
-  const [categories, dashboard, restaurantInfo] = await Promise.all([
+  const [categories, dashboard, restaurantInfo, testimonials] = await Promise.all([
     getMenuCategories(),
     isStaffRole(session.role)
       ? getStaffDashboard(session.role)
       : getCustomerDashboard(session.user.id),
     getRestaurantProfile(),
+    getPublicTestimonials(),
   ]);
 
   const firstName = session.profile.full_name.split(" ")[0];
@@ -609,7 +612,20 @@ export default async function Home() {
                     key={scene.key}
                     className={`scene-card luxury-card rounded-[2.1rem] p-5 ${getGalleryToneClass(scene.tone)}`}
                   >
-                    <div className={`scene-visual ${getGalleryToneClass(scene.tone)}`} />
+                    <div className={`scene-visual ${getGalleryToneClass(scene.tone)}`}>
+                      {scene.imageUrl ? (
+                        <Image
+                          src={scene.imageUrl}
+                          alt={scene.title}
+                          className="h-full w-full rounded-[1.4rem] object-cover"
+                          width={1400}
+                          height={900}
+                          loading="lazy"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 25vw"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : null}
+                    </div>
                     <p className="text-xs uppercase tracking-[0.24em] text-[var(--gold)]">
                       Galeria
                     </p>

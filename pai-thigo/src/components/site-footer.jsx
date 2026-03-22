@@ -159,6 +159,15 @@ export async function SiteFooter() {
               {restaurantInfo.name}. Reservas, cardapio e atendimento reunidos em um unico ambiente digital.
             </p>
             <div className="flex flex-wrap items-center gap-4 text-[rgba(217,185,122,0.92)]">
+              <Link href="/privacidade" className="inline-flex items-center gap-2">
+                Privacidade
+              </Link>
+              <Link href="/termos" className="inline-flex items-center gap-2">
+                Termos
+              </Link>
+              <Link href="/cancelamentos" className="inline-flex items-center gap-2">
+                Cancelamentos
+              </Link>
               <a
                 href={restaurantInfo.instagramUrl}
                 target="_blank"

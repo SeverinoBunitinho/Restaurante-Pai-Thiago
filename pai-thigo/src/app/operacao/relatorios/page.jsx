@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BarChart3, TrendingUp, WalletCards } from "lucide-react";
+import { BarChart3, Download, TrendingUp, WalletCards } from "lucide-react";
 
 import { SectionHeading } from "@/components/section-heading";
 import { getServiceReportsBoard, reportPeriodOptions } from "@/lib/checks-data";
@@ -13,7 +13,20 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
   const period = Array.isArray(resolvedSearchParams?.period)
     ? resolvedSearchParams.period[0]
     : resolvedSearchParams?.period;
-  const board = await getServiceReportsBoard(period ?? "30d");
+  const startDate = Array.isArray(resolvedSearchParams?.start)
+    ? resolvedSearchParams.start[0]
+    : resolvedSearchParams?.start;
+  const endDate = Array.isArray(resolvedSearchParams?.end)
+    ? resolvedSearchParams.end[0]
+    : resolvedSearchParams?.end;
+  const board = await getServiceReportsBoard(period ?? "30d", {
+    startDate: startDate ?? "",
+    endDate: endDate ?? "",
+  });
+  const exportHref =
+    board.period === "custom" && board.startDate && board.endDate
+      ? `/api/operacao/relatorios/export?period=custom&start=${board.startDate}&end=${board.endDate}`
+      : `/api/operacao/relatorios/export?period=${board.period}`;
 
   return (
     <>
@@ -31,7 +44,11 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
               {reportPeriodOptions.map((option) => (
                 <Link
                   key={option.value}
-                  href={`/operacao/relatorios?period=${option.value}`}
+                  href={
+                    option.value === "custom"
+                      ? "/operacao/relatorios?period=custom"
+                      : `/operacao/relatorios?period=${option.value}`
+                  }
                   className={`filter-chip ${
                     board.period === option.value ? "filter-chip-active" : ""
                   }`}
@@ -40,6 +57,39 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                 </Link>
               ))}
             </div>
+
+            <form method="get" className="mt-5 grid gap-3 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.56)] p-4 sm:grid-cols-[1fr_1fr_auto]">
+              <input type="hidden" name="period" value="custom" />
+              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                Inicio
+                <input
+                  type="date"
+                  name="start"
+                  defaultValue={board.startDate || ""}
+                  className="rounded-xl border border-[rgba(20,35,29,0.12)] bg-white px-3 py-2 text-sm normal-case tracking-normal text-[var(--forest)] outline-none"
+                />
+              </label>
+              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                Fim
+                <input
+                  type="date"
+                  name="end"
+                  defaultValue={board.endDate || ""}
+                  className="rounded-xl border border-[rgba(20,35,29,0.12)] bg-white px-3 py-2 text-sm normal-case tracking-normal text-[var(--forest)] outline-none"
+                />
+              </label>
+              <button type="submit" className="button-secondary self-end">
+                Aplicar
+              </button>
+            </form>
+
+            <a
+              href={exportHref}
+              className="button-primary mt-5 inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+            >
+              <Download size={16} />
+              Exportar CSV
+            </a>
 
             <div className="mt-8 grid gap-4 md:grid-cols-2">
               {board.summary.map((item) => {
