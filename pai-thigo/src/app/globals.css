@@ -1214,7 +1214,7 @@ textarea {
   }
 
   .site-header-offset {
-    height: 12rem;
+    height: 15rem;
   }
 
   .staff-order-toast {
@@ -1242,6 +1242,12 @@ textarea {
 
   .operations-module-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1023px) {
+  .site-header-offset {
+    height: 13.25rem;
   }
 }
 

@@ -131,7 +131,7 @@ export default async function CardapioPage() {
           />
 
           {categories.length ? (
-            <div className="sticky top-[10.9rem] z-30 mt-8 rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-3 shadow-[0_14px_30px_rgba(39,30,18,0.08)] backdrop-blur md:top-[8.8rem]">
+            <div className="sticky top-[15.3rem] z-30 mt-8 rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-3 shadow-[0_14px_30px_rgba(39,30,18,0.08)] backdrop-blur sm:top-[13.6rem] lg:top-[8.8rem]">
               <p className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
                 Navegacao rapida
               </p>
