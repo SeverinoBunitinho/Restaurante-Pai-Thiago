@@ -537,17 +537,16 @@ textarea {
 
 .site-header-fixed {
   position: fixed;
-  inset-inline: 0;
+  left: 0;
+  right: 0;
   top: 0;
   z-index: 60;
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
-  will-change: transform;
+  pointer-events: none;
 }
 
 .site-header-shell {
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
+  padding-top: 0;
+  padding-bottom: 0.65rem;
 }
 
 .site-header-card {
@@ -555,7 +554,7 @@ textarea {
 }
 
 .site-header-offset {
-  height: 11rem;
+  height: 10.25rem;
 }
 
 .floating-badge {
@@ -1166,7 +1165,7 @@ textarea {
   }
 
   .site-header-offset {
-    height: 11rem;
+    height: 10.25rem;
   }
 
   .staff-order-toast {
@@ -1211,7 +1210,7 @@ textarea {
   }
 
   .site-header-offset {
-    height: 10.5rem;
+    height: 9.75rem;
   }
 }
 
