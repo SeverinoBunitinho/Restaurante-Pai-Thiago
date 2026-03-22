@@ -117,9 +117,9 @@ export default async function AreaClientePage() {
         : "O cardapio online fica disponivel sempre que quiser pedir.",
     },
     {
-      label: "Sala preferida",
-      value: dashboard.profile.preferredRoom,
-      description: "Essa referencia ajuda a equipe a sugerir o ambiente ideal para a visita.",
+      label: "Status da conta",
+      value: loyaltyTier.label,
+      description: "Nivel atual do relacionamento para apoiar reservas, atendimento e recorrencia.",
     },
   ];
 
@@ -197,7 +197,7 @@ export default async function AreaClientePage() {
           : "Sua conta esta pronta para reservar, pedir novamente ou explorar novas sugestoes da casa.",
     },
     {
-      eyebrow: "Leitura do relacionamento",
+      eyebrow: "Ritmo da jornada",
       title: completedVisits
         ? `${completedVisits} visita(s) ja concluidas`
         : "Historico em construcao",
@@ -626,7 +626,7 @@ export default async function AreaClientePage() {
               <SectionHeading
                 eyebrow="Atalhos elegantes"
                 title="Os caminhos mais uteis da sua conta"
-                description="Acessos pensados para o cliente circular pelo sistema sem esforço, tanto no celular quanto no desktop."
+                description="Acessos pensados para o cliente circular pelo sistema sem esforco, tanto no celular quanto no desktop."
                 compact
               />
 
