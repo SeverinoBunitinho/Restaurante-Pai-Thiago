@@ -535,6 +535,29 @@ textarea {
   backdrop-filter: blur(18px);
 }
 
+.site-header-fixed {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 60;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.site-header-shell {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.site-header-card {
+  pointer-events: auto;
+}
+
+.site-header-offset {
+  height: 11rem;
+}
+
 .floating-badge {
   border: 1px solid rgba(182, 135, 66, 0.18);
   background: rgba(255, 252, 247, 0.72);
@@ -1142,6 +1165,10 @@ textarea {
     border-radius: 1.8rem;
   }
 
+  .site-header-offset {
+    height: 11rem;
+  }
+
   .staff-order-toast {
     right: 0.75rem;
     bottom: 0.75rem;
@@ -1181,6 +1208,10 @@ textarea {
 
   .feature-stat-grid.feature-stat-grid-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .site-header-offset {
+    height: 10.5rem;
   }
 }
 

@@ -44,9 +44,9 @@ export async function SiteHeader() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-[60] pt-3">
-        <div className="shell pb-3">
-          <div className="nav-pill rounded-[2.2rem] px-4 py-4 sm:px-6">
+      <header className="site-header-fixed">
+        <div className="site-header-shell shell">
+          <div className="site-header-card nav-pill rounded-[2.2rem] px-4 py-4 sm:px-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <Link href="/" className="flex items-center gap-4">
                 <div className="relative flex h-13 w-13 items-center justify-center rounded-full border border-[rgba(217,185,122,0.18)] bg-[linear-gradient(135deg,var(--forest),#223a31)] text-[var(--cream)] shadow-[0_18px_34px_rgba(20,35,29,0.22)]">
@@ -138,7 +138,7 @@ export async function SiteHeader() {
         </div>
       </header>
 
-      <div aria-hidden className="h-[11rem] xl:h-[10.5rem]" />
+      <div aria-hidden className="site-header-offset" />
     </>
   );
 }
