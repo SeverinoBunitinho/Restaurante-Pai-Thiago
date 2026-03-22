@@ -87,6 +87,9 @@ export default async function AreaClientePage() {
   const loyaltyTier = getLoyaltyTier(dashboard.profile.loyaltyPoints ?? 0);
   const upcomingReservation = getUpcomingReservation(dashboard.reservations);
   const latestOrder = getLatestOrder(orderGroups);
+  const latestOrderStatusLabel = latestOrder
+    ? orderStatusMeta[latestOrder.status]?.label ?? latestOrder.status
+    : "";
   const activeOrders = orderGroups.filter(
     (order) => !["delivered", "cancelled"].includes(order.status),
   ).length;
@@ -170,6 +173,37 @@ export default async function AreaClientePage() {
       title: "Falar com a casa",
       text: "Use nossos contatos para combinar detalhes especiais antes da experiencia.",
       href: "/contato",
+    },
+  ];
+
+  const profileSignals = [
+    {
+      eyebrow: "Ambiente com mais afinidade",
+      title: dashboard.profile.preferredRoom,
+      description:
+        "Essa preferencia vira o ponto de partida para a equipe sugerir onde sua experiencia pode ficar mais confortavel.",
+    },
+    {
+      eyebrow: "Proximo movimento recomendado",
+      title: upcomingReservation
+        ? "Preparar a proxima visita"
+        : latestOrder
+          ? "Acompanhar o pedido atual"
+          : "Escolher a proxima experiencia",
+      description: upcomingReservation
+        ? `Sua reserva em ${upcomingReservation.area} ja pode ser acompanhada pela equipe com antecedencia.`
+        : latestOrder
+          ? `${getFulfillmentTypeLabel(latestOrder.fulfillmentType)} com status ${latestOrderStatusLabel.toLowerCase()}.`
+          : "Sua conta esta pronta para reservar, pedir novamente ou explorar novas sugestoes da casa.",
+    },
+    {
+      eyebrow: "Leitura do relacionamento",
+      title: completedVisits
+        ? `${completedVisits} visita(s) ja concluidas`
+        : "Historico em construcao",
+      description: activeOrders
+        ? `${activeOrders} fluxo(s) seguem em acompanhamento pela operacao neste momento.`
+        : "A recorrencia da conta ajuda a casa a receber voce com mais contexto a cada nova visita.",
     },
   ];
 
@@ -546,47 +580,45 @@ export default async function AreaClientePage() {
           <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
             <div className="luxury-card-dark rounded-[2.4rem] p-7 text-[var(--cream)] md:p-8">
               <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-                Concierge da conta
+                Leitura da conta
               </p>
               <h2 className="display-title page-section-title mt-4 text-white">
-                Um perfil que conversa com reservas, delivery e hospitalidade
+                Um perfil mais inteligente, sem repetir informacao e com foco no que importa
               </h2>
               <p className="mt-5 max-w-2xl text-base leading-8 text-[rgba(255,247,232,0.76)]">
-                O objetivo desta area e deixar sua experiencia mais fluida antes,
-                durante e depois da visita. O restaurante encontra aqui suas
-                preferencias, a equipe acompanha seus pedidos e voce enxerga tudo
-                sem precisar procurar em varias telas.
+                Aqui a conta deixa de repetir cadastro e passa a mostrar sinais
+                uteis da sua jornada com a casa: ambiente preferido, proximo passo
+                recomendado e o ritmo atual do relacionamento.
               </p>
 
               <div className="mt-8 grid gap-4">
-                <article className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
-                  <p className="text-xs uppercase tracking-[0.22em] text-[rgba(217,185,122,0.92)]">
-                    Nome na conta
-                  </p>
-                  <p className="mt-3 text-lg font-semibold text-white">{profileName}</p>
-                </article>
+                {profileSignals.map((item) => (
+                  <article
+                    key={item.eyebrow}
+                    className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5"
+                  >
+                    <p className="text-xs uppercase tracking-[0.22em] text-[rgba(217,185,122,0.92)]">
+                      {item.eyebrow}
+                    </p>
+                    <p className="mt-3 text-lg font-semibold text-white">{item.title}</p>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
+                      {item.description}
+                    </p>
+                  </article>
+                ))}
+              </div>
 
-                <article className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
-                  <p className="text-xs uppercase tracking-[0.22em] text-[rgba(217,185,122,0.92)]">
-                    Telefone de apoio
-                  </p>
-                  <p className="mt-3 text-lg font-semibold text-white">
-                    {dashboard.profile.phone || "Ainda nao informado"}
-                  </p>
-                </article>
-
-                <article className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
-                  <p className="text-xs uppercase tracking-[0.22em] text-[rgba(217,185,122,0.92)]">
-                    Curadoria da semana
-                  </p>
-                  <p className="mt-3 text-lg font-semibold text-white">
-                    {experiences[1]?.title ?? "Jantar degustacao"}
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                    Uma sugestao pensada para continuar a experiencia com o ritmo
-                    e a identidade da casa.
-                  </p>
-                </article>
+              <div className="mt-5 rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
+                <p className="text-xs uppercase tracking-[0.22em] text-[rgba(217,185,122,0.92)]">
+                  Curadoria da semana
+                </p>
+                <p className="mt-3 text-lg font-semibold text-white">
+                  {experiences[1]?.title ?? "Jantar degustacao"}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
+                  Uma sugestao pensada para continuar a experiencia com o ritmo e
+                  a identidade da casa, sem repetir os mesmos dados do perfil.
+                </p>
               </div>
             </div>
 
