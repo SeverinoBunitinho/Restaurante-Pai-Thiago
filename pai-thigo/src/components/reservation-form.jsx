@@ -95,27 +95,27 @@ export function ReservationForm({
         </label>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Data
           <input
             name="date"
             type="date"
             min={getTodayInBrazil()}
             required
-            className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 pr-12 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Horario
           <input
             name="time"
             type="time"
             required
-            className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 pr-12 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Pessoas
           <input
             name="guests"
@@ -124,15 +124,15 @@ export function ReservationForm({
             max={20}
             defaultValue={2}
             required
-            className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Area
           <select
             name="areaPreference"
             defaultValue={resolvedAreas[0] ?? "Salao principal"}
-            className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           >
             {resolvedAreas.map((option) => (
               <option key={option} value={option}>
