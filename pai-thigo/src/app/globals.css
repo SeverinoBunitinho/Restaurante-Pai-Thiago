@@ -151,6 +151,28 @@ textarea {
   text-wrap: balance;
 }
 
+.section-heading-shell {
+  position: relative;
+}
+
+.section-heading-shell::after {
+  content: "";
+  position: absolute;
+  inset: auto auto -0.85rem 0;
+  width: min(7rem, 22%);
+  height: 1px;
+  background: linear-gradient(90deg, rgba(182, 135, 66, 0.32), transparent);
+  pointer-events: none;
+}
+
+.section-heading-title {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.section-heading-description {
+  text-wrap: pretty;
+}
+
 .luxury-card,
 .luxury-card-dark {
   position: relative;
@@ -572,10 +594,108 @@ textarea {
   gap: 1.25rem;
 }
 
+.operations-main-stack {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.operations-hero-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.operations-hero-shell::after {
+  content: "";
+  position: absolute;
+  inset: 1.2rem 1.2rem auto auto;
+  width: 7.5rem;
+  height: 7.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 185, 122, 0.12);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.14), transparent 68%);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.operations-return-link {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.operations-module-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.operations-module-tile {
+  position: relative;
+  display: block;
+  min-height: 100%;
+  overflow: hidden;
+  border-radius: 1.6rem;
+  border: 1px solid rgba(217, 185, 122, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02)),
+    rgba(255, 255, 255, 0.04);
+  padding: 1.25rem;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.operations-module-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 34%);
+  pointer-events: none;
+}
+
+.operations-module-tile::after {
+  content: "";
+  position: absolute;
+  left: 1.25rem;
+  right: 1.25rem;
+  bottom: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(217, 185, 122, 0.72), rgba(127, 150, 139, 0.22));
+  opacity: 0.34;
+}
+
+.operations-module-tile > * {
+  position: relative;
+  z-index: 1;
+}
+
+.operations-module-copy {
+  text-wrap: pretty;
+}
+
 .staff-side-stack {
   display: grid;
   gap: 1.25rem;
   align-self: start;
+}
+
+.staff-side-card {
+  position: relative;
+}
+
+.staff-side-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 1.5rem 1.35rem 1.5rem;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(182, 135, 66, 0.16), transparent);
+  opacity: 0.68;
+  pointer-events: none;
+}
+
+.staff-side-title {
+  font-size: clamp(1.9rem, 4vw, 2.4rem);
+  letter-spacing: -0.03em;
 }
 
 .staff-side-link {
@@ -594,6 +714,19 @@ textarea {
     background 180ms ease;
 }
 
+.staff-side-link::before {
+  content: "";
+  position: absolute;
+  left: 0.9rem;
+  top: 1rem;
+  bottom: 1rem;
+  width: 2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(182, 135, 66, 0.48), transparent);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
 .staff-side-link-active {
   border-color: rgba(182, 135, 66, 0.24);
   background:
@@ -601,6 +734,139 @@ textarea {
   box-shadow:
     0 18px 34px rgba(39, 30, 18, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.staff-side-link-active::before,
+.staff-side-link:hover::before {
+  opacity: 1;
+}
+
+.staff-side-link-copy {
+  min-width: 0;
+}
+
+.staff-side-link-icon {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 10px 20px rgba(39, 30, 18, 0.07);
+}
+
+.staff-side-link-title {
+  text-wrap: balance;
+}
+
+.staff-side-link-description {
+  text-wrap: pretty;
+}
+
+.staff-side-arrow {
+  margin-top: 0.2rem;
+}
+
+.staff-quick-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.staff-side-note {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.46),
+    0 14px 28px rgba(39, 30, 18, 0.05);
+}
+
+.staff-status-chip {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.staff-inline-note {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 14px 30px rgba(12, 22, 19, 0.08);
+}
+
+.staff-surface-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 100%;
+  box-shadow:
+    0 16px 32px rgba(39, 30, 18, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.56);
+}
+
+.staff-surface-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 32%);
+  pointer-events: none;
+}
+
+.staff-surface-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.staff-feature-link {
+  position: relative;
+  overflow: hidden;
+  min-height: 100%;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.staff-feature-link::after {
+  content: "";
+  position: absolute;
+  left: 1.15rem;
+  right: 1.15rem;
+  bottom: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(182, 135, 66, 0.6), transparent);
+  opacity: 0.4;
+}
+
+.staff-kpi-strip {
+  position: relative;
+  overflow: hidden;
+}
+
+.staff-kpi-strip::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.18), transparent 40%),
+    radial-gradient(circle at right top, rgba(217, 185, 122, 0.08), transparent 28%);
+  pointer-events: none;
+}
+
+.staff-kpi-item {
+  position: relative;
+  border-radius: 1.4rem;
+  background: rgba(255, 255, 255, 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+.staff-cta-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.staff-cta-panel::after {
+  content: "";
+  position: absolute;
+  inset: auto 1.4rem 1.4rem auto;
+  width: 5.25rem;
+  height: 5.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 185, 122, 0.14);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1), transparent 70%);
+  pointer-events: none;
 }
 
 .filter-chip {
@@ -793,6 +1059,19 @@ textarea {
     background: rgba(255, 255, 255, 0.74);
   }
 
+  .operations-module-tile:hover,
+  .staff-feature-link:hover {
+    transform: translateY(-2px);
+    border-color: rgba(182, 135, 66, 0.28);
+    box-shadow: 0 18px 34px rgba(12, 22, 19, 0.12);
+  }
+
+  .operations-module-tile:hover {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03)),
+      rgba(255, 255, 255, 0.06);
+  }
+
   .staff-side-link-active:hover {
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 239, 227, 0.82));
@@ -849,6 +1128,14 @@ textarea {
 
   .staff-order-toast-link {
     width: 100%;
+  }
+
+  .operations-main-stack {
+    gap: 1.25rem;
+  }
+
+  .operations-module-grid {
+    grid-template-columns: 1fr;
   }
 }
 

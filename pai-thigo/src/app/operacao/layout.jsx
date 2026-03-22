@@ -19,8 +19,8 @@ export default async function OperacaoLayout({ children }) {
           <div className="operations-layout">
             <StaffWorkspaceNav role={session.role} />
 
-            <div className="space-y-5">
-              <div className="luxury-card-dark rounded-[2.4rem] p-7 text-[var(--cream)] md:p-10">
+            <div className="operations-main-stack">
+              <div className="operations-hero-shell luxury-card-dark rounded-[2.4rem] p-7 text-[var(--cream)] md:p-10">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
                   <div className="max-w-3xl">
                     <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
@@ -38,24 +38,24 @@ export default async function OperacaoLayout({ children }) {
 
                   <Link
                     href="/area-funcionario"
-                    className="inline-flex items-center justify-center rounded-full border border-[rgba(217,185,122,0.24)] px-5 py-3 text-sm font-semibold text-[var(--cream)] transition hover:-translate-y-0.5"
+                    className="operations-return-link inline-flex items-center justify-center rounded-full border border-[rgba(217,185,122,0.24)] px-5 py-3 text-sm font-semibold text-[var(--cream)] transition hover:-translate-y-0.5"
                   >
                     Voltar ao painel da equipe
                   </Link>
                 </div>
 
-                <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="operations-module-grid mt-8 md:grid-cols-2 xl:grid-cols-4">
                   {modules.map((module) => (
                     <Link
                       key={module.key}
                       href={module.href}
-                      className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5 transition hover:-translate-y-0.5"
+                      className="operations-module-tile"
                     >
                       <module.icon className="text-[var(--gold-soft)]" size={20} />
                       <h2 className="mt-4 text-lg font-semibold text-white">
                         {module.title}
                       </h2>
-                      <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
+                      <p className="operations-module-copy mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
                         {module.description}
                       </p>
                     </Link>

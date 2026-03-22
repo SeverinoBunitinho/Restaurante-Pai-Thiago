@@ -137,11 +137,11 @@ export default async function AreaFuncionarioPage() {
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(217,185,122,0.2)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(255,247,232,0.82)]">
+                <span className="staff-status-chip inline-flex items-center gap-2 rounded-full border border-[rgba(217,185,122,0.2)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(255,247,232,0.82)]">
                   <BadgeCheck size={14} />
                   acesso validado
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(217,185,122,0.2)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(255,247,232,0.82)]">
+                <span className="staff-status-chip inline-flex items-center gap-2 rounded-full border border-[rgba(217,185,122,0.2)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(255,247,232,0.82)]">
                   <ShieldCheck size={14} />
                   perfil {getStaffRoleLabel(session.role).toLowerCase()}
                 </span>
@@ -151,7 +151,7 @@ export default async function AreaFuncionarioPage() {
                 {dashboard.alerts.map((alert) => (
                   <div
                     key={alert}
-                    className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm leading-6 text-[rgba(255,247,232,0.8)]"
+                    className="staff-inline-note rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm leading-6 text-[rgba(255,247,232,0.8)]"
                   >
                     {alert}
                   </div>
@@ -168,7 +168,7 @@ export default async function AreaFuncionarioPage() {
               </h2>
 
               <div className="mt-6 grid gap-4">
-                <article className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-5">
+                <article className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-5">
                   <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
                     Conta interna
                   </p>
@@ -180,7 +180,7 @@ export default async function AreaFuncionarioPage() {
                   </p>
                 </article>
 
-                <article className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-5">
+                <article className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-5">
                   <div className="flex items-start gap-3">
                     <KeyRound className="mt-1 text-[var(--gold)]" size={18} />
                     <div>
@@ -229,7 +229,7 @@ export default async function AreaFuncionarioPage() {
                   <Link
                     key={step.title}
                     href={getModuleLink(modules, step.key)}
-                    className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5 transition hover:-translate-y-0.5"
+                    className="staff-feature-link rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
                   >
                     <p className="text-xs uppercase tracking-[0.24em] text-[var(--gold)]">
                       Etapa {index + 1}
@@ -257,7 +257,7 @@ export default async function AreaFuncionarioPage() {
                 {blueprint.permissions.map((permission) => (
                   <article
                     key={permission}
-                    className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
+                    className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
                   >
                     <div className="flex items-start gap-3">
                       <Sparkles className="mt-1 text-[var(--gold)]" size={18} />
@@ -286,7 +286,7 @@ export default async function AreaFuncionarioPage() {
                 <Link
                   key={item.key}
                   href={item.href}
-                  className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5 transition hover:-translate-y-0.5"
+                  className="staff-feature-link rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
                 >
                   <item.icon className="text-[var(--gold)]" size={20} />
                   <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
@@ -302,15 +302,15 @@ export default async function AreaFuncionarioPage() {
         </section>
 
         <section className="shell pt-20">
-          <div className="luxury-card-dark rounded-[2.2rem] p-6 text-[var(--cream)]">
+          <div className="staff-cta-panel luxury-card-dark rounded-[2.2rem] p-6 text-[var(--cream)]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
-              <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-                Proximo clique
-              </p>
-              <h2 className="display-title page-section-title mt-4 text-white">
-                Acesse a central interna pelo fluxo recomendado para o seu cargo
-              </h2>
+                <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
+                  Proximo clique
+                </p>
+                <h2 className="display-title page-section-title mt-4 text-white">
+                  Acesse a central interna pelo fluxo recomendado para o seu cargo
+                </h2>
               </div>
               <Route className="text-[var(--gold-soft)]" size={22} />
             </div>

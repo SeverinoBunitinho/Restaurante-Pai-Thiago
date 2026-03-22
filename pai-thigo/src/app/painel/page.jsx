@@ -111,11 +111,11 @@ export default async function PainelPage() {
               </p>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(217,185,122,0.2)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(255,247,232,0.82)]">
+                <span className="staff-status-chip inline-flex items-center gap-2 rounded-full border border-[rgba(217,185,122,0.2)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(255,247,232,0.82)]">
                   <Radar size={14} />
                   turno sob controle
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(217,185,122,0.2)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(255,247,232,0.82)]">
+                <span className="staff-status-chip inline-flex items-center gap-2 rounded-full border border-[rgba(217,185,122,0.2)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(255,247,232,0.82)]">
                   <ShieldCheck size={14} />
                   leitura por cargo
                 </span>
@@ -144,7 +144,7 @@ export default async function PainelPage() {
                     return (
                       <article
                         key={reservation.id}
-                        className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] px-4 py-4"
+                        className="staff-surface-card rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] px-4 py-4"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -187,9 +187,9 @@ export default async function PainelPage() {
         </section>
 
         <section className="shell pt-20">
-          <div className="grid gap-4 rounded-[2.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.46)] px-5 py-5 shadow-[0_20px_60px_rgba(36,29,15,0.06)] sm:grid-cols-2 xl:grid-cols-5 lg:px-8">
+          <div className="staff-kpi-strip grid gap-4 rounded-[2.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.46)] px-5 py-5 shadow-[0_20px_60px_rgba(36,29,15,0.06)] sm:grid-cols-2 xl:grid-cols-5 lg:px-8">
             {commandCards.map((card) => (
-              <div key={card.label} className="rounded-[1.5rem] px-4 py-4">
+              <div key={card.label} className="staff-kpi-item rounded-[1.5rem] px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.24em] text-[var(--sage)]">
                   {card.label}
                 </p>
@@ -219,7 +219,7 @@ export default async function PainelPage() {
                   <Link
                     key={module.key}
                     href={module.href}
-                    className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5 transition hover:-translate-y-0.5"
+                    className="staff-feature-link rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
                   >
                     <module.icon className="text-[var(--gold)]" size={20} />
                     <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
@@ -246,7 +246,7 @@ export default async function PainelPage() {
                   tablesBoard.tables.slice(0, 4).map((table) => (
                     <article
                       key={table.id}
-                      className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
+                      className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div>
@@ -297,7 +297,7 @@ export default async function PainelPage() {
                     staffBoard.staff.slice(0, 4).map((member) => (
                       <article
                         key={member.id}
-                        className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
+                        className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -346,7 +346,7 @@ export default async function PainelPage() {
                     menuBoard.categories.slice(0, 3).map((category) => (
                       <article
                         key={category.id}
-                        className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
+                        className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -382,7 +382,7 @@ export default async function PainelPage() {
 
         {session.role === "owner" ? (
           <section className="shell pt-20">
-            <div className="luxury-card-dark rounded-[2.2rem] p-6 text-[var(--cream)]">
+            <div className="staff-cta-panel luxury-card-dark rounded-[2.2rem] p-6 text-[var(--cream)]">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">

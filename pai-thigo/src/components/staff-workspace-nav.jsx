@@ -33,11 +33,11 @@ export function StaffWorkspaceNav({ role }) {
 
   return (
     <aside className="staff-side-stack">
-      <div className="luxury-card rounded-[2rem] p-6">
+      <div className="staff-side-card luxury-card rounded-[2rem] p-6">
         <p className="text-xs uppercase tracking-[0.24em] text-[var(--gold)]">
           Navegacao da equipe
         </p>
-        <h2 className="mt-4 text-3xl font-semibold text-[var(--forest)]">
+        <h2 className="staff-side-title mt-4 font-semibold text-[var(--forest)]">
           Fluxo do {getStaffRoleLabel(role).toLowerCase()}
         </h2>
         <p className="mt-4 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
@@ -55,30 +55,30 @@ export function StaffWorkspaceNav({ role }) {
               className="staff-side-link"
               activeClassName="staff-side-link-active"
             >
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-full border border-[rgba(182,135,66,0.16)] bg-[rgba(255,255,255,0.62)] p-2 text-[var(--gold)]">
+              <div className="staff-side-link-copy flex items-start gap-3">
+                <div className="staff-side-link-icon mt-0.5 rounded-full border border-[rgba(182,135,66,0.16)] bg-[rgba(255,255,255,0.62)] p-2 text-[var(--gold)]">
                   <item.icon size={16} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--forest)]">
+                  <p className="staff-side-link-title text-sm font-semibold text-[var(--forest)]">
                     {item.title}
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                  <p className="staff-side-link-description mt-1 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
                     {item.description}
                   </p>
                 </div>
               </div>
-              <ArrowRight className="shrink-0 text-[var(--gold)]" size={16} />
+              <ArrowRight className="staff-side-arrow shrink-0 text-[var(--gold)]" size={16} />
             </ActiveLink>
           ))}
         </nav>
       </div>
 
-      <div className="luxury-card rounded-[2rem] p-6">
+      <div className="staff-side-card luxury-card rounded-[2rem] p-6">
         <p className="text-xs uppercase tracking-[0.24em] text-[var(--gold)]">
           Acesso rapido
         </p>
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="staff-quick-grid mt-5">
           {panel.quickItems.map((item) => (
             <ActiveLink
               key={item.key}
@@ -93,7 +93,7 @@ export function StaffWorkspaceNav({ role }) {
           ))}
         </div>
 
-        <div className="mt-6 rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.56)] px-4 py-4">
+        <div className="staff-side-note mt-6 rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.56)] px-4 py-4">
           <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
             <Route size={14} />
             leitura organizada
