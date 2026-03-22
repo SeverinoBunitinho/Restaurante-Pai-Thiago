@@ -45,19 +45,19 @@ export async function SiteHeader() {
       <header className="site-header-fixed">
         <div className="site-header-shell shell">
           <div className="site-header-card nav-pill rounded-[2.2rem] px-4 py-4 sm:px-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <Link href="/" className="flex items-center gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <Link href="/" className="flex w-full min-w-0 items-center gap-4 sm:w-auto">
                 <div className="relative flex h-13 w-13 items-center justify-center rounded-full border border-[rgba(217,185,122,0.18)] bg-[linear-gradient(135deg,var(--forest),#223a31)] text-[var(--cream)] shadow-[0_18px_34px_rgba(20,35,29,0.22)]">
                   <span className="display-title text-2xl font-semibold">P</span>
                   <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border border-[rgba(255,255,255,0.72)] bg-[var(--gold-soft)]" />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="hidden items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--sage)] sm:flex">
                     <span>Restaurante</span>
                     <Dot size={14} />
                     <span>{staffSession ? "acesso interno" : "reservas e atendimento"}</span>
                   </div>
-                  <p className="display-title text-[1.7rem] leading-none text-[var(--forest)] sm:text-[2rem]">
+                  <p className="display-title text-[1.45rem] leading-none text-[var(--forest)] sm:text-[2rem]">
                     {restaurantInfo.name}
                   </p>
                 </div>
@@ -77,7 +77,7 @@ export async function SiteHeader() {
                 ))}
               </nav>
 
-              <div className="flex items-center gap-2">
+              <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
                 {session ? (
                   <>
                     {session.role === "customer" ? (
@@ -96,7 +96,7 @@ export async function SiteHeader() {
                       </Link>
                     ) : null}
                     <form action={logoutAction}>
-                      <button type="submit" className="button-primary px-4 py-2.5">
+                      <button type="submit" className="button-primary px-3 py-2 sm:px-4 sm:py-2.5">
                         <LogOut size={16} />
                         Sair
                       </button>
