@@ -445,10 +445,6 @@ textarea {
   pointer-events: none;
 }
 
-.quote-panel::before {
-  content: "\201C";
-}
-
 .contact-chip {
   display: flex;
   flex-direction: column;
