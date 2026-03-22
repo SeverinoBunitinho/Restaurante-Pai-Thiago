@@ -63,19 +63,19 @@ export default async function AreaClientePage() {
                 </div>
               ) : null}
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <div className="feature-stat-grid feature-stat-grid-3 mt-8">
                 {dashboard.metrics.map((metric) => (
                   <div
                     key={metric.label}
-                    className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5"
+                    className="feature-stat-card rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5"
                   >
-                    <p className="text-xs uppercase tracking-[0.24em] text-[rgba(217,185,122,0.92)]">
+                    <p className="feature-stat-label text-xs uppercase tracking-[0.24em] text-[rgba(217,185,122,0.92)]">
                       {metric.label}
                     </p>
-                    <p className="mt-3 text-2xl font-semibold text-white">
+                    <p className="feature-stat-value mt-3 text-2xl font-semibold text-white">
                       {metric.value}
                     </p>
-                    <p className="mt-2 text-sm text-[rgba(255,247,232,0.72)]">
+                    <p className="feature-stat-body mt-2 text-sm text-[rgba(255,247,232,0.72)]">
                       {metric.description}
                     </p>
                   </div>

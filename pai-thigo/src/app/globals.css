@@ -285,6 +285,29 @@ textarea {
   gap: 1rem;
 }
 
+.feature-stat-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.feature-stat-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.feature-stat-label,
+.feature-stat-body {
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
+.feature-stat-value {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-wrap: balance;
+}
+
 .stat-panel {
   position: relative;
   overflow: hidden;
@@ -1139,6 +1162,12 @@ textarea {
   }
 }
 
+@media (min-width: 640px) {
+  .feature-stat-grid.feature-stat-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 1200px) {
   .operations-layout {
     grid-template-columns: minmax(0, 19rem) minmax(0, 1fr);
@@ -1148,6 +1177,10 @@ textarea {
   .staff-side-stack {
     position: sticky;
     top: 7.75rem;
+  }
+
+  .feature-stat-grid.feature-stat-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

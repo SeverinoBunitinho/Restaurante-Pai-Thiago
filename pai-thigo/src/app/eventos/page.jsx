@@ -71,42 +71,42 @@ export default async function EventosPage() {
                 facilitam o atendimento da equipe.
               </p>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <div className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
+              <div className="feature-stat-grid feature-stat-grid-3 mt-8">
+                <div className="feature-stat-card rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
                   <Gift className="text-[var(--gold-soft)]" size={18} />
-                  <p className="mt-4 text-sm font-semibold uppercase tracking-[0.22em] text-[rgba(217,185,122,0.9)]">
+                  <p className="feature-stat-label mt-4 text-sm font-semibold uppercase tracking-[0.22em] text-[rgba(217,185,122,0.9)]">
                     Relacionamento
                   </p>
-                  <p className="mt-3 text-2xl font-semibold text-white">
+                  <p className="feature-stat-value mt-3 text-2xl font-semibold text-white">
                     {dashboard.profile.loyaltyPoints} pontos
                   </p>
-                  <p className="mt-2 text-sm text-[rgba(255,247,232,0.74)]">
+                  <p className="feature-stat-body mt-2 text-sm text-[rgba(255,247,232,0.74)]">
                     Sua conta preserva historico e preferencias para agilizar o atendimento.
                   </p>
                 </div>
 
-                <div className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
+                <div className="feature-stat-card rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
                   <HeartHandshake className="text-[var(--gold-soft)]" size={18} />
-                  <p className="mt-4 text-sm font-semibold uppercase tracking-[0.22em] text-[rgba(217,185,122,0.9)]">
+                  <p className="feature-stat-label mt-4 text-sm font-semibold uppercase tracking-[0.22em] text-[rgba(217,185,122,0.9)]">
                     Ambiente favorito
                   </p>
-                  <p className="mt-3 text-2xl font-semibold text-white">
+                  <p className="feature-stat-value mt-3 text-2xl font-semibold text-white">
                     {dashboard.profile.preferredRoom}
                   </p>
-                  <p className="mt-2 text-sm text-[rgba(255,247,232,0.74)]">
+                  <p className="feature-stat-body mt-2 text-sm text-[rgba(255,247,232,0.74)]">
                     A equipe usa isso para sugerir o melhor clima para sua visita.
                   </p>
                 </div>
 
-                <div className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
+                <div className="feature-stat-card rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
                   <CalendarDays className="text-[var(--gold-soft)]" size={18} />
-                  <p className="mt-4 text-sm font-semibold uppercase tracking-[0.22em] text-[rgba(217,185,122,0.9)]">
+                  <p className="feature-stat-label mt-4 text-sm font-semibold uppercase tracking-[0.22em] text-[rgba(217,185,122,0.9)]">
                     Base da casa
                   </p>
-                  <p className="mt-3 text-lg font-semibold text-white">
+                  <p className="feature-stat-value mt-3 text-lg font-semibold text-white">
                     {restaurantInfo.address}
                   </p>
-                  <p className="mt-2 text-sm text-[rgba(255,247,232,0.74)]">
+                  <p className="feature-stat-body mt-2 text-sm text-[rgba(255,247,232,0.74)]">
                     {restaurantInfo.city}
                   </p>
                 </div>
