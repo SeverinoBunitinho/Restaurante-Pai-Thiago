@@ -80,6 +80,13 @@ function getComandasRedirect(tableName, extras = {}) {
   });
 }
 
+function getComandasCheckoutRedirect(checkoutReference, extras = {}) {
+  return buildRouteWithParams("/operacao/comandas", {
+    comanda: checkoutReference,
+    ...extras,
+  });
+}
+
 async function getWaiterCommissionRate(supabase) {
   const { data, error } = await supabase
     .from("restaurant_settings")
@@ -824,6 +831,96 @@ export async function updateOrderCheckoutStatusAction(formData) {
   await query;
 
   revalidateStaffPaths();
+}
+
+export async function closeOrderCheckoutAction(formData) {
+  await requireRole(["waiter", "manager", "owner"]);
+
+  const checkoutReference = String(formData.get("checkoutReference") ?? "").trim();
+  const status = String(formData.get("status") ?? "").trim();
+  const printCopy = String(formData.get("printCopy") ?? "").trim().toLowerCase();
+
+  const resolvedStatus =
+    status === "all" || orderStatuses.includes(status) ? status : "";
+  const resolvedPrintCopy = printCopy === "house" ? "house" : "customer";
+
+  if (!checkoutReference) {
+    redirect(
+      buildRouteWithParams("/operacao/comandas", {
+        status: resolvedStatus || undefined,
+        pedidoError: "Informe uma comanda valida para fechar e imprimir.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getComandasCheckoutRedirect(checkoutReference, {
+        status: resolvedStatus || undefined,
+        pedidoError: "Nao foi possivel conectar ao Supabase para fechar a comanda.",
+      }),
+    );
+  }
+
+  const existingOrdersResult = await supabase
+    .from("orders")
+    .select("id, status")
+    .eq("checkout_reference", checkoutReference);
+
+  if (existingOrdersResult.error || !existingOrdersResult.data?.length) {
+    redirect(
+      getComandasCheckoutRedirect(checkoutReference, {
+        status: resolvedStatus || undefined,
+        pedidoError: "Nenhum pedido foi encontrado para essa comanda.",
+      }),
+    );
+  }
+
+  const hasClosableOrders = existingOrdersResult.data.some(
+    (order) => order.status !== "cancelled",
+  );
+
+  if (!hasClosableOrders) {
+    redirect(
+      getComandasCheckoutRedirect(checkoutReference, {
+        status: resolvedStatus || undefined,
+        pedidoError:
+          "Essa comanda esta totalmente cancelada e nao pode gerar fechamento.",
+      }),
+    );
+  }
+
+  const hasOpenFlowOrders = existingOrdersResult.data.some(
+    (order) => order.status !== "delivered" && order.status !== "cancelled",
+  );
+
+  if (hasOpenFlowOrders) {
+    const updateResult = await supabase
+      .from("orders")
+      .update({ status: "delivered" })
+      .eq("checkout_reference", checkoutReference)
+      .neq("status", "cancelled");
+
+    if (updateResult.error) {
+      redirect(
+        getComandasCheckoutRedirect(checkoutReference, {
+          status: resolvedStatus || undefined,
+          pedidoError: "Nao foi possivel fechar o pedido para impressao agora.",
+        }),
+      );
+    }
+  }
+
+  revalidateStaffPaths();
+
+  redirect(
+    buildRouteWithParams("/impressao/conta", {
+      pedido: checkoutReference,
+      via: resolvedPrintCopy,
+    }),
+  );
 }
 
 export async function updateReservationStatusAction(formData) {

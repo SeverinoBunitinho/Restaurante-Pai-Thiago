@@ -11,6 +11,7 @@ import {
 import {
   addServiceCheckItemAction,
   cancelServiceCheckAction,
+  closeOrderCheckoutAction,
   closeServiceCheckAction,
   openServiceCheckAction,
   updateOrderCheckoutStatusAction,
@@ -112,7 +113,7 @@ function getOrderActions(status, fulfillmentType = "pickup") {
   return [];
 }
 
-function buildComandasHref({ mesa, status }) {
+function buildComandasHref({ mesa, status, comanda }) {
   const params = new URLSearchParams();
 
   if (mesa) {
@@ -123,9 +124,41 @@ function buildComandasHref({ mesa, status }) {
     params.set("status", status);
   }
 
+  if (comanda) {
+    params.set("comanda", comanda);
+  }
+
   const query = params.toString();
 
   return query ? `/operacao/comandas?${query}` : "/operacao/comandas";
+}
+
+function normalizeCheckoutReference(value) {
+  return String(value ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+}
+
+function findOrderGroupByReference(orderGroups, query) {
+  const normalizedQuery = normalizeCheckoutReference(query);
+
+  if (!normalizedQuery) {
+    return null;
+  }
+
+  return (
+    orderGroups.find(
+      (group) =>
+        normalizeCheckoutReference(group.checkoutReference) === normalizedQuery,
+    ) ??
+    orderGroups.find((group) =>
+      normalizeCheckoutReference(group.checkoutReference).includes(
+        normalizedQuery,
+      ),
+    ) ??
+    null
+  );
 }
 
 export default async function OperacaoComandasPage({ searchParams }) {
@@ -138,12 +171,21 @@ export default async function OperacaoComandasPage({ searchParams }) {
   const tableQuery = Array.isArray(resolvedSearchParams?.mesa)
     ? resolvedSearchParams.mesa[0]
     : resolvedSearchParams?.mesa;
+  const checkoutQuery = Array.isArray(resolvedSearchParams?.comanda)
+    ? resolvedSearchParams.comanda[0]
+    : resolvedSearchParams?.comanda;
   const commandaNotice = Array.isArray(resolvedSearchParams?.comandaNotice)
     ? resolvedSearchParams.comandaNotice[0]
     : resolvedSearchParams?.comandaNotice;
   const commandaError = Array.isArray(resolvedSearchParams?.comandaError)
     ? resolvedSearchParams.comandaError[0]
     : resolvedSearchParams?.comandaError;
+  const orderCheckoutNotice = Array.isArray(resolvedSearchParams?.pedidoNotice)
+    ? resolvedSearchParams.pedidoNotice[0]
+    : resolvedSearchParams?.pedidoNotice;
+  const orderCheckoutError = Array.isArray(resolvedSearchParams?.pedidoError)
+    ? resolvedSearchParams.pedidoError[0]
+    : resolvedSearchParams?.pedidoError;
 
   const [checksBoard, ordersBoard] = await Promise.all([
     getServiceChecksBoard(tableQuery ?? ""),
@@ -165,6 +207,14 @@ export default async function OperacaoComandasPage({ searchParams }) {
     activeStatus === "all"
       ? orderSections.filter((section) => (orderGroupsByStatus[section.key] ?? []).length)
       : orderSections.filter((section) => section.key === activeStatus);
+  const selectedOrderGroup = checkoutQuery
+    ? findOrderGroupByReference(groupedOrders, checkoutQuery)
+    : null;
+  const orderCheckoutSearchMessage =
+    orderCheckoutError ||
+    (checkoutQuery && !selectedOrderGroup
+      ? "Nenhum pedido foi localizado com essa comanda."
+      : "");
   const availableTables = checksBoard.tables.filter(
     (table) =>
       table.isActive &&
@@ -672,11 +722,152 @@ export default async function OperacaoComandasPage({ searchParams }) {
             compact
           />
 
+          <article className="mt-8 rounded-[1.8rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5">
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]">
+              Caixa sem mesa
+            </p>
+            <h3 className="mt-3 text-2xl font-semibold text-[var(--forest)]">
+              Buscar comanda, fechar pedido e emitir comprovante
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+              Para retirada ou delivery, o fechamento parte do numero da comanda.
+              O sistema mostra os dados do pedido e libera a impressao da via da
+              casa ou do cliente.
+            </p>
+
+            <form method="get" className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+              {activeStatus !== "all" ? (
+                <input type="hidden" name="status" value={activeStatus} />
+              ) : null}
+              <label className="grid gap-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
+                  Buscar por comanda
+                </span>
+                <input
+                  name="comanda"
+                  defaultValue={checkoutQuery ?? ""}
+                  placeholder="Ex.: CKT-24A91F3B"
+                  className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none placeholder:text-[rgba(21,35,29,0.46)]"
+                />
+              </label>
+              <button
+                type="submit"
+                className="button-primary w-full justify-center self-end md:w-auto"
+              >
+                <Search size={16} />
+                Buscar
+              </button>
+              <Link
+                href={buildComandasHref({ mesa: tableQuery ?? "", status: activeStatus })}
+                className="button-secondary w-full justify-center self-end md:w-auto"
+              >
+                Limpar busca
+              </Link>
+            </form>
+
+            {orderCheckoutSearchMessage ? (
+              <div className="mt-4 rounded-[1.4rem] border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-4 py-3 text-sm leading-6 text-[var(--clay)]">
+                {orderCheckoutSearchMessage}
+              </div>
+            ) : null}
+
+            {orderCheckoutNotice ? (
+              <div className="mt-4 rounded-[1.4rem] border border-[rgba(95,123,109,0.2)] bg-[rgba(95,123,109,0.08)] px-4 py-3 text-sm leading-6 text-[var(--forest)]">
+                {orderCheckoutNotice}
+              </div>
+            ) : null}
+
+            {selectedOrderGroup ? (
+              <div className="mt-5 rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.74)] p-4">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+                      Comanda {selectedOrderGroup.checkoutReference}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-[var(--forest)]">
+                      {selectedOrderGroup.guestName ||
+                        "Cliente identificado no checkout"}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                      Recebida em {formatDateTime(selectedOrderGroup.createdAt)}
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${
+                      (orderStatusMeta[selectedOrderGroup.status] ??
+                        orderStatusMeta.received).badge
+                    }`}
+                  >
+                    {(orderStatusMeta[selectedOrderGroup.status] ??
+                      orderStatusMeta.received).label}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <p className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] px-4 py-3 text-sm text-[rgba(21,35,29,0.72)]">
+                    <span className="font-semibold text-[var(--forest)]">Canal:</span>{" "}
+                    {getFulfillmentTypeLabel(selectedOrderGroup.fulfillmentType)}
+                  </p>
+                  <p className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] px-4 py-3 text-sm text-[rgba(21,35,29,0.72)]">
+                    <span className="font-semibold text-[var(--forest)]">Pagamento:</span>{" "}
+                    {getPaymentMethodLabel(selectedOrderGroup.paymentMethod)}
+                  </p>
+                  <p className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] px-4 py-3 text-sm text-[rgba(21,35,29,0.72)]">
+                    <span className="font-semibold text-[var(--forest)]">Total:</span>{" "}
+                    {formatCurrency(selectedOrderGroup.totalPrice)}
+                  </p>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <form action={closeOrderCheckoutAction}>
+                    <input
+                      type="hidden"
+                      name="checkoutReference"
+                      value={selectedOrderGroup.checkoutReference}
+                    />
+                    <input type="hidden" name="status" value={activeStatus} />
+                    <input type="hidden" name="printCopy" value="customer" />
+                    <button type="submit" className="button-primary">
+                      <Printer size={16} />
+                      Fechar e imprimir via cliente
+                    </button>
+                  </form>
+
+                  <form action={closeOrderCheckoutAction}>
+                    <input
+                      type="hidden"
+                      name="checkoutReference"
+                      value={selectedOrderGroup.checkoutReference}
+                    />
+                    <input type="hidden" name="status" value={activeStatus} />
+                    <input type="hidden" name="printCopy" value="house" />
+                    <button type="submit" className="button-secondary">
+                      <ReceiptText size={16} />
+                      Fechar e imprimir via casa
+                    </button>
+                  </form>
+
+                  <Link
+                    href={`/impressao/conta?pedido=${encodeURIComponent(selectedOrderGroup.checkoutReference)}&via=customer`}
+                    className="button-secondary"
+                  >
+                    <ReceiptText size={16} />
+                    Reimprimir comprovante
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+          </article>
+
           <div className="mt-6 flex flex-wrap gap-3">
             {orderFilters.map((filter) => (
               <Link
                 key={filter.value}
-                href={buildComandasHref({ mesa: tableQuery ?? "", status: filter.value })}
+                href={buildComandasHref({
+                  mesa: tableQuery ?? "",
+                  status: filter.value,
+                  comanda: checkoutQuery ?? "",
+                })}
                 className={`filter-chip ${activeStatus === filter.value ? "filter-chip-active" : ""}`}
               >
                 {filter.label}

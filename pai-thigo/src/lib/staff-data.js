@@ -84,14 +84,20 @@ function mapReservation(reservation) {
 }
 
 function mapOrder(order) {
+  const quantity = Number(order.quantity ?? 0);
+  const totalPrice = Number(order.total_price ?? 0);
+
   return {
     id: order.id,
     guestName: order.guest_name,
     guestEmail: order.guest_email ?? "",
     checkoutReference: order.checkout_reference ?? "",
     itemName: order.item_name,
-    quantity: order.quantity,
-    totalPrice: Number(order.total_price),
+    quantity,
+    unitPrice:
+      Number(order.unit_price ?? NaN) ||
+      (quantity > 0 ? totalPrice / quantity : 0),
+    totalPrice,
     notes: order.notes ?? "",
     paymentMethod: order.payment_method ?? "pix",
     fulfillmentType: order.fulfillment_type ?? "pickup",
@@ -996,7 +1002,7 @@ export async function getOrdersBoard() {
   const ordersResult = await supabase
     .from("orders")
     .select(
-      "id, guest_name, guest_email, checkout_reference, item_name, quantity, total_price, notes, payment_method, fulfillment_type, delivery_neighborhood, delivery_address, delivery_reference, delivery_fee, delivery_eta_minutes, status, created_at",
+      "id, guest_name, guest_email, checkout_reference, item_name, quantity, unit_price, total_price, notes, payment_method, fulfillment_type, delivery_neighborhood, delivery_address, delivery_reference, delivery_fee, delivery_eta_minutes, status, created_at",
     )
     .order("created_at", { ascending: false })
     .limit(18);
@@ -1035,5 +1041,47 @@ export async function getOrdersBoard() {
     liveOrders,
     groupedOrders,
     usingSupabase: true,
+  };
+}
+
+export async function getOrderCheckoutPrintReport(checkoutReference) {
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase || !checkoutReference) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select(
+      "id, guest_name, guest_email, checkout_reference, item_name, quantity, unit_price, total_price, notes, payment_method, fulfillment_type, delivery_neighborhood, delivery_address, delivery_reference, delivery_fee, delivery_eta_minutes, status, created_at, updated_at",
+    )
+    .eq("checkout_reference", checkoutReference)
+    .order("created_at", { ascending: true });
+
+  if (error || !data?.length) {
+    return null;
+  }
+
+  const mappedOrders = data.map(mapOrder);
+  const groupedOrders = groupOrdersByCheckout(mappedOrders);
+  const report =
+    groupedOrders.find(
+      (group) => group.checkoutReference === checkoutReference,
+    ) ?? groupedOrders[0];
+
+  if (!report) {
+    return null;
+  }
+
+  const firstOrder = data[0];
+  const lastOrder = data[data.length - 1];
+
+  return {
+    ...report,
+    guestName: report.guestName || firstOrder.guest_name || "",
+    guestEmail: report.guestEmail || firstOrder.guest_email || "",
+    createdAt: report.createdAt,
+    updatedAt: lastOrder.updated_at || lastOrder.created_at,
   };
 }
