@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import { BellRing, CalendarRange, ClipboardList, RefreshCw, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+
+import {
+  getUnreadCount,
+  markNotificationAsRead,
+  NOTIFICATION_READ_EVENT,
+} from "@/lib/notification-read-state";
 
 function formatBadgeCount(value) {
   if (!Number.isFinite(value) || value <= 0) {
@@ -21,13 +27,30 @@ export function NotificationCenter({
   items = [],
   ordersCount = 0,
   reservationsCount = 0,
+  ordersLatestAt = 0,
+  reservationsLatestAt = 0,
   staffSession = false,
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const panelRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const [, setVersion] = useState(0);
 
-  const totalCount = Math.max(0, Number(ordersCount ?? 0) + Number(reservationsCount ?? 0));
+  const unreadOrdersCount = getUnreadCount(
+    ordersCount,
+    "orders",
+    staffSession,
+    ordersLatestAt,
+  );
+  const unreadReservationsCount = getUnreadCount(
+    reservationsCount,
+    "reservations",
+    staffSession,
+    reservationsLatestAt,
+  );
+
+  const totalCount = Math.max(0, unreadOrdersCount + unreadReservationsCount);
 
   const normalizedItems = useMemo(
     () =>
@@ -36,6 +59,47 @@ export function NotificationCenter({
         : [],
     [items],
   );
+
+  useEffect(() => {
+    const refresh = () => {
+      setVersion((currentValue) => currentValue + 1);
+    };
+
+    window.addEventListener(NOTIFICATION_READ_EVENT, refresh);
+    window.addEventListener("storage", refresh);
+
+    return () => {
+      window.removeEventListener(NOTIFICATION_READ_EVENT, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  useEffect(() => {
+    const viewingOrders = staffSession
+      ? pathname?.startsWith("/operacao/comandas")
+      : pathname === "/pedidos";
+    const viewingReservations = staffSession
+      ? pathname?.startsWith("/operacao/reservas")
+      : pathname === "/reservas";
+
+    if (viewingOrders) {
+      markNotificationAsRead("orders", staffSession, ordersLatestAt);
+    }
+
+    if (viewingReservations) {
+      markNotificationAsRead("reservations", staffSession, reservationsLatestAt);
+    }
+  }, [
+    pathname,
+    staffSession,
+    ordersLatestAt,
+    reservationsLatestAt,
+  ]);
+
+  const markVisibleAsRead = () => {
+    markNotificationAsRead("orders", staffSession, ordersLatestAt);
+    markNotificationAsRead("reservations", staffSession, reservationsLatestAt);
+  };
 
   useEffect(() => {
     if (!open) {
@@ -68,7 +132,17 @@ export function NotificationCenter({
       <button
         type="button"
         className={`notification-center-trigger ${open ? "notification-center-trigger-active" : ""}`}
-        onClick={() => setOpen((currentValue) => !currentValue)}
+        onClick={() =>
+          setOpen((currentValue) => {
+            const nextValue = !currentValue;
+
+            if (nextValue) {
+              markVisibleAsRead();
+            }
+
+            return nextValue;
+          })
+        }
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={`Central de notificacoes${totalCount ? ` com ${totalCount} novas` : ""}`}
@@ -102,19 +176,38 @@ export function NotificationCenter({
             <span className="notification-count-pill">
               <ClipboardList size={14} />
               Pedidos
-              <strong>{formatBadgeCount(ordersCount) || "0"}</strong>
+              <strong>{formatBadgeCount(unreadOrdersCount) || "0"}</strong>
             </span>
             <span className="notification-count-pill">
               <CalendarRange size={14} />
               Reservas
-              <strong>{formatBadgeCount(reservationsCount) || "0"}</strong>
+              <strong>{formatBadgeCount(unreadReservationsCount) || "0"}</strong>
             </span>
           </div>
 
           <div className="notification-center-feed">
             {normalizedItems.length ? (
               normalizedItems.map((item) => (
-                <Link key={item.id} href={item.href} className="notification-feed-item" onClick={() => setOpen(false)}>
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className="notification-feed-item"
+                  onClick={() => {
+                    if (item.kind === "order") {
+                      markNotificationAsRead("orders", staffSession, ordersLatestAt);
+                    }
+
+                    if (item.kind === "reservation") {
+                      markNotificationAsRead(
+                        "reservations",
+                        staffSession,
+                        reservationsLatestAt,
+                      );
+                    }
+
+                    setOpen(false);
+                  }}
+                >
                   <p className="notification-feed-title">{item.title}</p>
                   <p className="notification-feed-detail">{item.detail}</p>
                   <p className="notification-feed-time">{item.timestamp || "Agora"}</p>

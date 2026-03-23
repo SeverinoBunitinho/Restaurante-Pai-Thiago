@@ -10,6 +10,7 @@ import {
 import { logoutAction } from "@/app/login/actions";
 import { ActiveLink } from "@/components/active-link";
 import { CartHeaderLink } from "@/components/cart-header-link";
+import { NotificationCountBadge } from "@/components/notification-count-badge";
 import { NotificationCenter } from "@/components/notification-center";
 import {
   getCurrentSession,
@@ -19,18 +20,6 @@ import {
 } from "@/lib/auth";
 import { getRestaurantProfile } from "@/lib/restaurant-profile";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-
-function formatBadgeCount(value) {
-  if (!Number.isFinite(value) || value <= 0) {
-    return "";
-  }
-
-  if (value > 99) {
-    return "99+";
-  }
-
-  return String(value);
-}
 
 function getOrderStatusLabel(value) {
   const labels = {
@@ -88,6 +77,8 @@ async function getHeaderNotificationContext(session) {
   const emptyContext = {
     orders: 0,
     reservations: 0,
+    ordersLatestAt: 0,
+    reservationsLatestAt: 0,
     items: [],
   };
 
@@ -133,9 +124,12 @@ async function getHeaderNotificationContext(session) {
     }
 
     const feed = [];
+    let ordersLatestAt = 0;
+    let reservationsLatestAt = 0;
 
     for (const order of recentOrdersResult.data ?? []) {
       const eventAt = order.updated_at ?? order.created_at;
+      ordersLatestAt = Math.max(ordersLatestAt, toEpoch(eventAt));
       feed.push({
         id: `order:${order.id}:${order.status}`,
         kind: "order",
@@ -151,6 +145,7 @@ async function getHeaderNotificationContext(session) {
 
     for (const reservation of recentReservationsResult.data ?? []) {
       const eventAt = reservation.updated_at ?? reservation.created_at;
+      reservationsLatestAt = Math.max(reservationsLatestAt, toEpoch(eventAt));
       const hourLabel = String(reservation.reservation_time ?? "").slice(0, 5);
       feed.push({
         id: `reservation:${reservation.id}:${reservation.status}`,
@@ -180,6 +175,8 @@ async function getHeaderNotificationContext(session) {
     return {
       orders: ordersCountResult.count ?? 0,
       reservations: reservationsCountResult.count ?? 0,
+      ordersLatestAt,
+      reservationsLatestAt,
       items: uniqueFeed,
     };
   }
@@ -220,9 +217,12 @@ async function getHeaderNotificationContext(session) {
   }
 
   const feed = [];
+  let ordersLatestAt = 0;
+  let reservationsLatestAt = 0;
 
   for (const order of recentOrdersResult.data ?? []) {
     const eventAt = order.updated_at ?? order.created_at;
+    ordersLatestAt = Math.max(ordersLatestAt, toEpoch(eventAt));
     feed.push({
       id: `order:${order.id}:${order.status}`,
       kind: "order",
@@ -238,6 +238,7 @@ async function getHeaderNotificationContext(session) {
 
   for (const reservation of recentReservationsResult.data ?? []) {
     const eventAt = reservation.updated_at ?? reservation.created_at;
+    reservationsLatestAt = Math.max(reservationsLatestAt, toEpoch(eventAt));
     const dayLabel = String(reservation.reservation_date ?? "");
     const hourLabel = String(reservation.reservation_time ?? "").slice(0, 5);
     feed.push({
@@ -268,6 +269,8 @@ async function getHeaderNotificationContext(session) {
   return {
     orders: ordersCountResult.count ?? 0,
     reservations: reservationsCountResult.count ?? 0,
+    ordersLatestAt,
+    reservationsLatestAt,
     items: uniqueFeed,
   };
 }
@@ -280,17 +283,43 @@ export async function SiteHeader() {
   ]);
   const staffSession = isStaffRole(session?.role);
   const navItems = staffSession
-    ? [
+      ? [
         { href: "/painel", label: "Painel", exact: true },
-        { href: "/operacao/comandas", label: "Pedidos", badgeCount: notificationContext.orders },
-        { href: "/operacao/reservas", label: "Reservas", badgeCount: notificationContext.reservations },
+        {
+          href: "/operacao/comandas",
+          label: "Pedidos",
+          badgeCount: notificationContext.orders,
+          badgeKind: "orders",
+          badgeLatestAt: notificationContext.ordersLatestAt,
+        },
+        {
+          href: "/operacao/reservas",
+          label: "Reservas",
+          badgeCount: notificationContext.reservations,
+          badgeKind: "reservations",
+          badgeLatestAt: notificationContext.reservationsLatestAt,
+        },
         { href: "/operacao", label: "Central", exact: true },
         { href: "/area-funcionario", label: "Portal", exact: true },
       ]
     : [
         { href: "/cardapio", label: "Cardapio", exact: true },
-        { href: "/pedidos", label: "Pedidos", exact: true, badgeCount: notificationContext.orders },
-        { href: "/reservas", label: "Reservas", exact: true, badgeCount: notificationContext.reservations },
+        {
+          href: "/pedidos",
+          label: "Pedidos",
+          exact: true,
+          badgeCount: notificationContext.orders,
+          badgeKind: "orders",
+          badgeLatestAt: notificationContext.ordersLatestAt,
+        },
+        {
+          href: "/reservas",
+          label: "Reservas",
+          exact: true,
+          badgeCount: notificationContext.reservations,
+          badgeKind: "reservations",
+          badgeLatestAt: notificationContext.reservationsLatestAt,
+        },
         { href: "/eventos", label: "Eventos", exact: true },
         { href: "/contato", label: "Contato", exact: true },
         { href: "/area-cliente", label: "Perfil", exact: true },
@@ -332,10 +361,15 @@ export async function SiteHeader() {
                   >
                     <span className="nav-link-content">
                       <span>{item.label}</span>
-                      {item.badgeCount ? (
-                        <span className="nav-link-badge" aria-label={`${item.badgeCount} notificacoes`}>
-                          {formatBadgeCount(item.badgeCount)}
-                        </span>
+                      {item.badgeCount && item.badgeKind ? (
+                        <NotificationCountBadge
+                          count={item.badgeCount}
+                          latestAt={item.badgeLatestAt}
+                          kind={item.badgeKind}
+                          staffSession={staffSession}
+                          className="nav-link-badge"
+                          ariaLabel={`${item.badgeCount} notificacoes`}
+                        />
                       ) : null}
                     </span>
                   </ActiveLink>
@@ -364,6 +398,8 @@ export async function SiteHeader() {
                       staffSession={staffSession}
                       ordersCount={notificationContext.orders}
                       reservationsCount={notificationContext.reservations}
+                      ordersLatestAt={notificationContext.ordersLatestAt}
+                      reservationsLatestAt={notificationContext.reservationsLatestAt}
                       items={notificationContext.items}
                     />
                     <form action={logoutAction}>
@@ -398,10 +434,15 @@ export async function SiteHeader() {
                 >
                   <span className="mobile-nav-link-content">
                     <span>{item.label}</span>
-                    {item.badgeCount ? (
-                      <span className="mobile-nav-link-badge" aria-label={`${item.badgeCount} notificacoes`}>
-                        {formatBadgeCount(item.badgeCount)}
-                      </span>
+                    {item.badgeCount && item.badgeKind ? (
+                      <NotificationCountBadge
+                        count={item.badgeCount}
+                        latestAt={item.badgeLatestAt}
+                        kind={item.badgeKind}
+                        staffSession={staffSession}
+                        className="mobile-nav-link-badge"
+                        ariaLabel={`${item.badgeCount} notificacoes`}
+                      />
                     ) : null}
                   </span>
                 </ActiveLink>
