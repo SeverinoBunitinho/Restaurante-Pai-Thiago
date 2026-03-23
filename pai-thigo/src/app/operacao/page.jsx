@@ -21,7 +21,7 @@ const roleFlows = {
       title: "Conduzir atendimento",
       description:
         "Use hospitalidade para ganhar contexto e a fila para agir no momento certo.",
-      keys: ["comandas", "reservas"],
+      keys: ["comandas", "cozinha", "reservas"],
     },
     {
       title: "Acompanhar o turno",
@@ -46,8 +46,8 @@ const roleFlows = {
     {
       title: "Ajustar oferta",
       description:
-        "Entre no cardapio interno e na configuracao da casa para alinhar frente, cozinha e canais digitais.",
-      keys: ["menu", "configuracoes", "painel"],
+        "Ajuste cardapio, previsao e campanhas para alinhar frente, cozinha e demanda digital.",
+      keys: ["menu", "previsao", "campanhas", "configuracoes", "painel"],
     },
   ],
   owner: [
@@ -60,8 +60,8 @@ const roleFlows = {
     {
       title: "Corrigir estrutura",
       description:
-        "Passe por equipe, acomodacao, reservas e configuracoes para remover friccao da casa.",
-      keys: ["equipe", "mesas", "reservas", "configuracoes"],
+        "Passe por equipe, escala, acomodacao e configuracoes para remover friccao da casa.",
+      keys: ["equipe", "escala", "mesas", "reservas", "configuracoes"],
     },
     {
       title: "Sustentar a experiencia",
@@ -75,18 +75,18 @@ const roleFlows = {
 const roleProtocols = {
   waiter: [
     "Confira primeiro as reservas sem mesa antes do horario de pico.",
-    "Use hospitalidade para saber quem chega com celebracao ou observacao especial.",
+    "Use a fila da cozinha para priorizar preparo e entrega sem perder o ritmo do salao.",
     "Volte para o painel do turno sempre que o salao mudar de ritmo.",
   ],
   manager: [
     "Abra a equipe antes do turno para evitar acessos sem cobertura da escala.",
-    "Use acomodacao para redistribuir o salao e menu para alinhar a cozinha.",
-    "Trate reservas, hospitalidade e setores como trilhas separadas para decidir melhor.",
+    "Use previsao e campanhas para ajustar demanda antes de mexer na operacao ao vivo.",
+    "Trate reservas, cozinha e cobertura de equipe como trilhas separadas para decidir melhor.",
   ],
   owner: [
     "Entre no executivo para medir a casa antes de entrar nos detalhes.",
-    "Desca para equipe e acomodacao quando houver risco operacional.",
-    "Use o painel do turno para leituras rapidas e a central para decidir por frentes.",
+    "Desca para auditoria e equipe quando houver risco operacional.",
+    "Use previsao, campanhas e painel para decidir por frentes sem repetir leitura.",
   ],
 };
 

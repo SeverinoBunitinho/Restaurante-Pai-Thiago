@@ -190,6 +190,68 @@ create table if not exists public.service_check_items (
   created_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.staff_shifts (
+  id uuid primary key default gen_random_uuid(),
+  staff_id uuid not null references public.staff_directory(id) on delete cascade,
+  created_by_user_id uuid not null references public.profiles(user_id) on delete restrict,
+  role text not null check (role in ('waiter', 'manager')),
+  shift_date date not null,
+  shift_label text not null default 'turno',
+  starts_at time not null,
+  ends_at time not null,
+  status text not null default 'planned' check (status in ('planned', 'confirmed', 'completed', 'absent')),
+  notes text,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  unique (staff_id, shift_date, shift_label)
+);
+
+create table if not exists public.marketing_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  created_by_user_id uuid not null references public.profiles(user_id) on delete restrict,
+  title text not null,
+  description text,
+  channel text not null default 'site' check (channel in ('site', 'whatsapp', 'instagram', 'email', 'interno')),
+  starts_on date not null,
+  ends_on date not null,
+  status text not null default 'draft' check (status in ('draft', 'active', 'paused', 'finished')),
+  target_audience text,
+  highlight_offer text,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.marketing_coupons (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid references public.marketing_campaigns(id) on delete set null,
+  created_by_user_id uuid not null references public.profiles(user_id) on delete restrict,
+  code text not null unique,
+  coupon_type text not null check (coupon_type in ('percentage', 'fixed_amount')),
+  amount numeric(10, 2) not null check (amount > 0),
+  min_order numeric(10, 2) not null default 0 check (min_order >= 0),
+  usage_limit integer check (usage_limit is null or usage_limit > 0),
+  usage_count integer not null default 0 check (usage_count >= 0),
+  is_active boolean not null default true,
+  starts_on date not null,
+  ends_on date not null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
+create table if not exists public.operation_audit_logs (
+  id uuid primary key default gen_random_uuid(),
+  actor_user_id uuid references public.profiles(user_id) on delete set null,
+  actor_name text,
+  actor_role text,
+  event_type text not null,
+  entity_type text not null,
+  entity_id text,
+  entity_label text,
+  description text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
 alter table public.orders
 add column if not exists checkout_reference text;
 
@@ -278,6 +340,24 @@ execute procedure public.touch_updated_at();
 drop trigger if exists touch_delivery_zones_updated_at on public.delivery_zones;
 create trigger touch_delivery_zones_updated_at
 before update on public.delivery_zones
+for each row
+execute procedure public.touch_updated_at();
+
+drop trigger if exists touch_staff_shifts_updated_at on public.staff_shifts;
+create trigger touch_staff_shifts_updated_at
+before update on public.staff_shifts
+for each row
+execute procedure public.touch_updated_at();
+
+drop trigger if exists touch_marketing_campaigns_updated_at on public.marketing_campaigns;
+create trigger touch_marketing_campaigns_updated_at
+before update on public.marketing_campaigns
+for each row
+execute procedure public.touch_updated_at();
+
+drop trigger if exists touch_marketing_coupons_updated_at on public.marketing_coupons;
+create trigger touch_marketing_coupons_updated_at
+before update on public.marketing_coupons
 for each row
 execute procedure public.touch_updated_at();
 
@@ -444,6 +524,10 @@ alter table public.reservations enable row level security;
 alter table public.orders enable row level security;
 alter table public.service_checks enable row level security;
 alter table public.service_check_items enable row level security;
+alter table public.staff_shifts enable row level security;
+alter table public.marketing_campaigns enable row level security;
+alter table public.marketing_coupons enable row level security;
+alter table public.operation_audit_logs enable row level security;
 
 drop policy if exists "Managers and owners can read staff directory" on public.staff_directory;
 create policy "Managers and owners can read staff directory"
@@ -653,6 +737,65 @@ to authenticated
 using (public.current_app_role() in ('waiter', 'manager', 'owner'))
 with check (public.current_app_role() in ('waiter', 'manager', 'owner'));
 
+drop policy if exists "Managers and owners can read staff shifts" on public.staff_shifts;
+create policy "Managers and owners can read staff shifts"
+on public.staff_shifts
+for select
+to authenticated
+using (public.current_app_role() in ('manager', 'owner'));
+
+drop policy if exists "Managers and owners can manage staff shifts" on public.staff_shifts;
+create policy "Managers and owners can manage staff shifts"
+on public.staff_shifts
+for all
+to authenticated
+using (public.current_app_role() in ('manager', 'owner'))
+with check (public.current_app_role() in ('manager', 'owner'));
+
+drop policy if exists "Managers and owners can read campaigns" on public.marketing_campaigns;
+create policy "Managers and owners can read campaigns"
+on public.marketing_campaigns
+for select
+to authenticated
+using (public.current_app_role() in ('manager', 'owner'));
+
+drop policy if exists "Managers and owners can manage campaigns" on public.marketing_campaigns;
+create policy "Managers and owners can manage campaigns"
+on public.marketing_campaigns
+for all
+to authenticated
+using (public.current_app_role() in ('manager', 'owner'))
+with check (public.current_app_role() in ('manager', 'owner'));
+
+drop policy if exists "Managers and owners can read coupons" on public.marketing_coupons;
+create policy "Managers and owners can read coupons"
+on public.marketing_coupons
+for select
+to authenticated
+using (public.current_app_role() in ('manager', 'owner'));
+
+drop policy if exists "Managers and owners can manage coupons" on public.marketing_coupons;
+create policy "Managers and owners can manage coupons"
+on public.marketing_coupons
+for all
+to authenticated
+using (public.current_app_role() in ('manager', 'owner'))
+with check (public.current_app_role() in ('manager', 'owner'));
+
+drop policy if exists "Owners can read operation audit logs" on public.operation_audit_logs;
+create policy "Owners can read operation audit logs"
+on public.operation_audit_logs
+for select
+to authenticated
+using (public.current_app_role() = 'owner');
+
+drop policy if exists "Staff can insert operation audit logs" on public.operation_audit_logs;
+create policy "Staff can insert operation audit logs"
+on public.operation_audit_logs
+for insert
+to authenticated
+with check (public.current_app_role() in ('waiter', 'manager', 'owner'));
+
 alter table public.profiles replica identity full;
 alter table public.staff_directory replica identity full;
 alter table public.restaurant_tables replica identity full;
@@ -664,6 +807,10 @@ alter table public.reservations replica identity full;
 alter table public.orders replica identity full;
 alter table public.service_checks replica identity full;
 alter table public.service_check_items replica identity full;
+alter table public.staff_shifts replica identity full;
+alter table public.marketing_campaigns replica identity full;
+alter table public.marketing_coupons replica identity full;
+alter table public.operation_audit_logs replica identity full;
 
 do $$
 begin
@@ -776,6 +923,46 @@ begin
         and tablename = 'service_check_items'
     ) then
       execute 'alter publication supabase_realtime add table public.service_check_items';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'staff_shifts'
+    ) then
+      execute 'alter publication supabase_realtime add table public.staff_shifts';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'marketing_campaigns'
+    ) then
+      execute 'alter publication supabase_realtime add table public.marketing_campaigns';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'marketing_coupons'
+    ) then
+      execute 'alter publication supabase_realtime add table public.marketing_coupons';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'operation_audit_logs'
+    ) then
+      execute 'alter publication supabase_realtime add table public.operation_audit_logs';
     end if;
   end if;
 end;

@@ -87,6 +87,11 @@ function getRealtimeTables(pathname) {
     return Array.from(tables);
   }
 
+  if (pathname.startsWith("/operacao/cozinha")) {
+    addTables("orders", "service_checks", "service_check_items");
+    return Array.from(tables);
+  }
+
   if (pathname.startsWith("/operacao/reservas")) {
     addTables("reservations", "orders", "restaurant_tables");
     return Array.from(tables);
@@ -104,6 +109,26 @@ function getRealtimeTables(pathname) {
 
   if (pathname.startsWith("/operacao/equipe")) {
     addTables("staff_directory", "profiles", "reservations", "orders");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/escala")) {
+    addTables("staff_shifts", "staff_directory", "profiles");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/campanhas")) {
+    addTables("marketing_campaigns", "marketing_coupons", "orders");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/auditoria")) {
+    addTables("operation_audit_logs");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/previsao")) {
+    addTables("orders", "reservations", "service_checks");
     return Array.from(tables);
   }
 
@@ -178,9 +203,14 @@ function getPrefetchRoutes(pathname) {
       "/operacao/reservas",
       "/operacao/mesas",
       "/operacao/comandas",
+      "/operacao/cozinha",
       "/operacao/menu",
       "/operacao/equipe",
+      "/operacao/escala",
+      "/operacao/campanhas",
       "/operacao/relatorios",
+      "/operacao/previsao",
+      "/operacao/auditoria",
       "/operacao/configuracoes",
       "/operacao/executivo",
     ];

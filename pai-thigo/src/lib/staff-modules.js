@@ -49,12 +49,30 @@ const allModules = [
     roles: ["waiter", "manager", "owner"],
   },
   {
+    key: "cozinha",
+    href: "/operacao/cozinha",
+    title: "Fila da cozinha",
+    description:
+      "Organizar o preparo em tempo real, da entrada do pedido ate a expedicao.",
+    icon: ChefHat,
+    roles: ["waiter", "manager", "owner"],
+  },
+  {
     key: "menu",
     href: "/operacao/menu",
     title: "Cardapio interno",
     description:
       "Ativar ou pausar pratos para alinhar o salao com a producao da cozinha.",
     icon: ChefHat,
+    roles: ["manager", "owner"],
+  },
+  {
+    key: "escala",
+    href: "/operacao/escala",
+    title: "Escala da equipe",
+    description:
+      "Planejar turnos por data e acompanhar cobertura operacional da casa.",
+    icon: CalendarClock,
     roles: ["manager", "owner"],
   },
   {
@@ -67,11 +85,29 @@ const allModules = [
     roles: ["manager", "owner"],
   },
   {
+    key: "campanhas",
+    href: "/operacao/campanhas",
+    title: "Campanhas e cupons",
+    description:
+      "Criar campanhas sazonais e cupons para ativar demanda sem baguncar a operacao.",
+    icon: BellRing,
+    roles: ["manager", "owner"],
+  },
+  {
     key: "relatorios",
     href: "/operacao/relatorios",
     title: "Relatorios e comissoes",
     description:
       "Calcular comissoes dos garcons e acompanhar ocupacao das mesas por periodo.",
+    icon: BarChart3,
+    roles: ["manager", "owner"],
+  },
+  {
+    key: "previsao",
+    href: "/operacao/previsao",
+    title: "Previsao de demanda",
+    description:
+      "Projetar reservas, pedidos e picos de atendimento para o proximo turno.",
     icon: BarChart3,
     roles: ["manager", "owner"],
   },
@@ -94,6 +130,15 @@ const allModules = [
     roles: ["owner"],
   },
   {
+    key: "auditoria",
+    href: "/operacao/auditoria",
+    title: "Auditoria operacional",
+    description:
+      "Rastrear alteracoes criticas para seguranca, governanca e conferencias internas.",
+    icon: ShieldCheck,
+    roles: ["owner"],
+  },
+  {
     key: "painel",
     href: "/painel",
     title: "Painel do turno",
@@ -109,8 +154,8 @@ const rolePanels = {
     title: "Fluxo do salao e atendimento",
     description:
       "O garcom recebe o cliente, abre a conta da mesa, lanca pedidos e acompanha o fechamento.",
-    quickKeys: ["comandas", "mesas", "reservas"],
-    focusKeys: ["comandas", "mesas", "reservas", "painel"],
+    quickKeys: ["comandas", "cozinha", "mesas"],
+    focusKeys: ["comandas", "cozinha", "mesas", "reservas", "painel"],
     highlights: [
       {
         icon: BellRing,
@@ -128,8 +173,21 @@ const rolePanels = {
     title: "Supervisao da equipe e da operacao",
     description:
       "O gerente distribui o time, cadastra garcons, acompanha comandas, comissoes, reservas e a leitura do salao.",
-    quickKeys: ["equipe", "comandas", "relatorios"],
-    focusKeys: ["equipe", "comandas", "relatorios", "mesas", "reservas", "menu", "configuracoes", "painel"],
+    quickKeys: ["equipe", "cozinha", "comandas"],
+    focusKeys: [
+      "equipe",
+      "escala",
+      "cozinha",
+      "comandas",
+      "relatorios",
+      "previsao",
+      "campanhas",
+      "mesas",
+      "reservas",
+      "menu",
+      "configuracoes",
+      "painel",
+    ],
     highlights: [
       {
         icon: BriefcaseBusiness,
@@ -147,8 +205,23 @@ const rolePanels = {
     title: "Controle executivo do restaurante",
     description:
       "O dono acompanha a operacao inteira, cadastra gerentes, corrige gargalos e observa os sinais estrategicos da casa.",
-    quickKeys: ["executivo", "relatorios", "equipe"],
-    focusKeys: ["executivo", "relatorios", "equipe", "comandas", "configuracoes", "menu", "mesas", "reservas", "painel"],
+    quickKeys: ["executivo", "auditoria", "relatorios"],
+    focusKeys: [
+      "executivo",
+      "auditoria",
+      "relatorios",
+      "previsao",
+      "campanhas",
+      "equipe",
+      "escala",
+      "cozinha",
+      "comandas",
+      "configuracoes",
+      "menu",
+      "mesas",
+      "reservas",
+      "painel",
+    ],
     highlights: [
       {
         icon: WalletCards,

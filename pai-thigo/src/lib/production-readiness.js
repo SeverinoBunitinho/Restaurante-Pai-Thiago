@@ -249,6 +249,10 @@ export const getProductionReadinessReport = cache(
           reservationsResult,
           serviceChecksResult,
           serviceCheckItemsResult,
+          shiftsResult,
+          campaignsResult,
+          couponsResult,
+          auditLogsResult,
         ] = await Promise.all([
           supabase.from("restaurant_settings").select("id").limit(1),
           supabase.from("delivery_zones").select("id").limit(1),
@@ -257,6 +261,10 @@ export const getProductionReadinessReport = cache(
           supabase.from("reservations").select("id").limit(1),
           supabase.from("service_checks").select("id").limit(1),
           supabase.from("service_check_items").select("id").limit(1),
+          supabase.from("staff_shifts").select("id").limit(1),
+          supabase.from("marketing_campaigns").select("id").limit(1),
+          supabase.from("marketing_coupons").select("id").limit(1),
+          supabase.from("operation_audit_logs").select("id").limit(1),
         ]);
 
         const queryResults = [
@@ -267,6 +275,10 @@ export const getProductionReadinessReport = cache(
           reservationsResult,
           serviceChecksResult,
           serviceCheckItemsResult,
+          shiftsResult,
+          campaignsResult,
+          couponsResult,
+          auditLogsResult,
         ];
         const queryErrors = queryResults.filter((result) => result.error);
 
@@ -305,7 +317,7 @@ export const getProductionReadinessReport = cache(
               label: "Estrutura critica do banco",
               status: "ok",
               detail:
-                "restaurant_settings, delivery_zones, menu_categories, restaurant_tables, reservations, service_checks e service_check_items responderam corretamente.",
+                "restaurant_settings, delivery_zones, menu_categories, restaurant_tables, reservations, service_checks, service_check_items, staff_shifts, marketing_campaigns, marketing_coupons e operation_audit_logs responderam corretamente.",
               category: "infra",
             });
       }

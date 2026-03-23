@@ -26,6 +26,10 @@ const orderStatuses = [
 ];
 
 const staffRoles = ["waiter", "manager"];
+const shiftStatuses = ["planned", "confirmed", "completed", "absent"];
+const campaignStatuses = ["draft", "active", "paused", "finished"];
+const campaignChannels = ["site", "whatsapp", "instagram", "email", "interno"];
+const couponTypes = ["percentage", "fixed_amount"];
 const paymentMethods = new Set(paymentMethodOptions.map((option) => option.value));
 
 function normalizeLines(value) {
@@ -53,6 +57,14 @@ function parseCurrencyValue(value) {
   return Number.isFinite(amount) ? amount : NaN;
 }
 
+function isDateOnly(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ""));
+}
+
+function isTimeOnly(value) {
+  return /^\d{2}:\d{2}$/.test(String(value ?? ""));
+}
+
 function buildRouteWithParams(pathname, params = {}) {
   const searchParams = new URLSearchParams();
 
@@ -73,6 +85,22 @@ function normalizeEmail(value) {
   return String(value ?? "").trim().toLowerCase();
 }
 
+function getStaffRoleLabelForAudit(role) {
+  if (role === "owner") {
+    return "Dono";
+  }
+
+  if (role === "manager") {
+    return "Gerente";
+  }
+
+  if (role === "waiter") {
+    return "Garcom";
+  }
+
+  return "Perfil";
+}
+
 function getComandasRedirect(tableName, extras = {}) {
   return buildRouteWithParams("/operacao/comandas", {
     mesa: tableName,
@@ -85,6 +113,34 @@ function getComandasCheckoutRedirect(checkoutReference, extras = {}) {
     comanda: checkoutReference,
     ...extras,
   });
+}
+
+function getEscalaRedirect(extras = {}) {
+  return buildRouteWithParams("/operacao/escala", extras);
+}
+
+function getCampanhasRedirect(extras = {}) {
+  return buildRouteWithParams("/operacao/campanhas", extras);
+}
+
+async function writeOperationAuditLog(supabase, session, payload) {
+  if (!supabase || !session?.profile?.user_id) {
+    return;
+  }
+
+  try {
+    await supabase.from("operation_audit_logs").insert({
+      actor_user_id: session.profile.user_id,
+      actor_name: session.profile.full_name || session.profile.email || "Equipe",
+      actor_role: session.role || "staff",
+      event_type: payload.eventType || "event",
+      entity_type: payload.entityType || "record",
+      entity_id: payload.entityId || null,
+      entity_label: payload.entityLabel || null,
+      description: payload.description || "",
+      metadata: payload.metadata ?? {},
+    });
+  } catch {}
 }
 
 async function getWaiterCommissionRate(supabase) {
@@ -159,6 +215,11 @@ function revalidateStaffPaths() {
   revalidatePath("/operacao/menu");
   revalidatePath("/operacao/relatorios");
   revalidatePath("/operacao/executivo");
+  revalidatePath("/operacao/cozinha");
+  revalidatePath("/operacao/escala");
+  revalidatePath("/operacao/campanhas");
+  revalidatePath("/operacao/auditoria");
+  revalidatePath("/operacao/previsao");
   revalidatePath("/impressao/conta");
   revalidatePath("/cardapio");
   revalidatePath("/carrinho");
@@ -283,6 +344,20 @@ export async function createStaffAccountAction(formData) {
     }
   }
 
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "staff_account_saved",
+    entityType: "staff_directory",
+    entityId: email,
+    entityLabel: fullName,
+    description: `${getStaffRoleLabelForAudit(role)} interno salvo pela gestao.`,
+    metadata: {
+      role,
+      email,
+      actorRole: session.role,
+      mode: existingUser ? "update" : "create",
+    },
+  });
+
   revalidateStaffPaths();
 
   redirect(
@@ -383,6 +458,19 @@ export async function openServiceCheckAction(formData) {
     );
   }
 
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "service_check_opened",
+    entityType: "service_check",
+    entityId: table.id,
+    entityLabel: table.name,
+    description: "Conta aberta no modulo de comandas.",
+    metadata: {
+      tableId: table.id,
+      tableName: table.name,
+      guestName: guestName || null,
+    },
+  });
+
   revalidateStaffPaths();
 
   redirect(
@@ -482,6 +570,18 @@ export async function addServiceCheckItemAction(formData) {
     );
   }
 
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "service_check_item_added",
+    entityType: "service_check",
+    entityId: checkId,
+    entityLabel: tableName || null,
+    description: "Item associado a conta de mesa.",
+    metadata: {
+      menuItemId,
+      quantity,
+    },
+  });
+
   revalidateStaffPaths();
 
   redirect(
@@ -547,6 +647,18 @@ export async function cancelServiceCheckAction(formData) {
       }),
     );
   }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "service_check_cancelled",
+    entityType: "service_check",
+    entityId: checkId,
+    entityLabel: tableName || null,
+    description: "Conta cancelada no modulo de comandas.",
+    metadata: {
+      checkId,
+      tableName,
+    },
+  });
 
   revalidateStaffPaths();
 
@@ -643,6 +755,20 @@ export async function closeServiceCheckAction(formData) {
       }),
     );
   }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "service_check_closed",
+    entityType: "service_check",
+    entityId: checkId,
+    entityLabel: tableName || null,
+    description: "Conta fechada com pagamento registrado.",
+    metadata: {
+      paymentMethod,
+      subtotal: totals.subtotal,
+      commissionRate,
+      commissionAmount,
+    },
+  });
 
   revalidateStaffPaths();
 
@@ -766,7 +892,7 @@ export async function deleteMenuItemAction(formData) {
 }
 
 export async function updateOrderStatusAction(formData) {
-  await requireRole(["waiter", "manager", "owner"]);
+  const session = await requireRole(["waiter", "manager", "owner"]);
 
   const orderId = String(formData.get("orderId") ?? "").trim();
   const nextStatus = String(formData.get("nextStatus") ?? "").trim();
@@ -781,13 +907,29 @@ export async function updateOrderStatusAction(formData) {
     return;
   }
 
-  await supabase.from("orders").update({ status: nextStatus }).eq("id", orderId);
+  const { error } = await supabase
+    .from("orders")
+    .update({ status: nextStatus })
+    .eq("id", orderId);
+
+  if (!error) {
+    await writeOperationAuditLog(supabase, session, {
+      eventType: "order_status_updated",
+      entityType: "order",
+      entityId: orderId,
+      entityLabel: orderId,
+      description: "Status de pedido atualizado pela equipe.",
+      metadata: {
+        nextStatus,
+      },
+    });
+  }
 
   revalidateStaffPaths();
 }
 
 export async function updateOrderCheckoutStatusAction(formData) {
-  await requireRole(["waiter", "manager", "owner"]);
+  const session = await requireRole(["waiter", "manager", "owner"]);
 
   const checkoutReference = String(formData.get("checkoutReference") ?? "").trim();
   const orderIdsPayload = String(formData.get("orderIds") ?? "").trim();
@@ -828,13 +970,27 @@ export async function updateOrderCheckoutStatusAction(formData) {
     query = query.eq("checkout_reference", checkoutReference);
   }
 
-  await query;
+  const { error } = await query;
+
+  if (!error) {
+    await writeOperationAuditLog(supabase, session, {
+      eventType: "order_status_updated",
+      entityType: "order_checkout",
+      entityId: checkoutReference || null,
+      entityLabel: checkoutReference || null,
+      description: "Status de pedido atualizado pela equipe.",
+      metadata: {
+        nextStatus,
+        orderCount: orderIds.length,
+      },
+    });
+  }
 
   revalidateStaffPaths();
 }
 
 export async function closeOrderCheckoutAction(formData) {
-  await requireRole(["waiter", "manager", "owner"]);
+  const session = await requireRole(["waiter", "manager", "owner"]);
 
   const checkoutReference = String(formData.get("checkoutReference") ?? "").trim();
   const status = String(formData.get("status") ?? "").trim();
@@ -915,6 +1071,18 @@ export async function closeOrderCheckoutAction(formData) {
 
   revalidateStaffPaths();
 
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "order_checkout_closed",
+    entityType: "order_checkout",
+    entityId: checkoutReference,
+    entityLabel: checkoutReference,
+    description: "Comanda de pedido fechada e enviada para impressao.",
+    metadata: {
+      printCopy: resolvedPrintCopy,
+      statusFilter: resolvedStatus || "all",
+    },
+  });
+
   redirect(
     buildRouteWithParams("/impressao/conta", {
       pedido: checkoutReference,
@@ -924,7 +1092,7 @@ export async function closeOrderCheckoutAction(formData) {
 }
 
 export async function updateReservationStatusAction(formData) {
-  await requireRole(["waiter", "manager", "owner"]);
+  const session = await requireRole(["waiter", "manager", "owner"]);
 
   const reservationId = String(formData.get("reservationId") ?? "").trim();
   const nextStatus = String(formData.get("nextStatus") ?? "").trim();
@@ -939,16 +1107,29 @@ export async function updateReservationStatusAction(formData) {
     return;
   }
 
-  await supabase
+  const { error } = await supabase
     .from("reservations")
     .update({ status: nextStatus })
     .eq("id", reservationId);
+
+  if (!error) {
+    await writeOperationAuditLog(supabase, session, {
+      eventType: "reservation_status_updated",
+      entityType: "reservation",
+      entityId: reservationId,
+      entityLabel: reservationId,
+      description: "Status da reserva atualizado na fila operacional.",
+      metadata: {
+        nextStatus,
+      },
+    });
+  }
 
   revalidateStaffPaths();
 }
 
 export async function assignReservationTableAction(formData) {
-  await requireRole(["waiter", "manager", "owner"]);
+  const session = await requireRole(["waiter", "manager", "owner"]);
 
   const reservationId = String(formData.get("reservationId") ?? "").trim();
   const tableId = String(formData.get("tableId") ?? "").trim();
@@ -963,16 +1144,31 @@ export async function assignReservationTableAction(formData) {
     return;
   }
 
-  await supabase
+  const { error } = await supabase
     .from("reservations")
     .update({ assigned_table_id: tableId || null })
     .eq("id", reservationId);
+
+  if (!error) {
+    await writeOperationAuditLog(supabase, session, {
+      eventType: "reservation_table_assigned",
+      entityType: "reservation",
+      entityId: reservationId,
+      entityLabel: reservationId,
+      description: tableId
+        ? "Mesa vinculada a reserva no modulo de acomodacao."
+        : "Mesa desvinculada da reserva no modulo de acomodacao.",
+      metadata: {
+        tableId: tableId || null,
+      },
+    });
+  }
 
   revalidateStaffPaths();
 }
 
 export async function toggleRestaurantTableActiveAction(formData) {
-  await requireRole(["manager", "owner"]);
+  const session = await requireRole(["manager", "owner"]);
 
   const tableId = String(formData.get("tableId") ?? "").trim();
   const currentActive = String(formData.get("currentActive") ?? "")
@@ -989,16 +1185,32 @@ export async function toggleRestaurantTableActiveAction(formData) {
     return;
   }
 
-  await supabase
+  const nextActive = currentActive !== "true";
+  const { error } = await supabase
     .from("restaurant_tables")
-    .update({ is_active: currentActive !== "true" })
+    .update({ is_active: nextActive })
     .eq("id", tableId);
+
+  if (!error) {
+    await writeOperationAuditLog(supabase, session, {
+      eventType: "table_state_changed",
+      entityType: "restaurant_table",
+      entityId: tableId,
+      entityLabel: tableId,
+      description: nextActive
+        ? "Mesa reativada para operacao."
+        : "Mesa pausada pela gestao.",
+      metadata: {
+        nextActive,
+      },
+    });
+  }
 
   revalidateStaffPaths();
 }
 
 export async function toggleMenuItemAvailabilityAction(formData) {
-  await requireRole(["manager", "owner"]);
+  const session = await requireRole(["manager", "owner"]);
 
   const itemId = String(formData.get("itemId") ?? "").trim();
   const currentAvailability = String(formData.get("currentAvailability") ?? "")
@@ -1015,10 +1227,26 @@ export async function toggleMenuItemAvailabilityAction(formData) {
     return;
   }
 
-  await supabase
+  const nextAvailable = currentAvailability !== "true";
+  const { error } = await supabase
     .from("menu_items")
-    .update({ is_available: currentAvailability !== "true" })
+    .update({ is_available: nextAvailable })
     .eq("id", itemId);
+
+  if (!error) {
+    await writeOperationAuditLog(supabase, session, {
+      eventType: "menu_item_availability_changed",
+      entityType: "menu_item",
+      entityId: itemId,
+      entityLabel: itemId,
+      description: nextAvailable
+        ? "Item de cardapio reativado."
+        : "Item de cardapio pausado.",
+      metadata: {
+        nextAvailable,
+      },
+    });
+  }
 
   revalidateStaffPaths();
 }
@@ -1028,11 +1256,15 @@ export async function toggleStaffDirectoryStatusAction(formData) {
 
   const staffId = String(formData.get("staffId") ?? "").trim();
   const staffRole = String(formData.get("staffRole") ?? "").trim();
-  const nextActive = String(formData.get("nextActive") ?? "")
+  const nextActiveValue = String(formData.get("nextActive") ?? "")
     .trim()
     .toLowerCase();
 
-  if (!staffId || !staffRole || (nextActive !== "true" && nextActive !== "false")) {
+  if (
+    !staffId ||
+    !staffRole ||
+    (nextActiveValue !== "true" && nextActiveValue !== "false")
+  ) {
     return;
   }
 
@@ -1050,10 +1282,27 @@ export async function toggleStaffDirectoryStatusAction(formData) {
     return;
   }
 
-  await supabase
+  const nextActive = nextActiveValue === "true";
+  const { error } = await supabase
     .from("staff_directory")
-    .update({ active: nextActive === "true" })
+    .update({ active: nextActive })
     .eq("id", staffId);
+
+  if (!error) {
+    await writeOperationAuditLog(supabase, session, {
+      eventType: "staff_directory_status_changed",
+      entityType: "staff_directory",
+      entityId: staffId,
+      entityLabel: staffId,
+      description: nextActive
+        ? "Acesso interno reativado para membro da equipe."
+        : "Acesso interno pausado para membro da equipe.",
+      metadata: {
+        staffRole,
+        nextActive,
+      },
+    });
+  }
 
   revalidateStaffPaths();
 }
@@ -1289,4 +1538,556 @@ export async function toggleDeliveryZoneActiveAction(formData) {
     .eq("id", zoneId);
 
   revalidateStaffPaths();
+}
+
+export async function createStaffShiftAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+
+  const staffId = String(formData.get("staffId") ?? "").trim();
+  const role = String(formData.get("role") ?? "").trim();
+  const shiftDate = String(formData.get("shiftDate") ?? "").trim();
+  const shiftLabel = String(formData.get("shiftLabel") ?? "").trim();
+  const startsAt = String(formData.get("startsAt") ?? "").trim();
+  const endsAt = String(formData.get("endsAt") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  const status = String(formData.get("status") ?? "planned").trim();
+
+  if (!staffId || !staffRoles.includes(role)) {
+    redirect(
+      getEscalaRedirect({
+        shiftError: "Selecione o membro da equipe e o cargo do turno.",
+      }),
+    );
+  }
+
+  if (!isDateOnly(shiftDate) || !isTimeOnly(startsAt) || !isTimeOnly(endsAt)) {
+    redirect(
+      getEscalaRedirect({
+        shiftError: "Informe data e horarios validos para salvar a escala.",
+      }),
+    );
+  }
+
+  if (startsAt >= endsAt) {
+    redirect(
+      getEscalaRedirect({
+        shiftError: "O horario de inicio precisa ser menor que o horario de fim.",
+      }),
+    );
+  }
+
+  if (!shiftStatuses.includes(status)) {
+    redirect(
+      getEscalaRedirect({
+        shiftError: "Status de turno invalido.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getEscalaRedirect({
+        shiftError: "Nao foi possivel conectar ao banco para salvar a escala.",
+      }),
+    );
+  }
+
+  const { data: staffMember, error: staffError } = await supabase
+    .from("staff_directory")
+    .select("id, role, full_name, active")
+    .eq("id", staffId)
+    .maybeSingle();
+
+  if (staffError || !staffMember || !staffMember.active) {
+    redirect(
+      getEscalaRedirect({
+        shiftError: "O membro selecionado nao esta ativo na equipe interna.",
+      }),
+    );
+  }
+
+  if (session.role === "manager" && staffMember.role !== "waiter") {
+    redirect(
+      getEscalaRedirect({
+        shiftError: "Gerente pode organizar apenas turnos dos garcons.",
+      }),
+    );
+  }
+
+  if (role !== staffMember.role) {
+    redirect(
+      getEscalaRedirect({
+        shiftError: "O cargo do turno precisa seguir o cargo real do colaborador.",
+      }),
+    );
+  }
+
+  const { error } = await supabase.from("staff_shifts").upsert(
+    {
+      staff_id: staffId,
+      role,
+      shift_date: shiftDate,
+      shift_label: shiftLabel || "turno",
+      starts_at: startsAt,
+      ends_at: endsAt,
+      status,
+      notes: notes || null,
+      created_by_user_id: session.profile.user_id,
+    },
+    {
+      onConflict: "staff_id,shift_date,shift_label",
+    },
+  );
+
+  if (error) {
+    redirect(
+      getEscalaRedirect({
+        shiftError:
+          "Nao foi possivel salvar esse turno. Verifique se a tabela de escala foi criada no banco.",
+      }),
+    );
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "staff_shift_saved",
+    entityType: "staff_shift",
+    entityId: staffId,
+    entityLabel: `${staffMember.full_name} - ${shiftDate}`,
+    description: "Turno salvo na escala da equipe.",
+    metadata: {
+      role,
+      shiftDate,
+      shiftLabel,
+      startsAt,
+      endsAt,
+      status,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    getEscalaRedirect({
+      shiftNotice: "Turno salvo com sucesso.",
+    }),
+  );
+}
+
+export async function updateStaffShiftStatusAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+
+  const shiftId = String(formData.get("shiftId") ?? "").trim();
+  const nextStatus = String(formData.get("nextStatus") ?? "").trim();
+
+  if (!shiftId || !shiftStatuses.includes(nextStatus)) {
+    redirect(
+      getEscalaRedirect({
+        shiftError: "Nao foi possivel atualizar o status desse turno.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getEscalaRedirect({
+        shiftError: "Nao foi possivel conectar ao banco para atualizar a escala.",
+      }),
+    );
+  }
+
+  const { error } = await supabase
+    .from("staff_shifts")
+    .update({ status: nextStatus })
+    .eq("id", shiftId);
+
+  if (error) {
+    redirect(
+      getEscalaRedirect({
+        shiftError:
+          "Nao foi possivel atualizar o status. Verifique a estrutura da tabela staff_shifts.",
+      }),
+    );
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "staff_shift_status_updated",
+    entityType: "staff_shift",
+    entityId: shiftId,
+    entityLabel: shiftId,
+    description: "Status de turno atualizado na escala.",
+    metadata: {
+      nextStatus,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    getEscalaRedirect({
+      shiftNotice: "Status do turno atualizado.",
+    }),
+  );
+}
+
+export async function deleteStaffShiftAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+
+  const shiftId = String(formData.get("shiftId") ?? "").trim();
+
+  if (!shiftId) {
+    return;
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    return;
+  }
+
+  const { error } = await supabase.from("staff_shifts").delete().eq("id", shiftId);
+
+  if (!error) {
+    await writeOperationAuditLog(supabase, session, {
+      eventType: "staff_shift_deleted",
+      entityType: "staff_shift",
+      entityId: shiftId,
+      entityLabel: shiftId,
+      description: "Turno removido da escala.",
+      metadata: {},
+    });
+  }
+
+  revalidateStaffPaths();
+
+  redirect(
+    getEscalaRedirect({
+      shiftNotice: "Turno removido da escala.",
+    }),
+  );
+}
+
+export async function createCampaignAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const channel = String(formData.get("channel") ?? "").trim();
+  const startsOn = String(formData.get("startsOn") ?? "").trim();
+  const endsOn = String(formData.get("endsOn") ?? "").trim();
+  const targetAudience = String(formData.get("targetAudience") ?? "").trim();
+  const highlightOffer = String(formData.get("highlightOffer") ?? "").trim();
+  const status = String(formData.get("status") ?? "draft").trim();
+
+  if (!title || !campaignChannels.includes(channel) || !campaignStatuses.includes(status)) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Preencha titulo, canal e status da campanha.",
+      }),
+    );
+  }
+
+  if (!isDateOnly(startsOn) || !isDateOnly(endsOn) || startsOn > endsOn) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Informe datas validas para inicio e fim da campanha.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Nao foi possivel conectar ao banco para salvar a campanha.",
+      }),
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("marketing_campaigns")
+    .insert({
+      title,
+      description: description || null,
+      channel,
+      starts_on: startsOn,
+      ends_on: endsOn,
+      status,
+      target_audience: targetAudience || null,
+      highlight_offer: highlightOffer || null,
+      created_by_user_id: session.profile.user_id,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError:
+          "Nao foi possivel salvar a campanha. Verifique se a tabela marketing_campaigns existe no banco.",
+      }),
+    );
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "campaign_saved",
+    entityType: "marketing_campaign",
+    entityId: data?.id || null,
+    entityLabel: title,
+    description: "Campanha criada na central comercial.",
+    metadata: {
+      channel,
+      startsOn,
+      endsOn,
+      status,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    getCampanhasRedirect({
+      campaignNotice: "Campanha criada com sucesso.",
+    }),
+  );
+}
+
+export async function setCampaignStatusAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+
+  const campaignId = String(formData.get("campaignId") ?? "").trim();
+  const nextStatus = String(formData.get("nextStatus") ?? "").trim();
+
+  if (!campaignId || !campaignStatuses.includes(nextStatus)) {
+    return;
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("marketing_campaigns")
+    .update({ status: nextStatus })
+    .eq("id", campaignId);
+
+  if (!error) {
+    await writeOperationAuditLog(supabase, session, {
+      eventType: "campaign_status_updated",
+      entityType: "marketing_campaign",
+      entityId: campaignId,
+      entityLabel: campaignId,
+      description: "Status de campanha atualizado.",
+      metadata: {
+        nextStatus,
+      },
+    });
+  }
+
+  revalidateStaffPaths();
+
+  redirect(
+    getCampanhasRedirect({
+      campaignNotice: "Status da campanha atualizado.",
+    }),
+  );
+}
+
+export async function createCouponAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+
+  const campaignId = String(formData.get("campaignId") ?? "").trim();
+  const code = String(formData.get("code") ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+  const couponType = String(formData.get("couponType") ?? "").trim();
+  const amount = parseCurrencyValue(formData.get("amount"));
+  const minOrder = parseCurrencyValue(formData.get("minOrder"));
+  const usageLimitRaw = String(formData.get("usageLimit") ?? "").trim();
+  const startsOn = String(formData.get("startsOn") ?? "").trim();
+  const endsOn = String(formData.get("endsOn") ?? "").trim();
+  const isActive = formData.has("isActive");
+
+  if (!code || !couponTypes.includes(couponType)) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Informe codigo e tipo do cupom.",
+      }),
+    );
+  }
+
+  if (!/^[A-Z0-9_-]{3,24}$/.test(code)) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError:
+          "Codigo invalido. Use de 3 a 24 caracteres com letras, numeros, _ ou -.",
+      }),
+    );
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Informe um valor valido para o cupom.",
+      }),
+    );
+  }
+
+  if (
+    couponType === "percentage" &&
+    (amount <= 0 || amount > 100)
+  ) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Cupom percentual deve estar entre 1 e 100.",
+      }),
+    );
+  }
+
+  if (!Number.isFinite(minOrder) || minOrder < 0) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Pedido minimo do cupom precisa ser um valor valido.",
+      }),
+    );
+  }
+
+  if (!isDateOnly(startsOn) || !isDateOnly(endsOn) || startsOn > endsOn) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Informe datas validas para vigencia do cupom.",
+      }),
+    );
+  }
+
+  const usageLimit =
+    usageLimitRaw === "" ? null : Number.parseInt(usageLimitRaw, 10);
+
+  if (usageLimit != null && (!Number.isInteger(usageLimit) || usageLimit <= 0)) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Limite de uso deve ser inteiro positivo ou vazio.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Nao foi possivel conectar ao banco para salvar o cupom.",
+      }),
+    );
+  }
+
+  const { data, error } = await supabase
+    .from("marketing_coupons")
+    .insert({
+      campaign_id: campaignId || null,
+      code,
+      coupon_type: couponType,
+      amount,
+      min_order: minOrder,
+      usage_limit: usageLimit,
+      is_active: isActive,
+      starts_on: startsOn,
+      ends_on: endsOn,
+      created_by_user_id: session.profile.user_id,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError:
+          error.code === "23505"
+            ? "Ja existe um cupom com esse codigo."
+            : "Nao foi possivel salvar o cupom. Verifique se a tabela marketing_coupons existe no banco.",
+      }),
+    );
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "coupon_saved",
+    entityType: "marketing_coupon",
+    entityId: data?.id || null,
+    entityLabel: code,
+    description: "Cupom criado na central comercial.",
+    metadata: {
+      couponType,
+      amount,
+      minOrder,
+      startsOn,
+      endsOn,
+      isActive,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    getCampanhasRedirect({
+      campaignNotice: "Cupom criado com sucesso.",
+    }),
+  );
+}
+
+export async function toggleCouponActiveAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+
+  const couponId = String(formData.get("couponId") ?? "").trim();
+  const nextActiveValue = String(formData.get("nextActive") ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (
+    !couponId ||
+    (nextActiveValue !== "true" && nextActiveValue !== "false")
+  ) {
+    return;
+  }
+
+  const nextActive = nextActiveValue === "true";
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("marketing_coupons")
+    .update({ is_active: nextActive })
+    .eq("id", couponId);
+
+  if (!error) {
+    await writeOperationAuditLog(supabase, session, {
+      eventType: "coupon_state_changed",
+      entityType: "marketing_coupon",
+      entityId: couponId,
+      entityLabel: couponId,
+      description: nextActive
+        ? "Cupom reativado."
+        : "Cupom pausado.",
+      metadata: {
+        nextActive,
+      },
+    });
+  }
+
+  revalidateStaffPaths();
+
+  redirect(
+    getCampanhasRedirect({
+      campaignNotice: "Estado do cupom atualizado.",
+    }),
+  );
 }
