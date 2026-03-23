@@ -45,14 +45,8 @@ export async function SiteFooter() {
               </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/reservas" className="button-primary w-full justify-center sm:w-auto">
-                  Reservar mesa
-                </Link>
-                <Link href="/cardapio" className="button-ghost w-full justify-center sm:w-auto">
-                  Ver cardapio
-                </Link>
-                <Link href="/contato" className="button-ghost w-full justify-center sm:w-auto">
-                  Contato
+                <Link href="/contato" className="button-primary w-full justify-center sm:w-auto">
+                  Falar com a casa
                 </Link>
               </div>
             </div>
