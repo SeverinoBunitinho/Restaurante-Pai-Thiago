@@ -14,19 +14,19 @@ const roleFlows = {
     {
       title: "Preparar salao",
       description:
-        "Comece entendendo setores, mesas livres e reservas sem distribuicao.",
+        "Revise setores, mesas livres e reservas sem mesa.",
       keys: ["mesas", "reservas"],
     },
     {
       title: "Conduzir atendimento",
       description:
-        "Use hospitalidade para ganhar contexto e a fila para agir no momento certo.",
+        "Conduza o atendimento e acompanhe a fila da cozinha.",
       keys: ["comandas", "cozinha", "reservas"],
     },
     {
       title: "Acompanhar o turno",
       description:
-        "Abra o painel do turno quando quiser uma leitura mais ampla das prioridades.",
+        "Use o painel para checar prioridades do turno.",
       keys: ["painel"],
     },
   ],
@@ -34,19 +34,19 @@ const roleFlows = {
     {
       title: "Montar cobertura",
       description:
-        "Verifique equipe, setores e configuracoes operacionais antes da casa encher.",
+        "Confirme equipe, setores e configuracoes antes do pico.",
       keys: ["equipe", "mesas", "configuracoes"],
     },
     {
       title: "Equilibrar operacao",
       description:
-        "Coordene reservas sensiveis, hospitalidade do turno e fluxo de acomodacao.",
+        "Coordene reservas, acomodacao e ritmo do salao.",
       keys: ["reservas", "comandas", "mesas"],
     },
     {
       title: "Ajustar oferta",
       description:
-        "Ajuste cardapio, previsao e campanhas para alinhar frente, cozinha e demanda digital.",
+        "Ajuste cardapio, previsao e campanhas conforme a demanda.",
       keys: ["menu", "previsao", "campanhas", "configuracoes", "painel"],
     },
   ],
@@ -54,19 +54,19 @@ const roleFlows = {
     {
       title: "Ler sinais estrategicos",
       description:
-        "Comece pela visao executiva e desca para a operacao somente onde houver gargalo.",
+        "Comece na visao executiva e desca apenas onde houver gargalo.",
       keys: ["executivo", "painel"],
     },
     {
       title: "Corrigir estrutura",
       description:
-        "Passe por equipe, escala, acomodacao e configuracoes para remover friccao da casa.",
+        "Ajuste equipe, escala e configuracoes para manter fluidez.",
       keys: ["equipe", "escala", "mesas", "reservas", "configuracoes"],
     },
     {
       title: "Sustentar a experiencia",
       description:
-        "Use hospitalidade e cardapio para proteger a qualidade percebida pelo cliente.",
+        "Garanta qualidade de servico e consistencia do cardapio.",
       keys: ["comandas", "menu"],
     },
   ],
@@ -74,19 +74,19 @@ const roleFlows = {
 
 const roleProtocols = {
   waiter: [
-    "Confira primeiro as reservas sem mesa antes do horario de pico.",
-    "Use a fila da cozinha para priorizar preparo e entrega sem perder o ritmo do salao.",
-    "Volte para o painel do turno sempre que o salao mudar de ritmo.",
+    "Comece por reservas sem mesa antes do pico.",
+    "Priorize a fila da cozinha para manter o ritmo do salao.",
+    "Volte ao painel sempre que o fluxo mudar.",
   ],
   manager: [
-    "Abra a equipe antes do turno para evitar acessos sem cobertura da escala.",
-    "Use previsao e campanhas para ajustar demanda antes de mexer na operacao ao vivo.",
-    "Trate reservas, cozinha e cobertura de equipe como trilhas separadas para decidir melhor.",
+    "Revise equipe e escala no inicio do turno.",
+    "Ajuste previsao e campanhas antes do pico.",
+    "Decida por frente: reservas, salao, cozinha e equipe.",
   ],
   owner: [
-    "Entre no executivo para medir a casa antes de entrar nos detalhes.",
-    "Desca para auditoria e equipe quando houver risco operacional.",
-    "Use previsao, campanhas e painel para decidir por frentes sem repetir leitura.",
+    "Leia a visao executiva antes de entrar nos detalhes.",
+    "Use auditoria e equipe quando houver risco operacional.",
+    "Combine previsao, campanhas e painel para decidir com clareza.",
   ],
 };
 
@@ -114,8 +114,8 @@ export default async function OperacaoOverviewPage() {
           <div className="luxury-card rounded-[2.2rem] p-6">
             <SectionHeading
               eyebrow="Mapa operacional"
-              title={`A central do ${getStaffRoleLabel(session.role).toLowerCase()} agora virou um hub de rotas`}
-              description="Esta pagina organiza o trabalho em trilhas claras de acordo com o cargo."
+              title={`Central do ${getStaffRoleLabel(session.role).toLowerCase()} com rotas do turno`}
+              description="Trilhas diretas para executar o turno com menos cliques."
               compact
             />
 
@@ -159,7 +159,7 @@ export default async function OperacaoOverviewPage() {
               Protocolo do cargo
             </p>
             <h2 className="display-title page-section-title mt-4 text-white">
-              Como este perfil deve navegar pela operacao
+              Como este perfil conduz a operacao
             </h2>
 
             <div className="mt-8 space-y-3">
@@ -198,8 +198,8 @@ export default async function OperacaoOverviewPage() {
           <div className="luxury-card rounded-[2.2rem] p-6">
             <SectionHeading
               eyebrow="Modulos complementares"
-              title="Acessos sem repeticao com as trilhas de cima"
-              description="Aqui ficam os modulos que ainda nao apareceram no mapa operacional."
+              title="Acessos complementares da central"
+              description="Modulos que nao apareceram nas trilhas iniciais."
               compact
             />
 
@@ -226,7 +226,7 @@ export default async function OperacaoOverviewPage() {
             <SectionHeading
               eyebrow="Acesso rapido"
               title="Rotas de entrada recomendadas para o seu cargo"
-              description="Use estes atalhos para abrir o turno sem ficar navegando entre paginas repetidas."
+              description="Atalhos diretos para iniciar o turno sem navegar em paginas repetidas."
               compact
             />
 
