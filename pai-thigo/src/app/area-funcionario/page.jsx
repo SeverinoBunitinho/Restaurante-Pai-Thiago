@@ -12,7 +12,7 @@ import { SectionHeading } from "@/components/section-heading";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { getStaffRoleLabel, requireRole } from "@/lib/auth";
-import { getStaffPanel, getStaffModules } from "@/lib/staff-modules";
+import { getStaffModules } from "@/lib/staff-modules";
 import { getStaffDashboard } from "@/lib/site-data";
 
 const roleBlueprints = {
@@ -111,7 +111,6 @@ function getModuleLink(modules, key, fallback = "/operacao") {
 
 export default async function AreaFuncionarioPage() {
   const session = await requireRole(["waiter", "manager", "owner"]);
-  const panel = getStaffPanel(session.role);
   const modules = getStaffModules(session.role);
   const dashboard = await getStaffDashboard(session.role);
   const blueprint = roleBlueprints[session.role] ?? roleBlueprints.waiter;
@@ -217,12 +216,12 @@ export default async function AreaFuncionarioPage() {
         <section className="shell pt-20">
           <div className="grid gap-5 lg:grid-cols-[1.04fr_0.96fr]">
             <div className="luxury-card rounded-[2.2rem] p-6">
-              <SectionHeading
-                eyebrow="Roteiro do turno"
-                title="Fluxo recomendado para iniciar o turno"
-                description="Esta pagina mostra a sequencia inicial de trabalho para cada perfil."
-                compact
-              />
+                <SectionHeading
+                  eyebrow="Roteiro do turno"
+                  title="Fluxo recomendado para iniciar o turno"
+                  description="Esta pagina mostra a sequencia inicial de trabalho do cargo. A listagem completa de modulos fica centralizada na aba Central."
+                  compact
+                />
 
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 {blueprint.workflow.map((step, index) => (
@@ -268,35 +267,6 @@ export default async function AreaFuncionarioPage() {
                   </article>
                 ))}
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="shell pt-20">
-          <div className="luxury-card rounded-[2.2rem] p-6">
-            <SectionHeading
-              eyebrow="Modulos operacionais"
-              title={panel.title}
-              description="Abaixo estao os modulos disponiveis para o seu perfil, cada um com objetivo claro."
-              compact
-            />
-
-            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {panel.focusItems.map((item) => (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  className="staff-feature-link rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                >
-                  <item.icon className="text-[var(--gold)]" size={20} />
-                  <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                    {item.description}
-                  </p>
-                </Link>
-              ))}
             </div>
           </div>
         </section>
