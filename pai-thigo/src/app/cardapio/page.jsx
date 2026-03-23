@@ -108,17 +108,9 @@ export default async function CardapioPage() {
             </div>
 
             {categories.length ? (
-              <div className="mt-8 flex flex-wrap gap-3">
-                {categories.map((category) => (
-                  <a
-                    key={category.id}
-                    href={`#categoria-${category.id}`}
-                    className="rounded-full border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(255,247,232,0.82)] transition hover:-translate-y-0.5"
-                  >
-                    {category.name}
-                  </a>
-                ))}
-              </div>
+              <p className="mt-8 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
+                As categorias ficam no bloco de navegacao rapida logo abaixo, evitando repeticao visual nesta etapa.
+              </p>
             ) : null}
           </div>
         </section>

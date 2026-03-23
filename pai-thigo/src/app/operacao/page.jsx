@@ -104,8 +104,9 @@ export default async function OperacaoOverviewPage() {
   const protocols = roleProtocols[session.role] ?? roleProtocols.waiter;
   const flowKeys = new Set(flows.flatMap((flow) => flow.keys));
   const complementaryModules = modules.filter((module) => !flowKeys.has(module.key));
-  const modulesForGrid = complementaryModules.length ? complementaryModules : modules;
-  const quickItems = panel.quickItems?.length ? panel.quickItems : modules.slice(0, 3);
+  const modulesForGrid = complementaryModules;
+  const quickItems = complementaryModules.slice(0, 3);
+  const panelModule = getModuleByKey("painel");
 
   return (
     <>
@@ -203,23 +204,34 @@ export default async function OperacaoOverviewPage() {
               compact
             />
 
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              {modulesForGrid.map((module) => (
-                <Link
-                  key={module.key}
-                  href={module.href}
-                  className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5 transition hover:-translate-y-0.5"
-                >
-                  <module.icon className="text-[var(--gold)]" size={20} />
-                  <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
-                    {module.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                    {module.description}
-                  </p>
-                </Link>
-              ))}
-            </div>
+            {modulesForGrid.length ? (
+              <div className="mt-8 grid gap-4 md:grid-cols-2">
+                {modulesForGrid.map((module) => (
+                  <Link
+                    key={module.key}
+                    href={module.href}
+                    className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5 transition hover:-translate-y-0.5"
+                  >
+                    <module.icon className="text-[var(--gold)]" size={20} />
+                    <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
+                      {module.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                      {module.description}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <article className="mt-8 rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.56)] p-5">
+                <p className="text-lg font-semibold text-[var(--forest)]">
+                  Sem repeticao: as trilhas acima ja cobrem todos os modulos deste cargo.
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                  Use os blocos do mapa operacional para entrar em cada frente.
+                </p>
+              </article>
+            )}
           </div>
 
           <div className="luxury-card rounded-[2.2rem] p-6">
@@ -230,23 +242,43 @@ export default async function OperacaoOverviewPage() {
               compact
             />
 
-            <div className="mt-8 grid gap-4">
-              {quickItems.map((item) => (
-                <Link
-                  key={item.key}
-                  href={item.href}
-                  className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                >
-                  <item.icon className="text-[var(--gold)]" size={18} />
-                  <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                    {item.description}
-                  </p>
-                </Link>
-              ))}
-            </div>
+            {quickItems.length ? (
+              <div className="mt-8 grid gap-4">
+                {quickItems.map((item) => (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
+                  >
+                    <item.icon className="text-[var(--gold)]" size={18} />
+                    <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                      {item.description}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-8 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5">
+                <p className="text-lg font-semibold text-[var(--forest)]">
+                  Turno alinhado sem atalhos repetidos
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                  Se precisar de uma visao geral da operacao, use o painel do turno.
+                </p>
+                {panelModule ? (
+                  <Link
+                    href={panelModule.href}
+                    className="mt-4 inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
+                  >
+                    {panelModule.title}
+                    <ArrowRight size={14} />
+                  </Link>
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
       </section>
