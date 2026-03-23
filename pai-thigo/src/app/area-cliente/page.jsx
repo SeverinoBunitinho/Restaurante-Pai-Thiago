@@ -15,7 +15,6 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { requireRole } from "@/lib/auth";
 import { getCustomerDashboard } from "@/lib/site-data";
-import { getFulfillmentTypeLabel } from "@/lib/utils";
 
 function getInitials(name) {
   return name
@@ -63,10 +62,6 @@ export default async function AreaClientePage() {
     (reservation) =>
       reservation.status !== "cancelled" && reservation.status !== "completed",
   ).length;
-  const completedVisits = reservations.filter(
-    (reservation) => reservation.status === "completed",
-  ).length;
-  const latestOrder = orderGroups[0] ?? null;
 
   const summaryHighlights = [
     {
@@ -112,41 +107,6 @@ export default async function AreaClientePage() {
       eyebrow: "Pontos acumulados",
       title: `${dashboard.profile.loyaltyPoints} pontos`,
       description: "Pontuacao usada para reconhecer recorrencia e historico da conta.",
-    },
-  ];
-
-  const profileSignals = [
-    {
-      eyebrow: "Jornada recente",
-      title: completedVisits
-        ? `${completedVisits} visita(s) concluidas`
-        : "Historico em construcao",
-      description:
-        "O perfil registra seu ritmo de visitas para a casa receber voce com mais contexto.",
-    },
-    {
-      eyebrow: "Canal em destaque",
-      title: latestOrder
-        ? getFulfillmentTypeLabel(latestOrder.fulfillmentType)
-        : "Reserva presencial",
-      description: latestOrder
-        ? "Seu pedido mais recente define o canal atual de atendimento."
-        : "Sem pedido recente, a jornada fica centrada nas reservas da casa.",
-    },
-    {
-      eyebrow: "Proxima recomendacao",
-      title:
-        activeReservations > 0
-          ? "Acompanhar a reserva"
-          : activeOrders > 0
-            ? "Acompanhar os pedidos"
-            : "Escolher a proxima experiencia",
-      description:
-        activeReservations > 0
-          ? "Abra Reservas para conferir horario, ambiente e status da agenda."
-          : activeOrders > 0
-            ? "Abra Pedidos para acompanhar status, itens e forma de atendimento."
-            : "Use Cardapio, Reservas ou Eventos para iniciar uma nova jornada.",
     },
   ];
 
@@ -314,64 +274,32 @@ export default async function AreaClientePage() {
         </section>
 
         <section className="shell pt-20">
-          <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
-            <div className="luxury-card-dark rounded-[2.4rem] p-7 text-[var(--cream)] md:p-8">
-              <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-                Leitura da conta
-              </p>
-              <h2 className="display-title page-section-title mt-4 text-white">
-                Visao clara da sua relacao com a casa
-              </h2>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-[rgba(255,247,232,0.76)]">
-                O perfil concentra informacoes da sua conta, enquanto pedidos e
-                reservas seguem nas paginas dedicadas de acompanhamento.
-              </p>
+          <div className="luxury-card rounded-[2.4rem] p-6 md:p-8">
+            <SectionHeading
+              eyebrow="Atalhos uteis"
+              title="Cada tarefa no lugar certo"
+              description="Abrimos cada fluxo em pagina propria para facilitar a navegacao no celular e no computador."
+              compact
+            />
 
-              <div className="mt-8 grid gap-4">
-                {profileSignals.map((item) => (
-                  <article
-                    key={item.eyebrow}
-                    className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5"
-                  >
-                    <p className="text-xs uppercase tracking-[0.22em] text-[rgba(217,185,122,0.92)]">
-                      {item.eyebrow}
-                    </p>
-                    <p className="mt-3 text-lg font-semibold text-white">{item.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                      {item.description}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            <div className="luxury-card rounded-[2.4rem] p-6 md:p-8">
-              <SectionHeading
-                eyebrow="Atalhos uteis"
-                title="Cada tarefa no lugar certo"
-                description="Use os atalhos para abrir cada area certa da sua jornada."
-                compact
-              />
-
-              <div className="mt-8 grid gap-4 md:grid-cols-2">
-                {actionCards.map((item) => (
-                  <Link
-                    key={item.title}
-                    href={item.href}
-                    className="staff-feature-link rounded-[1.7rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                  >
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(182,135,66,0.16)] bg-[rgba(255,255,255,0.72)] text-[var(--gold)]">
-                      <item.icon size={18} />
-                    </div>
-                    <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      {item.text}
-                    </p>
-                  </Link>
-                ))}
-              </div>
+            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {actionCards.map((item) => (
+                <Link
+                  key={item.title}
+                  href={item.href}
+                  className="staff-feature-link rounded-[1.7rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(182,135,66,0.16)] bg-[rgba(255,255,255,0.72)] text-[var(--gold)]">
+                    <item.icon size={18} />
+                  </div>
+                  <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                    {item.text}
+                  </p>
+                </Link>
+              ))}
             </div>
           </div>
         </section>

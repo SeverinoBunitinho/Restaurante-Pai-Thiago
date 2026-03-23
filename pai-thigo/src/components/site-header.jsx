@@ -300,7 +300,6 @@ export async function SiteHeader() {
           badgeLatestAt: notificationContext.reservationsLatestAt,
         },
         { href: "/operacao", label: "Central", exact: true },
-        { href: "/area-funcionario", label: "Portal", exact: true },
       ]
     : [
         { href: "/cardapio", label: "Cardapio", exact: true },
@@ -320,8 +319,6 @@ export async function SiteHeader() {
           badgeKind: "reservations",
           badgeLatestAt: notificationContext.reservationsLatestAt,
         },
-        { href: "/eventos", label: "Eventos", exact: true },
-        { href: "/contato", label: "Contato", exact: true },
         { href: "/area-cliente", label: "Perfil", exact: true },
       ];
 

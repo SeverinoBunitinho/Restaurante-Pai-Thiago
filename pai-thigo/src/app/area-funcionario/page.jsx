@@ -5,7 +5,6 @@ import {
   KeyRound,
   Route,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 
 import { SectionHeading } from "@/components/section-heading";
@@ -116,6 +115,7 @@ export default async function AreaFuncionarioPage() {
   const blueprint = roleBlueprints[session.role] ?? roleBlueprints.waiter;
   const firstName = session.profile.full_name.split(" ")[0];
   const nextHref = getModuleLink(modules, blueprint.nextKey, "/operacao");
+  const moduleHighlights = modules.slice(0, 6);
 
   return (
     <div className="min-h-screen">
@@ -214,14 +214,14 @@ export default async function AreaFuncionarioPage() {
         </section>
 
         <section className="shell pt-20">
-          <div className="grid gap-5 lg:grid-cols-[1.04fr_0.96fr]">
+          <div className="grid gap-5 lg:grid-cols-2">
             <div className="luxury-card rounded-[2.2rem] p-6">
-                <SectionHeading
-                  eyebrow="Roteiro do turno"
-                  title="Fluxo recomendado para iniciar o turno"
-                  description="Esta pagina mostra a sequencia inicial de trabalho do cargo. A listagem completa de modulos fica centralizada na aba Central."
-                  compact
-                />
+              <SectionHeading
+                eyebrow="Roteiro do turno"
+                title="Fluxo recomendado para iniciar o turno"
+                description="Esta pagina mostra a sequencia inicial de trabalho do cargo. A listagem completa de modulos fica centralizada na aba Central."
+                compact
+              />
 
               <div className="mt-8 grid gap-4 md:grid-cols-3">
                 {blueprint.workflow.map((step, index) => (
@@ -246,25 +246,29 @@ export default async function AreaFuncionarioPage() {
 
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
-                eyebrow="Permissoes"
-                title="O que este perfil pode fazer"
-                description="Cada nivel de acesso foi separado para manter responsabilidades claras."
+                eyebrow="Acessos principais"
+                title="Atalhos diretos para os modulos da operacao"
+                description="Abrimos os caminhos mais usados do turno para reduzir cliques e evitar navegacao confusa."
                 compact
               />
 
-              <div className="mt-8 space-y-4">
-                {blueprint.permissions.map((permission) => (
-                  <article
-                    key={permission}
-                    className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
+              <div className="mt-8 grid gap-4 md:grid-cols-2">
+                {moduleHighlights.map((module) => (
+                  <Link
+                    key={module.href}
+                    href={module.href}
+                    className="staff-feature-link rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
                   >
-                    <div className="flex items-start gap-3">
-                      <Sparkles className="mt-1 text-[var(--gold)]" size={18} />
-                      <p className="text-sm leading-7 text-[rgba(21,35,29,0.72)]">
-                        {permission}
-                      </p>
-                    </div>
-                  </article>
+                    <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+                      Modulo
+                    </p>
+                    <h3 className="mt-3 text-xl font-semibold text-[var(--forest)]">
+                      {module.label}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                      Abrir tela {module.label.toLowerCase()} com contexto do cargo atual.
+                    </p>
+                  </Link>
                 ))}
               </div>
             </div>
