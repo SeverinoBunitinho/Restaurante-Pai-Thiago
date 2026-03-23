@@ -1,18 +1,10 @@
 import Link from "next/link";
 import {
-  Blocks,
   CalendarRange,
-  CalendarSearch,
-  ClipboardList,
   Dot,
-  LayoutDashboard,
   LogOut,
-  PhoneCall,
   Shield,
   Sparkles,
-  UserRound,
-  UtensilsCrossed,
-  PartyPopper,
 } from "lucide-react";
 
 import { logoutAction } from "@/app/login/actions";
@@ -292,14 +284,13 @@ export async function SiteHeader() {
   const staffSession = isStaffRole(session?.role);
   const navItems = staffSession
       ? [
-        { href: "/painel", label: "Painel", exact: true, icon: LayoutDashboard },
+        { href: "/painel", label: "Painel", exact: true },
         {
           href: "/operacao/comandas",
           label: "Pedidos",
           badgeCount: notificationContext.orders,
           badgeKind: "orders",
           badgeLatestAt: notificationContext.ordersLatestAt,
-          icon: ClipboardList,
         },
         {
           href: "/operacao/reservas",
@@ -307,13 +298,12 @@ export async function SiteHeader() {
           badgeCount: notificationContext.reservations,
           badgeKind: "reservations",
           badgeLatestAt: notificationContext.reservationsLatestAt,
-          icon: CalendarSearch,
         },
-        { href: "/operacao", label: "Central", exact: true, icon: Blocks },
-        { href: "/area-funcionario", label: "Portal", exact: true, icon: UserRound },
+        { href: "/operacao", label: "Central", exact: true },
+        { href: "/area-funcionario", label: "Portal", exact: true },
       ]
     : [
-        { href: "/cardapio", label: "Cardapio", exact: true, icon: UtensilsCrossed },
+        { href: "/cardapio", label: "Cardapio", exact: true },
         {
           href: "/pedidos",
           label: "Pedidos",
@@ -321,7 +311,6 @@ export async function SiteHeader() {
           badgeCount: notificationContext.orders,
           badgeKind: "orders",
           badgeLatestAt: notificationContext.ordersLatestAt,
-          icon: ClipboardList,
         },
         {
           href: "/reservas",
@@ -330,11 +319,10 @@ export async function SiteHeader() {
           badgeCount: notificationContext.reservations,
           badgeKind: "reservations",
           badgeLatestAt: notificationContext.reservationsLatestAt,
-          icon: CalendarSearch,
         },
-        { href: "/eventos", label: "Eventos", exact: true, icon: PartyPopper },
-        { href: "/contato", label: "Contato", exact: true, icon: PhoneCall },
-        { href: "/area-cliente", label: "Perfil", exact: true, icon: UserRound },
+        { href: "/eventos", label: "Eventos", exact: true },
+        { href: "/contato", label: "Contato", exact: true },
+        { href: "/area-cliente", label: "Perfil", exact: true },
       ];
 
   const dashboardHref = session ? getRouteForRole(session.role) : "/login";
@@ -372,7 +360,6 @@ export async function SiteHeader() {
                     activeClassName="nav-link-active"
                   >
                     <span className="nav-link-content">
-                      {item.icon ? <item.icon size={14} className="nav-link-icon" /> : null}
                       <span>{item.label}</span>
                       {item.badgeCount && item.badgeKind ? (
                         <NotificationCountBadge
@@ -436,7 +423,7 @@ export async function SiteHeader() {
               </div>
             </div>
 
-            <div className="site-mobile-nav mt-4 flex flex-wrap gap-2 lg:hidden">
+            <div className="site-mobile-nav mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden">
               {navItems.map((item) => (
                 <ActiveLink
                   key={item.href}
@@ -446,7 +433,6 @@ export async function SiteHeader() {
                   activeClassName="mobile-nav-link-active"
                 >
                   <span className="mobile-nav-link-content">
-                    {item.icon ? <item.icon size={14} className="mobile-nav-link-icon" /> : null}
                     <span className="mobile-nav-link-label">{item.label}</span>
                     {item.badgeCount && item.badgeKind ? (
                       <NotificationCountBadge

@@ -888,10 +888,6 @@ textarea {
   gap: 0.45rem;
 }
 
-.nav-link-icon {
-  opacity: 0.84;
-}
-
 .nav-link-badge {
   display: inline-flex;
   align-items: center;
@@ -961,11 +957,6 @@ textarea {
   gap: 0.4rem;
 }
 
-.mobile-nav-link-icon {
-  flex-shrink: 0;
-  opacity: 0.84;
-}
-
 .mobile-nav-link-label {
   min-width: 0;
 }
@@ -992,16 +983,18 @@ textarea {
 }
 
 .site-mobile-nav {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  overflow: visible;
-  padding-bottom: 0;
+  overflow: auto hidden;
+  padding-bottom: 0.1rem;
+  scrollbar-width: none;
+}
+
+.site-mobile-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .site-mobile-nav .mobile-nav-link {
-  width: 100%;
-  min-width: 0;
-  min-height: 2.85rem;
+  flex: 0 0 auto;
+  min-width: max-content;
 }
 
 .site-mobile-nav .mobile-nav-link-content {
@@ -1704,12 +1697,8 @@ textarea {
     flex: 0 0 auto;
   }
 
-  .site-mobile-nav .mobile-nav-link {
-    min-height: 2.75rem;
-  }
-
   .site-header-offset {
-    height: 12.85rem;
+    height: 12.6rem;
   }
 }
 
@@ -1770,12 +1759,8 @@ textarea {
     padding: 0.62rem 0.75rem;
   }
 
-  .site-mobile-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .site-mobile-nav .mobile-nav-link {
-    min-height: 2.7rem;
+    min-width: 7.1rem;
   }
 
   .site-header-actions .notification-center {
@@ -1814,7 +1799,7 @@ textarea {
   }
 
   .site-header-offset {
-    height: 13.5rem;
+    height: 13.2rem;
   }
 
   .staff-order-toast {
