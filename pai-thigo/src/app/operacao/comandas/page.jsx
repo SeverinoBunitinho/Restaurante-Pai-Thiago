@@ -203,13 +203,14 @@ export default async function OperacaoComandasPage({ searchParams }) {
 
     return accumulator;
   }, {});
-  const visibleSections =
-    activeStatus === "all"
-      ? orderSections.filter((section) => (orderGroupsByStatus[section.key] ?? []).length)
-      : orderSections.filter((section) => section.key === activeStatus);
   const selectedOrderGroup = checkoutQuery
     ? findOrderGroupByReference(groupedOrders, checkoutQuery)
     : null;
+  const visibleSections = selectedOrderGroup
+    ? orderSections.filter((section) => section.key === selectedOrderGroup.status)
+    : activeStatus === "all"
+      ? orderSections.filter((section) => (orderGroupsByStatus[section.key] ?? []).length)
+      : orderSections.filter((section) => section.key === activeStatus);
   const orderCheckoutSearchMessage =
     orderCheckoutError ||
     (checkoutQuery && !selectedOrderGroup
@@ -896,179 +897,185 @@ export default async function OperacaoComandasPage({ searchParams }) {
 
           <div className="mt-8 space-y-6">
             {visibleSections.length ? (
-              visibleSections.map((section) => (
-                <article
-                  key={section.key}
-                  className="rounded-[1.8rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.54)] p-5"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]">
-                        {section.title}
-                      </p>
-                      <h3 className="mt-3 text-2xl font-semibold text-[var(--forest)]">
-                        {orderStatusMeta[section.key]?.label ?? section.title}
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                        {section.description}
-                      </p>
+              visibleSections.map((section) => {
+                const sectionOrderGroups = selectedOrderGroup
+                  ? [selectedOrderGroup]
+                  : orderGroupsByStatus[section.key] ?? [];
+
+                return (
+                  <article
+                    key={section.key}
+                    className="rounded-[1.8rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.54)] p-5"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]">
+                          {section.title}
+                        </p>
+                        <h3 className="mt-3 text-2xl font-semibold text-[var(--forest)]">
+                          {orderStatusMeta[section.key]?.label ?? section.title}
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                          {section.description}
+                        </p>
+                      </div>
+                      <span className="rounded-full bg-[rgba(95,123,109,0.12)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                        {sectionOrderGroups.length} pedido(s)
+                      </span>
                     </div>
-                    <span className="rounded-full bg-[rgba(95,123,109,0.12)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
-                      {(orderGroupsByStatus[section.key] ?? []).length} pedido(s)
-                    </span>
-                  </div>
 
-                  <div className="mt-6 space-y-4">
-                    {(orderGroupsByStatus[section.key] ?? []).map((orderGroup) => {
-                      const statusView =
-                        orderStatusMeta[orderGroup.status] ?? orderStatusMeta.received;
-                      const actions = getOrderActions(
-                        orderGroup.status,
-                        orderGroup.fulfillmentType,
-                      );
+                    <div className="mt-6 space-y-4">
+                      {sectionOrderGroups.map((orderGroup) => {
+                        const statusView =
+                          orderStatusMeta[orderGroup.status] ?? orderStatusMeta.received;
+                        const actions = getOrderActions(
+                          orderGroup.status,
+                          orderGroup.fulfillmentType,
+                        );
 
-                      return (
-                        <div
-                          key={orderGroup.id}
-                          className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-5"
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-4">
-                            <div>
-                              <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                                Pedido {orderGroup.checkoutReference}
-                              </p>
-                              <h4 className="mt-2 text-xl font-semibold text-[var(--forest)]">
-                                {orderGroup.guestName || "Cliente identificado no checkout"}
-                              </h4>
-                              <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                                Recebido em {formatDateTime(orderGroup.createdAt)}
-                              </p>
-                            </div>
-                            <span
-                              className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${statusView.badge}`}
-                            >
-                              {statusView.label}
-                            </span>
-                          </div>
-
-                          <div className="mt-5 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-                            <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] p-4">
-                              <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                                Itens do pedido
-                              </p>
-                              <div className="mt-4 space-y-3">
-                                {orderGroup.items.map((item) => (
-                                  <div
-                                    key={item.id}
-                                    className="flex flex-wrap items-start justify-between gap-3 rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.78)] px-4 py-3"
-                                  >
-                                    <div>
-                                      <p className="text-sm font-semibold text-[var(--forest)]">
-                                        {item.itemName}
-                                      </p>
-                                      <p className="mt-1 text-sm text-[rgba(21,35,29,0.72)]">
-                                        {item.quantity} x {formatCurrency(item.totalPrice / item.quantity)}
-                                      </p>
-                                      {item.notes ? (
-                                        <p className="mt-2 text-sm text-[rgba(21,35,29,0.72)]">
-                                          Observacao: {item.notes}
-                                        </p>
-                                      ) : null}
-                                    </div>
-                                    <p className="text-sm font-semibold text-[var(--forest)]">
-                                      {formatCurrency(item.totalPrice)}
-                                    </p>
-                                  </div>
-                                ))}
+                        return (
+                          <div
+                            key={orderGroup.id}
+                            className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-5"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                              <div>
+                                <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+                                  Pedido {orderGroup.checkoutReference}
+                                </p>
+                                <h4 className="mt-2 text-xl font-semibold text-[var(--forest)]">
+                                  {orderGroup.guestName || "Cliente identificado no checkout"}
+                                </h4>
+                                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                                  Recebido em {formatDateTime(orderGroup.createdAt)}
+                                </p>
                               </div>
+                              <span
+                                className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${statusView.badge}`}
+                              >
+                                {statusView.label}
+                              </span>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="mt-5 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                               <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] p-4">
                                 <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                                  Atendimento e pagamento
+                                  Itens do pedido
                                 </p>
-                                <div className="mt-4 space-y-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                                  <p className="inline-flex items-center gap-2">
-                                    <ShoppingBag size={16} className="text-[var(--gold)]" />
-                                    {getFulfillmentTypeLabel(orderGroup.fulfillmentType)}
-                                  </p>
-                                  <p className="inline-flex items-center gap-2">
-                                    <CreditCard size={16} className="text-[var(--gold)]" />
-                                    {getPaymentMethodLabel(orderGroup.paymentMethod)}
-                                  </p>
-                                  <p>
-                                    <span className="font-semibold text-[var(--forest)]">Itens:</span>{" "}
-                                    {orderGroup.totalItems}
-                                  </p>
-                                  <p>
-                                    <span className="font-semibold text-[var(--forest)]">Total:</span>{" "}
-                                    {formatCurrency(orderGroup.totalPrice)}
-                                  </p>
+                                <div className="mt-4 space-y-3">
+                                  {orderGroup.items.map((item) => (
+                                    <div
+                                      key={item.id}
+                                      className="flex flex-wrap items-start justify-between gap-3 rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.78)] px-4 py-3"
+                                    >
+                                      <div>
+                                        <p className="text-sm font-semibold text-[var(--forest)]">
+                                          {item.itemName}
+                                        </p>
+                                        <p className="mt-1 text-sm text-[rgba(21,35,29,0.72)]">
+                                          {item.quantity} x {formatCurrency(item.totalPrice / item.quantity)}
+                                        </p>
+                                        {item.notes ? (
+                                          <p className="mt-2 text-sm text-[rgba(21,35,29,0.72)]">
+                                            Observacao: {item.notes}
+                                          </p>
+                                        ) : null}
+                                      </div>
+                                      <p className="text-sm font-semibold text-[var(--forest)]">
+                                        {formatCurrency(item.totalPrice)}
+                                      </p>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
 
-                              {orderGroup.fulfillmentType === "delivery" ? (
-                                <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] p-4 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                              <div className="space-y-4">
+                                <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] p-4">
                                   <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                                    Dados da entrega
+                                    Atendimento e pagamento
                                   </p>
-                                  <div className="mt-4 space-y-2">
-                                    <p>
-                                      <span className="font-semibold text-[var(--forest)]">Bairro:</span>{" "}
-                                      {orderGroup.deliveryNeighborhood || "Nao informado"}
+                                  <div className="mt-4 space-y-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                                    <p className="inline-flex items-center gap-2">
+                                      <ShoppingBag size={16} className="text-[var(--gold)]" />
+                                      {getFulfillmentTypeLabel(orderGroup.fulfillmentType)}
+                                    </p>
+                                    <p className="inline-flex items-center gap-2">
+                                      <CreditCard size={16} className="text-[var(--gold)]" />
+                                      {getPaymentMethodLabel(orderGroup.paymentMethod)}
                                     </p>
                                     <p>
-                                      <span className="font-semibold text-[var(--forest)]">Endereco:</span>{" "}
-                                      {orderGroup.deliveryAddress || "Nao informado"}
+                                      <span className="font-semibold text-[var(--forest)]">Itens:</span>{" "}
+                                      {orderGroup.totalItems}
                                     </p>
-                                    {orderGroup.deliveryReference ? (
-                                      <p>
-                                        <span className="font-semibold text-[var(--forest)]">Referencia:</span>{" "}
-                                        {orderGroup.deliveryReference}
-                                      </p>
-                                    ) : null}
                                     <p>
-                                      <span className="font-semibold text-[var(--forest)]">Taxa:</span>{" "}
-                                      {formatCurrency(orderGroup.deliveryFee)}
+                                      <span className="font-semibold text-[var(--forest)]">Total:</span>{" "}
+                                      {formatCurrency(orderGroup.totalPrice)}
                                     </p>
                                   </div>
                                 </div>
-                              ) : null}
-                            </div>
-                          </div>
 
-                          {actions.length ? (
-                            <div className="mt-5 flex flex-wrap gap-3">
-                              {actions.map((action) => (
-                                <form key={action.value} action={updateOrderCheckoutStatusAction}>
-                                  <input
-                                    type="hidden"
-                                    name="checkoutReference"
-                                    value={orderGroup.checkoutReference}
-                                  />
-                                  <input
-                                    type="hidden"
-                                    name="orderIds"
-                                    value={JSON.stringify(orderGroup.orderIds)}
-                                  />
-                                  <input type="hidden" name="nextStatus" value={action.value} />
-                                  <button
-                                    type="submit"
-                                    className={action.primary ? "button-primary" : "button-secondary"}
-                                  >
-                                    {action.label}
-                                  </button>
-                                </form>
-                              ))}
+                                {orderGroup.fulfillmentType === "delivery" ? (
+                                  <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] p-4 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                                    <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+                                      Dados da entrega
+                                    </p>
+                                    <div className="mt-4 space-y-2">
+                                      <p>
+                                        <span className="font-semibold text-[var(--forest)]">Bairro:</span>{" "}
+                                        {orderGroup.deliveryNeighborhood || "Nao informado"}
+                                      </p>
+                                      <p>
+                                        <span className="font-semibold text-[var(--forest)]">Endereco:</span>{" "}
+                                        {orderGroup.deliveryAddress || "Nao informado"}
+                                      </p>
+                                      {orderGroup.deliveryReference ? (
+                                        <p>
+                                          <span className="font-semibold text-[var(--forest)]">Referencia:</span>{" "}
+                                          {orderGroup.deliveryReference}
+                                        </p>
+                                      ) : null}
+                                      <p>
+                                        <span className="font-semibold text-[var(--forest)]">Taxa:</span>{" "}
+                                        {formatCurrency(orderGroup.deliveryFee)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                ) : null}
+                              </div>
                             </div>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </article>
-              ))
+
+                            {actions.length ? (
+                              <div className="mt-5 flex flex-wrap gap-3">
+                                {actions.map((action) => (
+                                  <form key={action.value} action={updateOrderCheckoutStatusAction}>
+                                    <input
+                                      type="hidden"
+                                      name="checkoutReference"
+                                      value={orderGroup.checkoutReference}
+                                    />
+                                    <input
+                                      type="hidden"
+                                      name="orderIds"
+                                      value={JSON.stringify(orderGroup.orderIds)}
+                                    />
+                                    <input type="hidden" name="nextStatus" value={action.value} />
+                                    <button
+                                      type="submit"
+                                      className={action.primary ? "button-primary" : "button-secondary"}
+                                    >
+                                      {action.label}
+                                    </button>
+                                  </form>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </article>
+                );
+              })
             ) : (
               <article className="rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
                 <p className="text-lg font-semibold text-[var(--forest)]">
