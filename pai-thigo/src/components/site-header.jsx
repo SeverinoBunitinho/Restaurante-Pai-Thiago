@@ -28,7 +28,7 @@ export async function SiteHeader() {
         { href: "/operacao/comandas", label: "Pedidos" },
         { href: "/operacao/reservas", label: "Reservas" },
         { href: "/operacao", label: "Central", exact: true },
-        { href: "/area-funcionario", label: "Minha area", exact: true },
+        { href: "/area-funcionario", label: "Portal", exact: true },
       ]
     : [
         { href: "/cardapio", label: "Cardapio", exact: true },

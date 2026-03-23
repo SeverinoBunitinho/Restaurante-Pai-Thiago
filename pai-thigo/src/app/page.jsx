@@ -19,7 +19,6 @@ import { SectionHeading } from "@/components/section-heading";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import {
-  getStaffRoleLabel,
   isStaffRole,
   requireAuth,
 } from "@/lib/auth";
@@ -38,11 +37,11 @@ function getHomeVoice(session, firstName) {
   if (isStaffRole(session.role)) {
     return {
       eyebrow: "acesso interno",
-      title: `${getStaffRoleLabel(session.role)} ${firstName}, acompanhe o restaurante com clareza e prioridade.`,
+      title: `${firstName}, acompanhe a operacao com clareza e prioridade.`,
       description:
         "O sistema do Pai Thiago organiza reservas, atendimento, salao e gestao interna em uma interface clara, consistente e conectada ao dia a dia do restaurante.",
       primaryHref: "/area-funcionario",
-      primaryLabel: "Abrir minha area",
+      primaryLabel: "Abrir portal interno",
       secondaryHref: "/operacao",
       secondaryLabel: "Entrar na central",
     };

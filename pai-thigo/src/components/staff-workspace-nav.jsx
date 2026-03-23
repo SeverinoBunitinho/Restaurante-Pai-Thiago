@@ -24,8 +24,8 @@ export function StaffWorkspaceNav({ role }) {
     })),
     {
       href: "/area-funcionario",
-      title: "Minha area",
-      description: "Portal pessoal do cargo com permissoes e atalhos do perfil.",
+      title: "Portal do cargo",
+      description: "Resumo do perfil com permissoes e atalhos principais.",
       icon: ShieldCheck,
       exact: true,
     },

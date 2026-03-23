@@ -195,12 +195,12 @@ export default async function AreaClientePage() {
                       Perfil
                     </p>
                     <h1 className="display-title page-hero-title mt-3 text-white">
-                      {firstName}, sua conta agora fica organizada por pagina
+                      {firstName}, acompanhe sua experiencia no Pai Thiago
                     </h1>
                     <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(255,247,232,0.76)]">
-                      Aqui voce acompanha apenas os sinais da sua conta. Pedidos,
-                      reservas, eventos e contato seguem em abas proprias para
-                      manter a navegacao clara.
+                      Aqui voce acompanha seu perfil, preferencias e historico da
+                      conta. Pedidos, reservas, eventos e contato continuam em
+                      abas proprias para manter a navegacao simples.
                     </p>
                   </div>
                 </div>
@@ -278,8 +278,8 @@ export default async function AreaClientePage() {
               <div className="luxury-card rounded-[2.4rem] p-7 md:p-8">
                 <SectionHeading
                   eyebrow="Dados de atendimento"
-                  title="Informacoes base para receber voce com mais contexto"
-                  description="Contato, preferencia e pontuacao ficam concentrados no perfil, sem misturar fluxos de outras paginas."
+                  title="Dados essenciais para um atendimento personalizado"
+                  description="Contato, preferencias e pontuacao ficam concentrados no perfil para facilitar cada proxima visita."
                   compact
                 />
 
@@ -320,11 +320,11 @@ export default async function AreaClientePage() {
                 Leitura da conta
               </p>
               <h2 className="display-title page-section-title mt-4 text-white">
-                Sinais da sua jornada sem misturar os outros fluxos
+                Visao clara da sua relacao com a casa
               </h2>
               <p className="mt-5 max-w-2xl text-base leading-8 text-[rgba(255,247,232,0.76)]">
-                Pedidos e reservas ficam em paginas proprias. O perfil mostra
-                apenas leitura da conta para manter a experiencia mais limpa.
+                O perfil concentra informacoes da sua conta, enquanto pedidos e
+                reservas seguem nas paginas dedicadas de acompanhamento.
               </p>
 
               <div className="mt-8 grid gap-4">
@@ -349,7 +349,7 @@ export default async function AreaClientePage() {
               <SectionHeading
                 eyebrow="Atalhos uteis"
                 title="Cada tarefa no lugar certo"
-                description="Use os caminhos abaixo para entrar na pagina correta sem repetir conteudo."
+                description="Use os atalhos para abrir cada area certa da sua jornada."
                 compact
               />
 

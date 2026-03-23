@@ -87,7 +87,7 @@ export default async function CardapioPage() {
                   Alergenicos
                 </p>
                 <p className="mt-3 text-2xl font-semibold text-white">
-                  Sinalizados prato a prato
+                  Sinalizados item a item
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
                   Leitura mais segura e mais profissional para o cliente.

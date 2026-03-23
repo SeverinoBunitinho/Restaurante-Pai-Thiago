@@ -252,7 +252,7 @@ function buildFallbackServiceBoard() {
       },
       {
         key: "recepcao",
-        title: "Recepcao e conduzir",
+        title: "Recepcao e acomodacao",
         items: [],
       },
       {
@@ -808,7 +808,7 @@ export async function getServiceBoard() {
       },
       {
         key: "recepcao",
-        title: "Recepcao e conduzir",
+        title: "Recepcao e acomodacao",
         items: reservations
           .filter((reservation) => reservation.status === "confirmed")
           .map((reservation) => ({

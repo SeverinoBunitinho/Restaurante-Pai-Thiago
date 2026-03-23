@@ -18,9 +18,9 @@ import { getStaffDashboard } from "@/lib/site-data";
 const roleBlueprints = {
   waiter: {
     eyebrow: "Jornada do garcom",
-    title: "Seu portal agora comeca pela comanda e pelo ritmo da mesa",
+    title: "seu portal com foco em comandas e ritmo de atendimento",
     description:
-      "Esta area virou uma base pessoal do garcom: ela mostra seu papel, suas permissoes e por onde vale comecar o turno entre abertura de conta, lancamento de itens e fechamento.",
+      "Use esta area como ponto de partida do turno: abrir conta de mesa, lancar itens, acompanhar reservas e fechar com conferencia.",
     nextKey: "comandas",
     workflow: [
       {
@@ -47,9 +47,9 @@ const roleBlueprints = {
   },
   manager: {
     eyebrow: "Jornada do gerente",
-    title: "Seu portal agora prioriza coordenacao, equipe e leitura comercial",
+    title: "seu portal para coordenar equipe, comandas e resultados",
     description:
-      "Esta area resume as prioridades do gerente e organiza os acessos essenciais antes da abertura de cada modulo operacional, com foco em equipe, comandas e comissoes.",
+      "Aqui ficam os acessos essenciais para distribuir a equipe, acompanhar comandas, revisar comissoes e manter o salao organizado.",
     nextKey: "equipe",
     workflow: [
       {
@@ -76,9 +76,9 @@ const roleBlueprints = {
   },
   owner: {
     eyebrow: "Jornada do dono",
-    title: "Seu portal agora separa decisao estrategica da execucao diaria da casa",
+    title: "seu portal para liderar estrategia e operacao da casa",
     description:
-      "Esta area centraliza as decisoes do dono antes do acesso a operacao, equipe, comissoes e indicadores executivos do restaurante.",
+      "Esta area centraliza indicadores, equipe e decisoes executivas antes da entrada nos modulos operacionais.",
     nextKey: "executivo",
     workflow: [
       {
@@ -88,7 +88,7 @@ const roleBlueprints = {
       },
       {
         title: "Estruturar lideranca e equipe",
-        text: "Passe por equipe para cadastrar gerentes, liberar garcons e manter a camada interna sob controle.",
+        text: "Passe por equipe para cadastrar gerentes, liberar acessos e manter a camada interna sob controle.",
         key: "equipe",
       },
       {
@@ -130,7 +130,7 @@ export default async function AreaFuncionarioPage() {
                 {blueprint.eyebrow}
               </p>
               <h1 className="display-title page-hero-title mt-4 text-white">
-                {firstName}, {blueprint.title.toLowerCase()}
+                {firstName}, {blueprint.title}
               </h1>
               <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(255,247,232,0.74)]">
                 {blueprint.description}
@@ -219,8 +219,8 @@ export default async function AreaFuncionarioPage() {
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
                 eyebrow="Roteiro do turno"
-                title="Por onde seu cargo deve comecar"
-                description="Esta pagina orienta a primeira sequencia de trabalho de acordo com o cargo."
+                title="Fluxo recomendado para iniciar o turno"
+                description="Esta pagina mostra a sequencia inicial de trabalho para cada perfil."
                 compact
               />
 
@@ -249,7 +249,7 @@ export default async function AreaFuncionarioPage() {
               <SectionHeading
                 eyebrow="Permissoes"
                 title="O que este perfil pode fazer"
-                description="Cada camada foi separada para deixar responsabilidades e acessos mais claros."
+                description="Cada nivel de acesso foi separado para manter responsabilidades claras."
                 compact
               />
 
@@ -275,9 +275,9 @@ export default async function AreaFuncionarioPage() {
         <section className="shell pt-20">
           <div className="luxury-card rounded-[2.2rem] p-6">
             <SectionHeading
-              eyebrow="Funcoes clicaveis"
+              eyebrow="Modulos operacionais"
               title={panel.title}
-              description="Os acessos abaixo agora apontam para modulos com focos mais distintos dentro da equipe."
+              description="Abaixo estao os modulos disponiveis para o seu perfil, cada um com objetivo claro."
               compact
             />
 
@@ -306,10 +306,10 @@ export default async function AreaFuncionarioPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-                  Proximo clique
+                  Proximo passo
                 </p>
                 <h2 className="display-title page-section-title mt-4 text-white">
-                  Acesse a central interna pelo fluxo recomendado para o seu cargo
+                  Acesse a central interna pela rota recomendada para o seu cargo
                 </h2>
               </div>
               <Route className="text-[var(--gold-soft)]" size={22} />

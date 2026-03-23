@@ -245,40 +245,51 @@ async function playOrderAlertSound(audioContextRef) {
     return;
   }
 
-  const now = context.currentTime + 0.02;
+  const now = context.currentTime + 0.015;
 
-  const playBeep = (startAt, frequency, duration = 0.18, maxGain = 0.22) => {
-    const oscillator = context.createOscillator();
-    const gainNode = context.createGain();
+  const playBellStrike = (startAt, baseFrequency, intensity = 0.2) => {
+    const partials = [
+      { ratio: 1, gain: 1, decay: 1.05, type: "sine" },
+      { ratio: 2.01, gain: 0.46, decay: 0.9, type: "triangle" },
+      { ratio: 2.76, gain: 0.28, decay: 1.2, type: "sine" },
+      { ratio: 4.09, gain: 0.16, decay: 1.45, type: "sine" },
+    ];
 
-    oscillator.type = "triangle";
-    oscillator.frequency.setValueAtTime(frequency, startAt);
-    oscillator.frequency.exponentialRampToValueAtTime(
-      Math.max(260, frequency - 220),
-      startAt + duration,
-    );
+    partials.forEach((partial) => {
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+      const frequency = baseFrequency * partial.ratio;
+      const attackAt = startAt + 0.012;
+      const releaseAt = startAt + partial.decay;
 
-    gainNode.gain.setValueAtTime(0.0001, startAt);
-    gainNode.gain.exponentialRampToValueAtTime(maxGain, startAt + 0.02);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+      oscillator.type = partial.type;
+      oscillator.frequency.setValueAtTime(frequency, startAt);
+      oscillator.frequency.exponentialRampToValueAtTime(
+        Math.max(180, frequency * 0.985),
+        releaseAt,
+      );
 
-    oscillator.connect(gainNode);
-    gainNode.connect(context.destination);
-    oscillator.start(startAt);
-    oscillator.stop(startAt + duration + 0.02);
+      gainNode.gain.setValueAtTime(0.0001, startAt);
+      gainNode.gain.exponentialRampToValueAtTime(
+        Math.max(0.0001, intensity * partial.gain),
+        attackAt,
+      );
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseAt);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+      oscillator.start(startAt);
+      oscillator.stop(releaseAt + 0.06);
+    });
   };
 
-  playBeep(now, 980, 0.16, 0.24);
-  playBeep(now + 0.19, 760, 0.17, 0.22);
-  playBeep(now + 0.4, 1100, 0.15, 0.2);
+  // Timbre de sininho em duas batidas curtas (ding-dong).
+  playBellStrike(now, 1568, 0.19);
+  playBellStrike(now + 0.23, 1318, 0.17);
 }
 
 function playOrderAlertPattern(audioContextRef) {
   void playOrderAlertSound(audioContextRef);
-
-  setTimeout(() => {
-    void playOrderAlertSound(audioContextRef);
-  }, 260);
 }
 
 export function AppLiveSync() {
