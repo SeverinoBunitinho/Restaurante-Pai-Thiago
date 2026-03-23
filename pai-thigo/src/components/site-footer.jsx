@@ -48,6 +48,9 @@ export async function SiteFooter() {
                 <Link href="/contato" className="button-primary w-full justify-center sm:w-auto">
                   Falar com a casa
                 </Link>
+                <Link href="/cardapio" className="button-ghost w-full justify-center sm:w-auto">
+                  Ver cardapio
+                </Link>
               </div>
             </div>
 
