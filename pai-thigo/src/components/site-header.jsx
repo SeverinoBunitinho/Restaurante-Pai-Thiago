@@ -10,6 +10,7 @@ import {
 import { logoutAction } from "@/app/login/actions";
 import { ActiveLink } from "@/components/active-link";
 import { CartHeaderLink } from "@/components/cart-header-link";
+import { HeaderSearch } from "@/components/header-search";
 import { NotificationCountBadge } from "@/components/notification-count-badge";
 import { NotificationCenter } from "@/components/notification-center";
 import {
@@ -391,6 +392,7 @@ export async function SiteHeader() {
                         {getStaffRoleLabel(session.role)}
                       </Link>
                     ) : null}
+                    <HeaderSearch staffSession={staffSession} />
                     <NotificationCenter
                       staffSession={staffSession}
                       ordersCount={notificationContext.orders}
@@ -408,6 +410,7 @@ export async function SiteHeader() {
                   </>
                 ) : (
                   <>
+                    <HeaderSearch />
                     <Link href="/login" className="button-secondary hidden px-4 py-2.5 sm:inline-flex">
                       Entrar
                     </Link>
