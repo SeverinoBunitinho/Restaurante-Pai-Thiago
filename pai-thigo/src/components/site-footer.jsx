@@ -10,10 +10,15 @@ import {
   Star,
 } from "lucide-react";
 
+import { getCurrentSession, isStaffRole } from "@/lib/auth";
 import { getRestaurantProfile } from "@/lib/restaurant-profile";
 
 export async function SiteFooter() {
-  const restaurantInfo = await getRestaurantProfile();
+  const [restaurantInfo, session] = await Promise.all([
+    getRestaurantProfile(),
+    getCurrentSession(),
+  ]);
+  const showMenuShortcut = session ? isStaffRole(session.role) : true;
 
   return (
     <footer className="mt-auto pt-20 pb-10">
@@ -48,9 +53,11 @@ export async function SiteFooter() {
                 <Link href="/contato" className="button-primary w-full justify-center sm:w-auto">
                   Falar com a casa
                 </Link>
-                <Link href="/cardapio" className="button-ghost w-full justify-center sm:w-auto">
-                  Ver cardapio
-                </Link>
+                {showMenuShortcut ? (
+                  <Link href="/cardapio" className="button-ghost w-full justify-center sm:w-auto">
+                    Ver cardapio
+                  </Link>
+                ) : null}
               </div>
             </div>
 
