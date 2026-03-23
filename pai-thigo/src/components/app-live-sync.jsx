@@ -9,54 +9,112 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 function getRealtimeTables(pathname) {
   const tables = new Set();
+  const addTables = (...tableNames) => {
+    tableNames.forEach((tableName) => tables.add(tableName));
+  };
 
-  if (!pathname || pathname === "/login" || pathname === "/cadastro") {
+  if (!pathname) {
     return [];
   }
 
+  // Rotas estaticas nao precisam de sincronizacao em tempo real.
   if (
-    pathname === "/" ||
-    pathname === "/area-cliente" ||
-    pathname === "/pedidos" ||
+    pathname === "/login" ||
+    pathname === "/cadastro" ||
+    pathname === "/recuperar-senha" ||
+    pathname === "/redefinir-senha" ||
     pathname === "/eventos" ||
-    pathname === "/reservas" ||
     pathname === "/contato" ||
-    pathname === "/carrinho"
+    pathname === "/privacidade" ||
+    pathname === "/termos" ||
+    pathname === "/cancelamentos"
   ) {
-    tables.add("profiles");
-    tables.add("reservations");
-    tables.add("orders");
-    tables.add("restaurant_tables");
-    tables.add("menu_items");
-    tables.add("menu_categories");
-    tables.add("restaurant_settings");
-    tables.add("delivery_zones");
+    return [];
   }
 
-  if (
-    pathname === "/area-funcionario" ||
-    pathname === "/painel" ||
-    pathname.startsWith("/operacao")
-  ) {
-    tables.add("profiles");
-    tables.add("staff_directory");
-    tables.add("reservations");
-    tables.add("orders");
-    tables.add("restaurant_tables");
-    tables.add("menu_items");
-    tables.add("menu_categories");
-    tables.add("restaurant_settings");
-    tables.add("delivery_zones");
-    tables.add("service_checks");
-    tables.add("service_check_items");
+  if (pathname === "/") {
+    addTables("orders", "reservations", "restaurant_tables", "menu_items", "menu_categories");
+    return Array.from(tables);
+  }
+
+  if (pathname === "/area-cliente") {
+    addTables("profiles", "reservations", "orders");
+    return Array.from(tables);
+  }
+
+  if (pathname === "/pedidos") {
+    addTables("orders");
+    return Array.from(tables);
+  }
+
+  if (pathname === "/reservas") {
+    addTables("reservations", "restaurant_tables");
+    return Array.from(tables);
   }
 
   if (pathname === "/cardapio") {
-    tables.add("orders");
-    tables.add("menu_items");
-    tables.add("menu_categories");
-    tables.add("restaurant_settings");
-    tables.add("delivery_zones");
+    addTables("menu_items", "menu_categories");
+    return Array.from(tables);
+  }
+
+  if (pathname === "/carrinho") {
+    addTables("menu_items", "menu_categories", "restaurant_settings", "delivery_zones");
+    return Array.from(tables);
+  }
+
+  if (pathname === "/area-funcionario") {
+    addTables("reservations", "orders", "restaurant_tables", "service_checks");
+    return Array.from(tables);
+  }
+
+  if (pathname === "/painel") {
+    addTables("reservations", "orders", "restaurant_tables", "service_checks", "service_check_items");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/comandas")) {
+    addTables("orders", "service_checks", "service_check_items", "restaurant_tables", "profiles");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/reservas")) {
+    addTables("reservations", "restaurant_tables");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/mesas")) {
+    addTables("restaurant_tables", "reservations", "service_checks");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/menu")) {
+    addTables("menu_items", "menu_categories");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/equipe")) {
+    addTables("staff_directory", "profiles");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/relatorios")) {
+    addTables("service_checks", "service_check_items", "restaurant_tables", "profiles");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/configuracoes")) {
+    addTables("restaurant_settings", "delivery_zones");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/executivo")) {
+    addTables("reservations", "orders", "profiles", "staff_directory", "restaurant_tables", "menu_items");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao")) {
+    addTables("reservations", "orders", "restaurant_tables", "service_checks");
+    return Array.from(tables);
   }
 
   return Array.from(tables);
@@ -124,6 +182,38 @@ function isStaffWorkspace(pathname) {
 
 function getFulfillmentLabel(value) {
   return value === "delivery" ? "Delivery" : "Retirada";
+}
+
+function getRefreshTiming(pathname) {
+  if (pathname?.startsWith("/operacao/comandas")) {
+    return {
+      debounceMs: 220,
+      minIntervalMs: 750,
+    };
+  }
+
+  if (pathname?.startsWith("/operacao") || pathname === "/painel") {
+    return {
+      debounceMs: 260,
+      minIntervalMs: 900,
+    };
+  }
+
+  if (
+    pathname === "/area-cliente" ||
+    pathname === "/pedidos" ||
+    pathname === "/reservas"
+  ) {
+    return {
+      debounceMs: 360,
+      minIntervalMs: 1600,
+    };
+  }
+
+  return {
+    debounceMs: 480,
+    minIntervalMs: 2200,
+  };
 }
 
 function hasRecentOrderAlert(orderKey) {
@@ -297,6 +387,7 @@ export function AppLiveSync() {
   const router = useRouter();
   const timeoutRef = useRef(null);
   const alertTimeoutRef = useRef(null);
+  const lastRefreshAtRef = useRef(0);
   const audioContextRef = useRef(null);
   const prefetchedRef = useRef(new Set());
   const [orderAlert, setOrderAlert] = useState(null);
@@ -373,14 +464,27 @@ export function AppLiveSync() {
       return undefined;
     }
 
+    const { debounceMs, minIntervalMs } = getRefreshTiming(pathname);
+
     const scheduleRefresh = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
 
+      const elapsed = Date.now() - lastRefreshAtRef.current;
+      const waitMs =
+        elapsed >= minIntervalMs
+          ? debounceMs
+          : Math.max(debounceMs, minIntervalMs - elapsed);
+
       timeoutRef.current = setTimeout(() => {
+        lastRefreshAtRef.current = Date.now();
         router.refresh();
-      }, 180);
+      }, waitMs);
     };
 
     const channel = supabase.channel(`live-sync:${pathname}:${tables.join(",")}`);
