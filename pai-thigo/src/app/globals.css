@@ -911,7 +911,7 @@ textarea {
   right: 0;
   top: calc(100% + 0.55rem);
   z-index: 92;
-  width: min(32rem, calc(100vw - 1rem));
+  width: min(30rem, calc(100vw - 1rem));
   border-radius: 1.4rem;
   border: 1px solid rgba(20, 35, 29, 0.12);
   background:
