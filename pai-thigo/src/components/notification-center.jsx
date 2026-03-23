@@ -148,7 +148,7 @@ export function NotificationCenter({
         aria-label={`Central de notificacoes${totalCount ? ` com ${totalCount} novas` : ""}`}
       >
         <BellRing size={16} />
-        <span className="hidden sm:inline">Notificacoes</span>
+        <span>Notificacoes</span>
         {totalCount ? (
           <span className="notification-center-trigger-badge">{formatBadgeCount(totalCount)}</span>
         ) : null}

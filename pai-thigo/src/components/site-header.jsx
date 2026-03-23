@@ -376,7 +376,7 @@ export async function SiteHeader() {
                 ))}
               </nav>
 
-              <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:flex-nowrap">
+              <div className="site-header-actions flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end">
                 {session ? (
                   <>
                     {session.role === "customer" ? (
@@ -388,7 +388,7 @@ export async function SiteHeader() {
                     {staffSession ? (
                       <Link
                         href={dashboardHref}
-                        className="floating-badge hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold text-[var(--forest)] md:inline-flex"
+                        className="site-header-role-badge floating-badge inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold text-[var(--forest)] sm:px-4 sm:text-sm"
                       >
                         <Shield size={16} />
                         {getStaffRoleLabel(session.role)}
@@ -403,7 +403,7 @@ export async function SiteHeader() {
                       items={notificationContext.items}
                     />
                     <form action={logoutAction}>
-                      <button type="submit" className="button-primary px-3 py-2 sm:px-4 sm:py-2.5">
+                      <button type="submit" className="site-header-logout button-primary px-3 py-2 sm:px-4 sm:py-2.5">
                         <LogOut size={16} />
                         Sair
                       </button>
@@ -423,7 +423,7 @@ export async function SiteHeader() {
               </div>
             </div>
 
-            <div className="mt-4 flex gap-2 overflow-x-auto pb-1 lg:hidden">
+            <div className="site-mobile-nav mt-4 flex flex-wrap gap-2 lg:hidden">
               {navItems.map((item) => (
                 <ActiveLink
                   key={item.href}
@@ -433,7 +433,7 @@ export async function SiteHeader() {
                   activeClassName="mobile-nav-link-active"
                 >
                   <span className="mobile-nav-link-content">
-                    <span>{item.label}</span>
+                    <span className="mobile-nav-link-label">{item.label}</span>
                     {item.badgeCount && item.badgeKind ? (
                       <NotificationCountBadge
                         count={item.badgeCount}
