@@ -16,6 +16,7 @@ export function SubmitButton({
     <button
       type="submit"
       disabled={pending}
+      aria-busy={pending}
       className={cn("button-primary", className)}
     >
       {pending ? <LoaderCircle size={16} className="animate-spin" /> : null}

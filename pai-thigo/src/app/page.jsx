@@ -611,12 +611,12 @@ export default async function Home() {
                     key={scene.key}
                     className={`scene-card luxury-card rounded-[2.1rem] p-5 ${getGalleryToneClass(scene.tone)}`}
                   >
-                    <div className={`scene-visual ${getGalleryToneClass(scene.tone)}`}>
+                    <div className={`scene-visual media-frame ${getGalleryToneClass(scene.tone)}`}>
                       {scene.imageUrl ? (
                         <Image
                           src={scene.imageUrl}
                           alt={scene.title}
-                          className="h-full w-full rounded-[1.4rem] object-cover"
+                          className="media-image h-full w-full rounded-[1.4rem] object-cover"
                           width={1400}
                           height={900}
                           loading="lazy"

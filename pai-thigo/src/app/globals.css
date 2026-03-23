@@ -195,6 +195,8 @@ textarea {
 
 .section-heading-description {
   text-wrap: pretty;
+  max-width: 68ch;
+  line-height: 1.82;
 }
 
 .luxury-card,
@@ -400,7 +402,8 @@ textarea {
 
 .page-lead {
   font-size: clamp(1rem, 2.8vw, 1.15rem);
-  line-height: 1.9;
+  line-height: 1.84;
+  letter-spacing: -0.003em;
 }
 
 .scene-card {
@@ -445,6 +448,10 @@ textarea {
   pointer-events: none;
 }
 
+.quote-panel::before {
+  content: "\201C";
+}
+
 .contact-chip {
   display: flex;
   flex-direction: column;
@@ -476,7 +483,8 @@ textarea {
   transition:
     transform 180ms ease,
     box-shadow 180ms ease,
-    filter 180ms ease;
+    filter 180ms ease,
+    outline-color 140ms ease;
 }
 
 .button-primary:hover {
@@ -485,11 +493,26 @@ textarea {
   filter: brightness(1.02);
 }
 
+.button-primary:focus-visible {
+  outline: 2px solid rgba(217, 185, 122, 0.76);
+  outline-offset: 2px;
+}
+
+.button-primary:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+
 .button-primary:disabled {
   cursor: not-allowed;
   opacity: 0.7;
   transform: none;
+  filter: saturate(0.75);
   box-shadow: 0 10px 24px rgba(20, 35, 29, 0.12);
+}
+
+.button-primary[aria-busy="true"] {
+  cursor: progress;
 }
 
 .button-secondary {
@@ -513,13 +536,30 @@ textarea {
   transition:
     transform 180ms ease,
     border-color 180ms ease,
-    background 180ms ease;
+    background 180ms ease,
+    outline-color 140ms ease;
 }
 
 .button-secondary:hover {
   transform: translateY(-2px);
   border-color: rgba(182, 135, 66, 0.28);
   background: rgba(255, 255, 255, 0.72);
+}
+
+.button-secondary:focus-visible {
+  outline: 2px solid rgba(217, 185, 122, 0.76);
+  outline-offset: 2px;
+}
+
+.button-secondary:active {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.button-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.66;
+  transform: none;
 }
 
 .button-ghost {
@@ -542,13 +582,40 @@ textarea {
   transition:
     transform 180ms ease,
     background 180ms ease,
-    border-color 180ms ease;
+    border-color 180ms ease,
+    outline-color 140ms ease;
 }
 
 .button-ghost:hover {
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(217, 185, 122, 0.34);
+}
+
+.button-ghost:focus-visible {
+  outline: 2px solid rgba(217, 185, 122, 0.76);
+  outline-offset: 2px;
+}
+
+.button-ghost:active {
+  transform: translateY(0);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.button-ghost:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+  transform: none;
+}
+
+.media-frame {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 40%),
+    radial-gradient(circle at top, rgba(217, 185, 122, 0.26), rgba(95, 123, 109, 0.2));
+}
+
+.media-image {
+  transition: transform 360ms ease, filter 360ms ease;
 }
 
 .nav-pill {
@@ -957,7 +1024,8 @@ textarea {
   transition:
     transform 180ms ease,
     border-color 180ms ease,
-    background 180ms ease;
+    background 180ms ease,
+    outline-color 140ms ease;
 }
 
 .filter-chip-active {
@@ -965,6 +1033,11 @@ textarea {
   background: linear-gradient(135deg, rgba(20, 35, 29, 0.96), rgba(33, 55, 47, 0.92));
   color: var(--cream);
   box-shadow: 0 14px 28px rgba(20, 35, 29, 0.16);
+}
+
+.filter-chip:focus-visible {
+  outline: 2px solid rgba(217, 185, 122, 0.76);
+  outline-offset: 2px;
 }
 
 .staff-order-toast {
@@ -1183,6 +1256,12 @@ textarea {
     background: linear-gradient(135deg, rgba(20, 35, 29, 0.96), rgba(33, 55, 47, 0.92));
   }
 
+  .group:hover .media-image,
+  .scene-card:hover .media-image {
+    transform: scale(1.035);
+    filter: saturate(1.04) contrast(1.03);
+  }
+
   .staff-order-sound-toggle:hover {
     transform: translateY(-1px);
     border-color: rgba(217, 185, 122, 0.34);
@@ -1217,6 +1296,8 @@ textarea {
     white-space: normal;
     text-align: center;
     line-height: 1.35;
+    padding: 0.82rem 1.15rem;
+    font-size: 0.84rem;
   }
 
   .hero-stage {
@@ -1229,6 +1310,25 @@ textarea {
     justify-content: center;
     text-align: center;
     letter-spacing: 0.2em;
+  }
+
+  .contact-chip {
+    padding: 1rem;
+    border-radius: 1.35rem;
+  }
+
+  .stat-panel {
+    border-radius: 1.45rem;
+  }
+
+  .mobile-nav-link {
+    font-size: 0.84rem;
+    padding: 0.66rem 0.9rem;
+  }
+
+  .feature-stat-body,
+  .feature-stat-label {
+    line-height: 1.45;
   }
 
   .nav-pill {
@@ -1293,6 +1393,20 @@ textarea {
   }
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  main > section {
+    animation: section-enter 360ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  main > section:nth-of-type(2) {
+    animation-delay: 45ms;
+  }
+
+  main > section:nth-of-type(3) {
+    animation-delay: 85ms;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-orb {
     animation: none;
@@ -1327,5 +1441,16 @@ textarea {
   }
   100% {
     background-position: -200% 0;
+  }
+}
+
+@keyframes section-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }

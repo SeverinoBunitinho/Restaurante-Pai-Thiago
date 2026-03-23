@@ -179,15 +179,17 @@ export default async function CardapioPage() {
                     {category.items.map((item) => (
                       <article
                         key={item.id}
-                        className="stat-panel overflow-hidden p-0"
+                        className="group stat-panel overflow-hidden p-0"
                       >
-                        <div className="relative h-44 w-full overflow-hidden">
+                        <div className="media-frame relative h-44 w-full overflow-hidden">
                           <Image
                             src={item.imageUrl}
                             alt={item.name}
                             fill
-                            className="object-cover"
+                            className="media-image object-cover"
                             sizes="(max-width: 1024px) 100vw, 50vw"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
                           />
                         </div>
 
