@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { BellRing, Volume2, VolumeX } from "lucide-react";
+import { BellRing, Volume2, VolumeX, X } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -269,6 +269,9 @@ function getReservationStatusLabel(value) {
   return labels[value] ?? "Reserva atualizada";
 }
 
+const STAFF_ALERT_VISIBLE_MS = 6500;
+const CUSTOMER_ALERT_VISIBLE_MS = 6200;
+
 function getRefreshTiming(pathname) {
   if (pathname?.startsWith("/operacao/comandas")) {
     return {
@@ -502,6 +505,8 @@ export function AppLiveSync() {
   const timeoutRef = useRef(null);
   const staffAlertTimeoutRef = useRef(null);
   const customerAlertTimeoutRef = useRef(null);
+  const orderAlertExpiresAtRef = useRef(0);
+  const customerAlertExpiresAtRef = useRef(0);
   const lastRefreshAtRef = useRef(0);
   const audioContextRef = useRef(null);
   const prefetchedRef = useRef(new Set());
@@ -510,6 +515,26 @@ export function AppLiveSync() {
   const [isSoundEnabled, setIsSoundEnabled] = useState(() => readSoundPreference());
   const soundEnabledRef = useRef(isSoundEnabled);
   const [supabase] = useState(() => getSupabaseBrowserClient());
+
+  const dismissStaffAlert = () => {
+    if (staffAlertTimeoutRef.current) {
+      clearTimeout(staffAlertTimeoutRef.current);
+      staffAlertTimeoutRef.current = null;
+    }
+
+    orderAlertExpiresAtRef.current = 0;
+    setOrderAlert(null);
+  };
+
+  const dismissCustomerAlert = () => {
+    if (customerAlertTimeoutRef.current) {
+      clearTimeout(customerAlertTimeoutRef.current);
+      customerAlertTimeoutRef.current = null;
+    }
+
+    customerAlertExpiresAtRef.current = 0;
+    setCustomerAlert(null);
+  };
 
   useEffect(() => {
     soundEnabledRef.current = isSoundEnabled;
@@ -526,6 +551,40 @@ export function AppLiveSync() {
         audioContextRef.current.close().catch(() => {});
         audioContextRef.current = null;
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    const dropExpiredToasts = () => {
+      const now = Date.now();
+
+      if (orderAlertExpiresAtRef.current && now >= orderAlertExpiresAtRef.current) {
+        dismissStaffAlert();
+      }
+
+      if (customerAlertExpiresAtRef.current && now >= customerAlertExpiresAtRef.current) {
+        dismissCustomerAlert();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (typeof document === "undefined") {
+        return;
+      }
+
+      if (document.visibilityState === "visible") {
+        dropExpiredToasts();
+      }
+    };
+
+    const interval = setInterval(dropExpiredToasts, 1000);
+    window.addEventListener("focus", dropExpiredToasts);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", dropExpiredToasts);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
@@ -673,11 +732,15 @@ export function AppLiveSync() {
 
         if (staffAlertTimeoutRef.current) {
           clearTimeout(staffAlertTimeoutRef.current);
+          staffAlertTimeoutRef.current = null;
         }
 
+        orderAlertExpiresAtRef.current = Date.now() + STAFF_ALERT_VISIBLE_MS;
         staffAlertTimeoutRef.current = setTimeout(() => {
           setOrderAlert(null);
-        }, 6500);
+          orderAlertExpiresAtRef.current = 0;
+          staffAlertTimeoutRef.current = null;
+        }, STAFF_ALERT_VISIBLE_MS);
 
         if (
           typeof window !== "undefined" &&
@@ -704,7 +767,10 @@ export function AppLiveSync() {
     return () => {
       if (staffAlertTimeoutRef.current) {
         clearTimeout(staffAlertTimeoutRef.current);
+        staffAlertTimeoutRef.current = null;
       }
+
+      orderAlertExpiresAtRef.current = 0;
 
       supabase.removeChannel(channel);
     };
@@ -720,11 +786,15 @@ export function AppLiveSync() {
 
       if (customerAlertTimeoutRef.current) {
         clearTimeout(customerAlertTimeoutRef.current);
+        customerAlertTimeoutRef.current = null;
       }
 
+      customerAlertExpiresAtRef.current = Date.now() + CUSTOMER_ALERT_VISIBLE_MS;
       customerAlertTimeoutRef.current = setTimeout(() => {
         setCustomerAlert(null);
-      }, 6200);
+        customerAlertExpiresAtRef.current = 0;
+        customerAlertTimeoutRef.current = null;
+      }, CUSTOMER_ALERT_VISIBLE_MS);
 
       if (
         typeof window !== "undefined" &&
@@ -831,7 +901,10 @@ export function AppLiveSync() {
     return () => {
       if (customerAlertTimeoutRef.current) {
         clearTimeout(customerAlertTimeoutRef.current);
+        customerAlertTimeoutRef.current = null;
       }
+
+      customerAlertExpiresAtRef.current = 0;
 
       supabase.removeChannel(channel);
     };
@@ -856,13 +929,25 @@ export function AppLiveSync() {
           <div className="staff-order-toast-icon">
             <BellRing size={18} />
           </div>
+          <button
+            type="button"
+            className="live-toast-close live-toast-close-dark"
+            onClick={dismissStaffAlert}
+            aria-label="Fechar notificacao de pedido"
+          >
+            <X size={14} />
+          </button>
           <div className="staff-order-toast-copy">
             <p className="staff-order-toast-title">{orderAlert.title}</p>
             <p className="staff-order-toast-message">{orderAlert.message}</p>
             <p className="staff-order-toast-detail">{orderAlert.detail}</p>
           </div>
           <div className="staff-order-toast-actions">
-            <Link href="/operacao/comandas" className="staff-order-toast-link">
+            <Link
+              href="/operacao/comandas"
+              className="staff-order-toast-link"
+              onClick={dismissStaffAlert}
+            >
               Abrir pedidos
             </Link>
             <button
@@ -882,12 +967,24 @@ export function AppLiveSync() {
           <div className="customer-live-toast-icon">
             <BellRing size={16} />
           </div>
+          <button
+            type="button"
+            className="live-toast-close live-toast-close-light"
+            onClick={dismissCustomerAlert}
+            aria-label="Fechar notificacao"
+          >
+            <X size={14} />
+          </button>
           <div className="customer-live-toast-copy">
             <p className="customer-live-toast-title">{customerAlert.title}</p>
             <p className="customer-live-toast-message">{customerAlert.message}</p>
             <p className="customer-live-toast-detail">{customerAlert.detail}</p>
           </div>
-          <Link href={customerAlert.href} className="customer-live-toast-link">
+          <Link
+            href={customerAlert.href}
+            className="customer-live-toast-link"
+            onClick={dismissCustomerAlert}
+          >
             {customerAlert.linkLabel}
           </Link>
         </div>

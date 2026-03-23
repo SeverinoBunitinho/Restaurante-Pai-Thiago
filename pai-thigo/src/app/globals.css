@@ -1294,6 +1294,40 @@ textarea {
   backdrop-filter: blur(18px);
 }
 
+.live-toast-close {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.live-toast-close:focus-visible {
+  outline: 2px solid rgba(217, 185, 122, 0.76);
+  outline-offset: 2px;
+}
+
+.live-toast-close-dark {
+  border-color: rgba(217, 185, 122, 0.24);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 247, 232, 0.84);
+}
+
+.live-toast-close-light {
+  border-color: rgba(20, 35, 29, 0.14);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--forest);
+}
+
 .staff-order-toast-icon {
   display: inline-flex;
   align-items: center;
@@ -1578,6 +1612,20 @@ textarea {
     transform: translateY(-1px);
     border-color: rgba(217, 185, 122, 0.34);
     background: rgba(255, 255, 255, 0.1);
+  }
+
+  .live-toast-close:hover {
+    transform: translateY(-1px);
+  }
+
+  .live-toast-close-dark:hover {
+    border-color: rgba(217, 185, 122, 0.34);
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .live-toast-close-light:hover {
+    border-color: rgba(20, 35, 29, 0.2);
+    background: rgba(255, 255, 255, 0.92);
   }
 }
 
