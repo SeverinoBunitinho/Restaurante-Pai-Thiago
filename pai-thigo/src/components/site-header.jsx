@@ -10,6 +10,7 @@ import {
 import { logoutAction } from "@/app/login/actions";
 import { ActiveLink } from "@/components/active-link";
 import { CartHeaderLink } from "@/components/cart-header-link";
+import { NotificationCenter } from "@/components/notification-center";
 import {
   getCurrentSession,
   getRouteForRole,
@@ -31,24 +32,77 @@ function formatBadgeCount(value) {
   return String(value);
 }
 
-async function getHeaderNotificationCounts(session) {
-  const emptyCounts = {
+function getOrderStatusLabel(value) {
+  const labels = {
+    received: "Pedido recebido",
+    preparing: "Pedido em preparo",
+    ready: "Pedido pronto",
+    dispatching: "Saiu para entrega",
+    delivered: "Pedido entregue",
+    cancelled: "Pedido cancelado",
+  };
+
+  return labels[value] ?? "Pedido atualizado";
+}
+
+function getReservationStatusLabel(value) {
+  const labels = {
+    pending: "Reserva pendente",
+    confirmed: "Reserva confirmada",
+    seated: "Reserva em atendimento",
+    completed: "Reserva finalizada",
+    cancelled: "Reserva cancelada",
+  };
+
+  return labels[value] ?? "Reserva atualizada";
+}
+
+function formatFeedMoment(rawValue) {
+  if (!rawValue) {
+    return "";
+  }
+
+  const parsedDate = new Date(rawValue);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+    .format(parsedDate)
+    .replace(",", "");
+}
+
+function toEpoch(rawValue) {
+  const parsedDate = new Date(rawValue ?? 0);
+  const time = parsedDate.getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+async function getHeaderNotificationContext(session) {
+  const emptyContext = {
     orders: 0,
     reservations: 0,
+    items: [],
   };
 
   if (!session) {
-    return emptyCounts;
+    return emptyContext;
   }
 
   const supabase = await getSupabaseServerClient();
 
   if (!supabase) {
-    return emptyCounts;
+    return emptyContext;
   }
 
   if (isStaffRole(session.role)) {
-    const [ordersResult, reservationsResult] = await Promise.all([
+    const [ordersCountResult, reservationsCountResult, recentOrdersResult, recentReservationsResult] = await Promise.all([
       supabase
         .from("orders")
         .select("*", { head: true, count: "exact" })
@@ -57,19 +111,81 @@ async function getHeaderNotificationCounts(session) {
         .from("reservations")
         .select("*", { head: true, count: "exact" })
         .eq("status", "pending"),
+      supabase
+        .from("orders")
+        .select("id, checkout_reference, guest_name, status, item_name, updated_at, created_at")
+        .order("updated_at", { ascending: false })
+        .limit(8),
+      supabase
+        .from("reservations")
+        .select("id, guest_name, status, reservation_date, reservation_time, updated_at, created_at")
+        .order("updated_at", { ascending: false })
+        .limit(8),
     ]);
 
-    if (ordersResult.error || reservationsResult.error) {
-      return emptyCounts;
+    if (
+      ordersCountResult.error ||
+      reservationsCountResult.error ||
+      recentOrdersResult.error ||
+      recentReservationsResult.error
+    ) {
+      return emptyContext;
     }
 
+    const feed = [];
+
+    for (const order of recentOrdersResult.data ?? []) {
+      const eventAt = order.updated_at ?? order.created_at;
+      feed.push({
+        id: `order:${order.id}:${order.status}`,
+        kind: "order",
+        title: getOrderStatusLabel(order.status),
+        detail: order.checkout_reference
+          ? `${order.checkout_reference}${order.guest_name ? ` | ${order.guest_name}` : ""}`
+          : order.guest_name || order.item_name || "Atualizacao de pedido",
+        href: "/operacao/comandas",
+        timestamp: formatFeedMoment(eventAt),
+        sortAt: toEpoch(eventAt),
+      });
+    }
+
+    for (const reservation of recentReservationsResult.data ?? []) {
+      const eventAt = reservation.updated_at ?? reservation.created_at;
+      const hourLabel = String(reservation.reservation_time ?? "").slice(0, 5);
+      feed.push({
+        id: `reservation:${reservation.id}:${reservation.status}`,
+        kind: "reservation",
+        title: getReservationStatusLabel(reservation.status),
+        detail: `${reservation.guest_name || "Reserva"}${hourLabel ? ` | ${hourLabel}` : ""}`,
+        href: "/operacao/reservas",
+        timestamp: formatFeedMoment(eventAt),
+        sortAt: toEpoch(eventAt),
+      });
+    }
+
+    const uniqueFeed = Array.from(
+      new Map(
+        feed
+          .sort((left, right) => right.sortAt - left.sortAt)
+          .map((item) => [item.id, item]),
+      ).values(),
+    )
+      .slice(0, 10)
+      .map((item) => {
+        const { sortAt, ...normalizedItem } = item;
+        void sortAt;
+        return normalizedItem;
+      });
+
     return {
-      orders: ordersResult.count ?? 0,
-      reservations: reservationsResult.count ?? 0,
+      orders: ordersCountResult.count ?? 0,
+      reservations: reservationsCountResult.count ?? 0,
+      items: uniqueFeed,
     };
   }
 
-  const [ordersResult, reservationsResult] = await Promise.all([
+  const [ordersCountResult, reservationsCountResult, recentOrdersResult, recentReservationsResult] =
+    await Promise.all([
     supabase
       .from("orders")
       .select("*", { head: true, count: "exact" })
@@ -80,37 +196,101 @@ async function getHeaderNotificationCounts(session) {
       .select("*", { head: true, count: "exact" })
       .eq("user_id", session.user.id)
       .in("status", ["pending", "confirmed", "seated"]),
-  ]);
+    supabase
+      .from("orders")
+      .select("id, checkout_reference, status, item_name, updated_at, created_at")
+      .eq("user_id", session.user.id)
+      .order("updated_at", { ascending: false })
+      .limit(8),
+    supabase
+      .from("reservations")
+      .select("id, status, reservation_date, reservation_time, updated_at, created_at")
+      .eq("user_id", session.user.id)
+      .order("updated_at", { ascending: false })
+      .limit(8),
+    ]);
 
-  if (ordersResult.error || reservationsResult.error) {
-    return emptyCounts;
+  if (
+    ordersCountResult.error ||
+    reservationsCountResult.error ||
+    recentOrdersResult.error ||
+    recentReservationsResult.error
+  ) {
+    return emptyContext;
   }
 
+  const feed = [];
+
+  for (const order of recentOrdersResult.data ?? []) {
+    const eventAt = order.updated_at ?? order.created_at;
+    feed.push({
+      id: `order:${order.id}:${order.status}`,
+      kind: "order",
+      title: getOrderStatusLabel(order.status),
+      detail: order.checkout_reference
+        ? `${order.checkout_reference}${order.item_name ? ` | ${order.item_name}` : ""}`
+        : order.item_name || "Atualizacao de pedido",
+      href: "/pedidos",
+      timestamp: formatFeedMoment(eventAt),
+      sortAt: toEpoch(eventAt),
+    });
+  }
+
+  for (const reservation of recentReservationsResult.data ?? []) {
+    const eventAt = reservation.updated_at ?? reservation.created_at;
+    const dayLabel = String(reservation.reservation_date ?? "");
+    const hourLabel = String(reservation.reservation_time ?? "").slice(0, 5);
+    feed.push({
+      id: `reservation:${reservation.id}:${reservation.status}`,
+      kind: "reservation",
+      title: getReservationStatusLabel(reservation.status),
+      detail: `${dayLabel}${hourLabel ? ` | ${hourLabel}` : ""}`,
+      href: "/reservas",
+      timestamp: formatFeedMoment(eventAt),
+      sortAt: toEpoch(eventAt),
+    });
+  }
+
+  const uniqueFeed = Array.from(
+    new Map(
+      feed
+        .sort((left, right) => right.sortAt - left.sortAt)
+        .map((item) => [item.id, item]),
+    ).values(),
+  )
+    .slice(0, 10)
+    .map((item) => {
+      const { sortAt, ...normalizedItem } = item;
+      void sortAt;
+      return normalizedItem;
+    });
+
   return {
-    orders: ordersResult.count ?? 0,
-    reservations: reservationsResult.count ?? 0,
+    orders: ordersCountResult.count ?? 0,
+    reservations: reservationsCountResult.count ?? 0,
+    items: uniqueFeed,
   };
 }
 
 export async function SiteHeader() {
   const session = await getCurrentSession();
-  const [restaurantInfo, notificationCounts] = await Promise.all([
+  const [restaurantInfo, notificationContext] = await Promise.all([
     getRestaurantProfile(),
-    getHeaderNotificationCounts(session),
+    getHeaderNotificationContext(session),
   ]);
   const staffSession = isStaffRole(session?.role);
   const navItems = staffSession
     ? [
         { href: "/painel", label: "Painel", exact: true },
-        { href: "/operacao/comandas", label: "Pedidos", badgeCount: notificationCounts.orders },
-        { href: "/operacao/reservas", label: "Reservas", badgeCount: notificationCounts.reservations },
+        { href: "/operacao/comandas", label: "Pedidos", badgeCount: notificationContext.orders },
+        { href: "/operacao/reservas", label: "Reservas", badgeCount: notificationContext.reservations },
         { href: "/operacao", label: "Central", exact: true },
         { href: "/area-funcionario", label: "Portal", exact: true },
       ]
     : [
         { href: "/cardapio", label: "Cardapio", exact: true },
-        { href: "/pedidos", label: "Pedidos", exact: true, badgeCount: notificationCounts.orders },
-        { href: "/reservas", label: "Reservas", exact: true, badgeCount: notificationCounts.reservations },
+        { href: "/pedidos", label: "Pedidos", exact: true, badgeCount: notificationContext.orders },
+        { href: "/reservas", label: "Reservas", exact: true, badgeCount: notificationContext.reservations },
         { href: "/eventos", label: "Eventos", exact: true },
         { href: "/contato", label: "Contato", exact: true },
         { href: "/area-cliente", label: "Perfil", exact: true },
@@ -180,6 +360,12 @@ export async function SiteHeader() {
                         {getStaffRoleLabel(session.role)}
                       </Link>
                     ) : null}
+                    <NotificationCenter
+                      staffSession={staffSession}
+                      ordersCount={notificationContext.orders}
+                      reservationsCount={notificationContext.reservations}
+                      items={notificationContext.items}
+                    />
                     <form action={logoutAction}>
                       <button type="submit" className="button-primary px-3 py-2 sm:px-4 sm:py-2.5">
                         <LogOut size={16} />
