@@ -17,23 +17,100 @@ import {
   isStaffRole,
 } from "@/lib/auth";
 import { getRestaurantProfile } from "@/lib/restaurant-profile";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+
+function formatBadgeCount(value) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return "";
+  }
+
+  if (value > 99) {
+    return "99+";
+  }
+
+  return String(value);
+}
+
+async function getHeaderNotificationCounts(session) {
+  const emptyCounts = {
+    orders: 0,
+    reservations: 0,
+  };
+
+  if (!session) {
+    return emptyCounts;
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    return emptyCounts;
+  }
+
+  if (isStaffRole(session.role)) {
+    const [ordersResult, reservationsResult] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("*", { head: true, count: "exact" })
+        .eq("status", "received"),
+      supabase
+        .from("reservations")
+        .select("*", { head: true, count: "exact" })
+        .eq("status", "pending"),
+    ]);
+
+    if (ordersResult.error || reservationsResult.error) {
+      return emptyCounts;
+    }
+
+    return {
+      orders: ordersResult.count ?? 0,
+      reservations: reservationsResult.count ?? 0,
+    };
+  }
+
+  const [ordersResult, reservationsResult] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("*", { head: true, count: "exact" })
+      .eq("user_id", session.user.id)
+      .in("status", ["received", "preparing", "ready", "dispatching"]),
+    supabase
+      .from("reservations")
+      .select("*", { head: true, count: "exact" })
+      .eq("user_id", session.user.id)
+      .in("status", ["pending", "confirmed", "seated"]),
+  ]);
+
+  if (ordersResult.error || reservationsResult.error) {
+    return emptyCounts;
+  }
+
+  return {
+    orders: ordersResult.count ?? 0,
+    reservations: reservationsResult.count ?? 0,
+  };
+}
 
 export async function SiteHeader() {
   const session = await getCurrentSession();
-  const restaurantInfo = await getRestaurantProfile();
+  const [restaurantInfo, notificationCounts] = await Promise.all([
+    getRestaurantProfile(),
+    getHeaderNotificationCounts(session),
+  ]);
   const staffSession = isStaffRole(session?.role);
   const navItems = staffSession
     ? [
         { href: "/painel", label: "Painel", exact: true },
-        { href: "/operacao/comandas", label: "Pedidos" },
-        { href: "/operacao/reservas", label: "Reservas" },
+        { href: "/operacao/comandas", label: "Pedidos", badgeCount: notificationCounts.orders },
+        { href: "/operacao/reservas", label: "Reservas", badgeCount: notificationCounts.reservations },
         { href: "/operacao", label: "Central", exact: true },
         { href: "/area-funcionario", label: "Portal", exact: true },
       ]
     : [
         { href: "/cardapio", label: "Cardapio", exact: true },
-        { href: "/pedidos", label: "Pedidos", exact: true },
-        { href: "/reservas", label: "Reservas", exact: true },
+        { href: "/pedidos", label: "Pedidos", exact: true, badgeCount: notificationCounts.orders },
+        { href: "/reservas", label: "Reservas", exact: true, badgeCount: notificationCounts.reservations },
         { href: "/eventos", label: "Eventos", exact: true },
         { href: "/contato", label: "Contato", exact: true },
         { href: "/area-cliente", label: "Perfil", exact: true },
@@ -73,7 +150,14 @@ export async function SiteHeader() {
                     className="nav-link"
                     activeClassName="nav-link-active"
                   >
-                    {item.label}
+                    <span className="nav-link-content">
+                      <span>{item.label}</span>
+                      {item.badgeCount ? (
+                        <span className="nav-link-badge" aria-label={`${item.badgeCount} notificacoes`}>
+                          {formatBadgeCount(item.badgeCount)}
+                        </span>
+                      ) : null}
+                    </span>
                   </ActiveLink>
                 ))}
               </nav>
@@ -126,7 +210,14 @@ export async function SiteHeader() {
                   className="mobile-nav-link"
                   activeClassName="mobile-nav-link-active"
                 >
-                  {item.label}
+                  <span className="mobile-nav-link-content">
+                    <span>{item.label}</span>
+                    {item.badgeCount ? (
+                      <span className="mobile-nav-link-badge" aria-label={`${item.badgeCount} notificacoes`}>
+                        {formatBadgeCount(item.badgeCount)}
+                      </span>
+                    ) : null}
+                  </span>
                 </ActiveLink>
               ))}
             </div>

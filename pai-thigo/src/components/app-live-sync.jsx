@@ -23,8 +23,6 @@ function getRealtimeTables(pathname) {
     pathname === "/cadastro" ||
     pathname === "/recuperar-senha" ||
     pathname === "/redefinir-senha" ||
-    pathname === "/eventos" ||
-    pathname === "/contato" ||
     pathname === "/privacidade" ||
     pathname === "/termos" ||
     pathname === "/cancelamentos"
@@ -53,12 +51,24 @@ function getRealtimeTables(pathname) {
   }
 
   if (pathname === "/cardapio") {
-    addTables("menu_items", "menu_categories");
+    addTables("menu_items", "menu_categories", "orders", "reservations");
     return Array.from(tables);
   }
 
   if (pathname === "/carrinho") {
-    addTables("menu_items", "menu_categories", "restaurant_settings", "delivery_zones");
+    addTables(
+      "menu_items",
+      "menu_categories",
+      "restaurant_settings",
+      "delivery_zones",
+      "orders",
+      "reservations",
+    );
+    return Array.from(tables);
+  }
+
+  if (pathname === "/eventos" || pathname === "/contato") {
+    addTables("orders", "reservations");
     return Array.from(tables);
   }
 
@@ -78,32 +88,39 @@ function getRealtimeTables(pathname) {
   }
 
   if (pathname.startsWith("/operacao/reservas")) {
-    addTables("reservations", "restaurant_tables");
+    addTables("reservations", "orders", "restaurant_tables");
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/mesas")) {
-    addTables("restaurant_tables", "reservations", "service_checks");
+    addTables("restaurant_tables", "reservations", "orders", "service_checks");
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/menu")) {
-    addTables("menu_items", "menu_categories");
+    addTables("menu_items", "menu_categories", "reservations", "orders");
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/equipe")) {
-    addTables("staff_directory", "profiles");
+    addTables("staff_directory", "profiles", "reservations", "orders");
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/relatorios")) {
-    addTables("service_checks", "service_check_items", "restaurant_tables", "profiles");
+    addTables(
+      "service_checks",
+      "service_check_items",
+      "restaurant_tables",
+      "profiles",
+      "reservations",
+      "orders",
+    );
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/configuracoes")) {
-    addTables("restaurant_settings", "delivery_zones");
+    addTables("restaurant_settings", "delivery_zones", "reservations", "orders");
     return Array.from(tables);
   }
 
@@ -180,8 +197,46 @@ function isStaffWorkspace(pathname) {
   );
 }
 
+function isCustomerWorkspace(pathname) {
+  return (
+    pathname === "/" ||
+    pathname === "/area-cliente" ||
+    pathname === "/pedidos" ||
+    pathname === "/cardapio" ||
+    pathname === "/carrinho" ||
+    pathname === "/reservas" ||
+    pathname === "/eventos" ||
+    pathname === "/contato"
+  );
+}
+
 function getFulfillmentLabel(value) {
   return value === "delivery" ? "Delivery" : "Retirada";
+}
+
+function getOrderStatusLabel(value) {
+  const labels = {
+    received: "Pedido recebido",
+    preparing: "Pedido em preparo",
+    ready: "Pedido pronto",
+    dispatching: "Pedido saiu para entrega",
+    delivered: "Pedido entregue",
+    cancelled: "Pedido cancelado",
+  };
+
+  return labels[value] ?? "Pedido atualizado";
+}
+
+function getReservationStatusLabel(value) {
+  const labels = {
+    pending: "Reserva pendente",
+    confirmed: "Reserva confirmada",
+    seated: "Reserva em atendimento",
+    completed: "Reserva finalizada",
+    cancelled: "Reserva cancelada",
+  };
+
+  return labels[value] ?? "Reserva atualizada";
 }
 
 function getRefreshTiming(pathname) {
@@ -242,6 +297,35 @@ function rememberOrderAlert(orderKey) {
 
   try {
     window.sessionStorage.setItem(`staff-order-alert:${orderKey}`, String(Date.now()));
+  } catch {}
+}
+
+function hasRecentCustomerAlert(alertKey) {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    const storageKey = `customer-live-alert:${alertKey}`;
+    const lastValue = window.sessionStorage.getItem(storageKey);
+
+    if (!lastValue) {
+      return false;
+    }
+
+    return Date.now() - Number(lastValue) < 16000;
+  } catch {
+    return false;
+  }
+}
+
+function rememberCustomerAlert(alertKey) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(`customer-live-alert:${alertKey}`, String(Date.now()));
   } catch {}
 }
 
@@ -386,11 +470,13 @@ export function AppLiveSync() {
   const pathname = usePathname();
   const router = useRouter();
   const timeoutRef = useRef(null);
-  const alertTimeoutRef = useRef(null);
+  const staffAlertTimeoutRef = useRef(null);
+  const customerAlertTimeoutRef = useRef(null);
   const lastRefreshAtRef = useRef(0);
   const audioContextRef = useRef(null);
   const prefetchedRef = useRef(new Set());
   const [orderAlert, setOrderAlert] = useState(null);
+  const [customerAlert, setCustomerAlert] = useState(null);
   const [isSoundEnabled, setIsSoundEnabled] = useState(() => readSoundPreference());
   const soundEnabledRef = useRef(isSoundEnabled);
   const [supabase] = useState(() => getSupabaseBrowserClient());
@@ -414,7 +500,7 @@ export function AppLiveSync() {
   }, []);
 
   useEffect(() => {
-    if (!isStaffWorkspace(pathname)) {
+    if (!isStaffWorkspace(pathname) && !isCustomerWorkspace(pathname)) {
       return undefined;
     }
 
@@ -555,11 +641,11 @@ export function AppLiveSync() {
           }
         }
 
-        if (alertTimeoutRef.current) {
-          clearTimeout(alertTimeoutRef.current);
+        if (staffAlertTimeoutRef.current) {
+          clearTimeout(staffAlertTimeoutRef.current);
         }
 
-        alertTimeoutRef.current = setTimeout(() => {
+        staffAlertTimeoutRef.current = setTimeout(() => {
           setOrderAlert(null);
         }, 6500);
 
@@ -586,8 +672,135 @@ export function AppLiveSync() {
     channel.subscribe();
 
     return () => {
-      if (alertTimeoutRef.current) {
-        clearTimeout(alertTimeoutRef.current);
+      if (staffAlertTimeoutRef.current) {
+        clearTimeout(staffAlertTimeoutRef.current);
+      }
+
+      supabase.removeChannel(channel);
+    };
+  }, [pathname, supabase]);
+
+  useEffect(() => {
+    if (!supabase || !isCustomerWorkspace(pathname) || isStaffWorkspace(pathname)) {
+      return undefined;
+    }
+
+    const showCustomerAlert = (nextAlert) => {
+      setCustomerAlert(nextAlert);
+
+      if (customerAlertTimeoutRef.current) {
+        clearTimeout(customerAlertTimeoutRef.current);
+      }
+
+      customerAlertTimeoutRef.current = setTimeout(() => {
+        setCustomerAlert(null);
+      }, 6200);
+
+      if (
+        typeof window !== "undefined" &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        try {
+          const notification = new Notification(nextAlert.title, {
+            body: `${nextAlert.message}${nextAlert.detail ? `\n${nextAlert.detail}` : ""}`,
+            tag: nextAlert.id,
+          });
+
+          notification.onclick = () => {
+            window.focus();
+            window.location.href = nextAlert.href;
+          };
+        } catch {}
+      }
+    };
+
+    const channel = supabase.channel(`customer-live-alerts:${pathname}`);
+
+    channel.on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "orders",
+      },
+      (payload) => {
+        const previousOrder = payload.old ?? {};
+        const nextOrder = payload.new ?? {};
+
+        if (!nextOrder.id || !nextOrder.status || nextOrder.status === previousOrder.status) {
+          return;
+        }
+
+        const alertKey = `${nextOrder.id}:${nextOrder.status}`;
+
+        if (hasRecentCustomerAlert(alertKey)) {
+          return;
+        }
+
+        rememberCustomerAlert(alertKey);
+
+        showCustomerAlert({
+          id: `customer-order-${alertKey}`,
+          title: "Atualizacao de pedido",
+          message: `${getOrderStatusLabel(nextOrder.status)}${nextOrder.checkout_reference ? ` | ${nextOrder.checkout_reference}` : ""}`,
+          detail: nextOrder.item_name
+            ? `Item: ${nextOrder.item_name}`
+            : "Acompanhe o andamento em Pedidos.",
+          href: "/pedidos",
+          linkLabel: "Ver pedidos",
+        });
+      },
+    );
+
+    channel.on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "reservations",
+      },
+      (payload) => {
+        const previousReservation = payload.old ?? {};
+        const nextReservation = payload.new ?? {};
+
+        if (
+          !nextReservation.id ||
+          !nextReservation.status ||
+          nextReservation.status === previousReservation.status
+        ) {
+          return;
+        }
+
+        const alertKey = `${nextReservation.id}:${nextReservation.status}`;
+
+        if (hasRecentCustomerAlert(alertKey)) {
+          return;
+        }
+
+        rememberCustomerAlert(alertKey);
+
+        showCustomerAlert({
+          id: `customer-reservation-${alertKey}`,
+          title: "Atualizacao de reserva",
+          message: getReservationStatusLabel(nextReservation.status),
+          detail:
+            nextReservation.reservation_date && nextReservation.reservation_time
+              ? `Horario: ${String(nextReservation.reservation_date)} as ${String(
+                  nextReservation.reservation_time,
+                ).slice(0, 5)}`
+              : "Confira os detalhes na aba de Reservas.",
+          href: "/reservas",
+          linkLabel: "Ver reservas",
+        });
+      },
+    );
+
+    channel.subscribe();
+
+    return () => {
+      if (customerAlertTimeoutRef.current) {
+        clearTimeout(customerAlertTimeoutRef.current);
       }
 
       supabase.removeChannel(channel);
@@ -606,29 +819,49 @@ export function AppLiveSync() {
     });
   };
 
-  return orderAlert ? (
-    <div className="staff-order-toast" role="status" aria-live="polite">
-      <div className="staff-order-toast-icon">
-        <BellRing size={18} />
-      </div>
-      <div className="staff-order-toast-copy">
-        <p className="staff-order-toast-title">{orderAlert.title}</p>
-        <p className="staff-order-toast-message">{orderAlert.message}</p>
-        <p className="staff-order-toast-detail">{orderAlert.detail}</p>
-      </div>
-      <div className="staff-order-toast-actions">
-        <Link href="/operacao/comandas" className="staff-order-toast-link">
-          Abrir pedidos
-        </Link>
-        <button
-          type="button"
-          className={`staff-order-sound-toggle ${isSoundEnabled ? "staff-order-sound-toggle-active" : ""}`}
-          onClick={toggleSound}
-        >
-          {isSoundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-          {isSoundEnabled ? "Som ligado" : "Som desligado"}
-        </button>
-      </div>
-    </div>
-  ) : null;
+  return (
+    <>
+      {orderAlert ? (
+        <div className="staff-order-toast" role="status" aria-live="polite">
+          <div className="staff-order-toast-icon">
+            <BellRing size={18} />
+          </div>
+          <div className="staff-order-toast-copy">
+            <p className="staff-order-toast-title">{orderAlert.title}</p>
+            <p className="staff-order-toast-message">{orderAlert.message}</p>
+            <p className="staff-order-toast-detail">{orderAlert.detail}</p>
+          </div>
+          <div className="staff-order-toast-actions">
+            <Link href="/operacao/comandas" className="staff-order-toast-link">
+              Abrir pedidos
+            </Link>
+            <button
+              type="button"
+              className={`staff-order-sound-toggle ${isSoundEnabled ? "staff-order-sound-toggle-active" : ""}`}
+              onClick={toggleSound}
+            >
+              {isSoundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+              {isSoundEnabled ? "Som ligado" : "Som desligado"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {customerAlert ? (
+        <div className="customer-live-toast" role="status" aria-live="polite">
+          <div className="customer-live-toast-icon">
+            <BellRing size={16} />
+          </div>
+          <div className="customer-live-toast-copy">
+            <p className="customer-live-toast-title">{customerAlert.title}</p>
+            <p className="customer-live-toast-message">{customerAlert.message}</p>
+            <p className="customer-live-toast-detail">{customerAlert.detail}</p>
+          </div>
+          <Link href={customerAlert.href} className="customer-live-toast-link">
+            {customerAlert.linkLabel}
+          </Link>
+        </div>
+      ) : null}
+    </>
+  );
 }
