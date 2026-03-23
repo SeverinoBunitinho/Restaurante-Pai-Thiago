@@ -1,10 +1,18 @@
 import Link from "next/link";
 import {
+  Blocks,
   CalendarRange,
+  CalendarSearch,
+  ClipboardList,
   Dot,
+  LayoutDashboard,
   LogOut,
+  PhoneCall,
   Shield,
   Sparkles,
+  UserRound,
+  UtensilsCrossed,
+  PartyPopper,
 } from "lucide-react";
 
 import { logoutAction } from "@/app/login/actions";
@@ -284,13 +292,14 @@ export async function SiteHeader() {
   const staffSession = isStaffRole(session?.role);
   const navItems = staffSession
       ? [
-        { href: "/painel", label: "Painel", exact: true },
+        { href: "/painel", label: "Painel", exact: true, icon: LayoutDashboard },
         {
           href: "/operacao/comandas",
           label: "Pedidos",
           badgeCount: notificationContext.orders,
           badgeKind: "orders",
           badgeLatestAt: notificationContext.ordersLatestAt,
+          icon: ClipboardList,
         },
         {
           href: "/operacao/reservas",
@@ -298,12 +307,13 @@ export async function SiteHeader() {
           badgeCount: notificationContext.reservations,
           badgeKind: "reservations",
           badgeLatestAt: notificationContext.reservationsLatestAt,
+          icon: CalendarSearch,
         },
-        { href: "/operacao", label: "Central", exact: true },
-        { href: "/area-funcionario", label: "Portal", exact: true },
+        { href: "/operacao", label: "Central", exact: true, icon: Blocks },
+        { href: "/area-funcionario", label: "Portal", exact: true, icon: UserRound },
       ]
     : [
-        { href: "/cardapio", label: "Cardapio", exact: true },
+        { href: "/cardapio", label: "Cardapio", exact: true, icon: UtensilsCrossed },
         {
           href: "/pedidos",
           label: "Pedidos",
@@ -311,6 +321,7 @@ export async function SiteHeader() {
           badgeCount: notificationContext.orders,
           badgeKind: "orders",
           badgeLatestAt: notificationContext.ordersLatestAt,
+          icon: ClipboardList,
         },
         {
           href: "/reservas",
@@ -319,10 +330,11 @@ export async function SiteHeader() {
           badgeCount: notificationContext.reservations,
           badgeKind: "reservations",
           badgeLatestAt: notificationContext.reservationsLatestAt,
+          icon: CalendarSearch,
         },
-        { href: "/eventos", label: "Eventos", exact: true },
-        { href: "/contato", label: "Contato", exact: true },
-        { href: "/area-cliente", label: "Perfil", exact: true },
+        { href: "/eventos", label: "Eventos", exact: true, icon: PartyPopper },
+        { href: "/contato", label: "Contato", exact: true, icon: PhoneCall },
+        { href: "/area-cliente", label: "Perfil", exact: true, icon: UserRound },
       ];
 
   const dashboardHref = session ? getRouteForRole(session.role) : "/login";
@@ -360,6 +372,7 @@ export async function SiteHeader() {
                     activeClassName="nav-link-active"
                   >
                     <span className="nav-link-content">
+                      {item.icon ? <item.icon size={14} className="nav-link-icon" /> : null}
                       <span>{item.label}</span>
                       {item.badgeCount && item.badgeKind ? (
                         <NotificationCountBadge
@@ -433,6 +446,7 @@ export async function SiteHeader() {
                   activeClassName="mobile-nav-link-active"
                 >
                   <span className="mobile-nav-link-content">
+                    {item.icon ? <item.icon size={14} className="mobile-nav-link-icon" /> : null}
                     <span className="mobile-nav-link-label">{item.label}</span>
                     {item.badgeCount && item.badgeKind ? (
                       <NotificationCountBadge
