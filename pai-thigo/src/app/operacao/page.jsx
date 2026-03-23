@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Compass, Layers3, Route, Sparkles } from "lucide-react";
+import { ArrowRight, Compass } from "lucide-react";
 
 import { SectionHeading } from "@/components/section-heading";
 import { getStaffRoleLabel, requireRole } from "@/lib/auth";
@@ -102,6 +102,10 @@ export default async function OperacaoOverviewPage() {
   const modules = getStaffModules(session.role);
   const flows = roleFlows[session.role] ?? roleFlows.waiter;
   const protocols = roleProtocols[session.role] ?? roleProtocols.waiter;
+  const flowKeys = new Set(flows.flatMap((flow) => flow.keys));
+  const complementaryModules = modules.filter((module) => !flowKeys.has(module.key));
+  const modulesForGrid = complementaryModules.length ? complementaryModules : modules;
+  const quickItems = panel.quickItems?.length ? panel.quickItems : modules.slice(0, 3);
 
   return (
     <>
@@ -193,14 +197,14 @@ export default async function OperacaoOverviewPage() {
         <div className="grid gap-5 lg:grid-cols-[0.98fr_1.02fr]">
           <div className="luxury-card rounded-[2.2rem] p-6">
             <SectionHeading
-              eyebrow="Camadas liberadas"
-              title="Os modulos foram separados por funcao"
-              description="Cada acesso abaixo agora representa uma frente diferente da operacao."
+              eyebrow="Modulos complementares"
+              title="Acessos sem repeticao com as trilhas de cima"
+              description="Aqui ficam os modulos que ainda nao apareceram no mapa operacional."
               compact
             />
 
             <div className="mt-8 grid gap-4 md:grid-cols-2">
-              {modules.map((module) => (
+              {modulesForGrid.map((module) => (
                 <Link
                   key={module.key}
                   href={module.href}
@@ -220,32 +224,17 @@ export default async function OperacaoOverviewPage() {
 
           <div className="luxury-card rounded-[2.2rem] p-6">
             <SectionHeading
-              eyebrow="Leitura da central"
-              title="Como a central foi organizada"
-              description="A central funciona como mapa de rotas, com modulos separados por frente de trabalho."
+              eyebrow="Acesso rapido"
+              title="Rotas de entrada recomendadas para o seu cargo"
+              description="Use estes atalhos para abrir o turno sem ficar navegando entre paginas repetidas."
               compact
             />
 
             <div className="mt-8 grid gap-4">
-              {[
-                {
-                  icon: Layers3,
-                  title: "Modulos especializados",
-                  text: "Reservas, acomodacao, atendimento, equipe e executivo agora cumprem papeis diferentes.",
-                },
-                {
-                  icon: Route,
-                  title: "Fluxos mais claros",
-                  text: "Cada cargo entende por onde deve comecar sem abrir varias telas parecidas.",
-                },
-                {
-                  icon: Sparkles,
-                  title: "Rotina mais objetiva",
-                  text: "Acomodacao ganhou distribuicao de mesas e atendimento passou a concentrar o contexto do cliente.",
-                },
-              ].map((item) => (
-                <article
-                  key={item.title}
+              {quickItems.map((item) => (
+                <Link
+                  key={item.key}
+                  href={item.href}
                   className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
                 >
                   <item.icon className="text-[var(--gold)]" size={18} />
@@ -253,9 +242,9 @@ export default async function OperacaoOverviewPage() {
                     {item.title}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                    {item.text}
+                    {item.description}
                   </p>
-                </article>
+                </Link>
               ))}
             </div>
           </div>
