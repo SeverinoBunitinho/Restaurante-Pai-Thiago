@@ -2122,7 +2122,7 @@ textarea {
 
   .site-header-actions {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: stretch;
     gap: 0.4rem;
   }
@@ -2134,12 +2134,12 @@ textarea {
   }
 
   .site-header-actions .header-search {
-    grid-column: auto;
+    grid-column: 1 / -1;
     min-width: 0;
   }
 
   .site-header-actions .notification-center {
-    grid-column: auto;
+    grid-column: 1 / -1;
     min-width: 0;
   }
 
@@ -2163,20 +2163,23 @@ textarea {
   }
 
   .site-header-actions .header-search-trigger-text,
-  .site-header-actions .notification-center-trigger-text,
+  .site-header-actions .notification-center-trigger-text {
+    display: inline;
+  }
+
   .site-header-actions .header-search-trigger-shortcut {
     display: none;
   }
 
   .site-header-actions .header-search-trigger {
-    justify-content: center;
+    justify-content: flex-start;
     font-size: 0.72rem;
     padding: 0.64rem 0.58rem;
     min-height: 2.36rem;
   }
 
   .site-header-actions .notification-center-trigger {
-    justify-content: center;
+    justify-content: flex-start;
     font-size: 0.72rem;
     padding: 0.64rem 0.58rem;
     min-height: 2.36rem;
@@ -2297,7 +2300,7 @@ textarea {
   }
 
   .site-header-offset {
-    height: 11.95rem;
+    height: 13.05rem;
   }
 
   .mobile-bottom-nav {
@@ -2371,19 +2374,19 @@ textarea {
 
 @media (max-width: 460px) {
   .site-header-actions .notification-center-trigger {
-    justify-content: center;
+    justify-content: flex-start;
     min-width: 0;
     padding-inline: 0.54rem;
   }
 
   .site-header-actions .header-search-trigger {
-    justify-content: center;
+    justify-content: flex-start;
     min-width: 0;
     padding-inline: 0.54rem;
   }
 
   .site-header-offset {
-    height: 11.6rem;
+    height: 12.7rem;
   }
 }
 
