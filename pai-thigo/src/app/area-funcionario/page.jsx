@@ -253,7 +253,10 @@ export default async function AreaFuncionarioPage() {
               />
 
               <div className="mt-8 grid gap-4 md:grid-cols-2">
-                {moduleHighlights.map((module) => (
+                {moduleHighlights.map((module) => {
+                  const moduleName = module.title ?? module.label ?? "Modulo";
+
+                  return (
                   <Link
                     key={module.href}
                     href={module.href}
@@ -263,13 +266,14 @@ export default async function AreaFuncionarioPage() {
                       Modulo
                     </p>
                     <h3 className="mt-3 text-xl font-semibold text-[var(--forest)]">
-                      {module.label}
+                      {moduleName}
                     </h3>
                     <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      Abrir tela {module.label.toLowerCase()} com contexto do cargo atual.
+                      Abrir tela {moduleName.toLowerCase()} com contexto do cargo atual.
                     </p>
                   </Link>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
