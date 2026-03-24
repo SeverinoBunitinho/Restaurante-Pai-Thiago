@@ -2170,22 +2170,22 @@ textarea {
 
   .site-header-actions .header-search-trigger {
     justify-content: center;
-    font-size: 0.7rem;
-    padding: 0.6rem 0.54rem;
-    min-height: 2.26rem;
+    font-size: 0.72rem;
+    padding: 0.64rem 0.58rem;
+    min-height: 2.36rem;
   }
 
   .site-header-actions .notification-center-trigger {
     justify-content: center;
-    font-size: 0.7rem;
-    padding: 0.6rem 0.54rem;
-    min-height: 2.26rem;
+    font-size: 0.72rem;
+    padding: 0.64rem 0.58rem;
+    min-height: 2.36rem;
   }
 
   .site-mobile-cart-link {
     gap: 0.35rem;
-    padding: 0.58rem 0.54rem;
-    min-height: 2.26rem;
+    padding: 0.62rem 0.58rem;
+    min-height: 2.36rem;
   }
 
   .site-mobile-cart-link span:first-of-type {
@@ -2198,21 +2198,21 @@ textarea {
   }
 
   .site-mobile-role-chip {
-    padding: 0.58rem 0.54rem;
-    min-height: 2.26rem;
+    padding: 0.62rem 0.58rem;
+    min-height: 2.36rem;
   }
 
   .site-header-actions .site-header-logout {
     width: 100%;
     justify-content: center;
-    padding: 0.58rem 0.54rem;
-    min-height: 2.26rem;
-    font-size: 0.74rem;
+    padding: 0.62rem 0.58rem;
+    min-height: 2.36rem;
+    font-size: 0.76rem;
   }
 
   .site-header-actions .site-header-role-badge {
-    font-size: 0.65rem;
-    padding: 0.58rem 0.54rem;
+    font-size: 0.68rem;
+    padding: 0.62rem 0.58rem;
   }
 
   .notification-center-panel {
@@ -2233,11 +2233,11 @@ textarea {
   }
 
   .nav-pill {
-    border-radius: 1.35rem;
+    border-radius: 1.4rem;
   }
 
   .site-header-offset {
-    height: 11.7rem;
+    height: 11.95rem;
   }
 
   .mobile-bottom-nav {
@@ -2323,7 +2323,7 @@ textarea {
   }
 
   .site-header-offset {
-    height: 11.35rem;
+    height: 11.6rem;
   }
 }
 
