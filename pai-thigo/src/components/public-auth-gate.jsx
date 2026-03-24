@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, startTransition } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
@@ -11,7 +11,9 @@ function getRouteForRole(role) {
 
 export function PublicAuthGate() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const forcePublicAccess = searchParams?.get("forcePublic") === "1";
 
   useEffect(() => {
     let isMounted = true;
@@ -26,7 +28,25 @@ export function PublicAuthGate() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!isMounted || !user) {
+      if (!isMounted) {
+        return;
+      }
+
+      if (forcePublicAccess) {
+        if (user) {
+          await supabase.auth.signOut();
+        }
+
+        if (pathname !== "/login") {
+          startTransition(() => {
+            router.replace("/login?forcePublic=1");
+          });
+        }
+
+        return;
+      }
+
+      if (!user) {
         return;
       }
 
@@ -50,7 +70,7 @@ export function PublicAuthGate() {
     return () => {
       isMounted = false;
     };
-  }, [pathname, router]);
+  }, [forcePublicAccess, pathname, router]);
 
   return null;
 }

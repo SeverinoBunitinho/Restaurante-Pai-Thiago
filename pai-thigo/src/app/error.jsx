@@ -22,7 +22,7 @@ export default function Error({ reset }) {
               <RefreshCw size={16} />
               Tentar novamente
             </button>
-            <Link href="/login" className="button-secondary">
+            <Link href="/login?forcePublic=1" className="button-secondary">
               <ShieldAlert size={16} />
               Voltar ao login
             </Link>
