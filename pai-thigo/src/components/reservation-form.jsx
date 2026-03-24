@@ -44,6 +44,24 @@ function getNextReservationTimeInBrazil() {
   return `${normalizedHours}:${normalizedMinutes}`;
 }
 
+function formatRealtimeMoment(value) {
+  if (!value) {
+    return "";
+  }
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(parsedDate);
+}
+
 export function ReservationForm({
   defaults = {},
   role = "customer",
@@ -107,15 +125,25 @@ export function ReservationForm({
       return undefined;
     }
 
-    const controller = new AbortController();
     let active = true;
+    let latestController = null;
+    let hasLoadedOnce = false;
 
-    const timeout = setTimeout(async () => {
-      setAvailability({
-        status: "loading",
-        message: "Atualizando disponibilidade...",
-        data: null,
-      });
+    const runAvailabilityRefresh = async ({ silent }) => {
+      if (!active) {
+        return;
+      }
+
+      const controller = new AbortController();
+      latestController = controller;
+
+      if (!silent) {
+        setAvailability({
+          status: "loading",
+          message: "Atualizando disponibilidade...",
+          data: null,
+        });
+      }
 
       try {
         const params = new URLSearchParams({
@@ -143,13 +171,23 @@ export function ReservationForm({
         }
 
         if (!response.ok || !payload?.ok || !payload.data) {
-          setAvailability({
-            status: "error",
-            message:
-              payload?.message ??
-              "Nao foi possivel consultar as mesas agora. Tente novamente.",
-            data: null,
-          });
+          if (silent) {
+            setAvailability((currentState) => ({
+              ...currentState,
+              status: currentState.data ? "success" : "error",
+              message:
+                payload?.message ??
+                "A leitura em tempo real falhou agora. Mantendo o ultimo estado disponivel.",
+            }));
+          } else {
+            setAvailability({
+              status: "error",
+              message:
+                payload?.message ??
+                "Nao foi possivel consultar as mesas agora. Tente novamente.",
+              data: null,
+            });
+          }
           return;
         }
 
@@ -163,19 +201,38 @@ export function ReservationForm({
           return;
         }
 
-        setAvailability({
-          status: "error",
-          message:
-            "Falha ao consultar disponibilidade no momento. Tente novamente.",
-          data: null,
-        });
+        if (silent) {
+          setAvailability((currentState) => ({
+            ...currentState,
+            status: currentState.data ? "success" : "error",
+            message:
+              "A leitura em tempo real falhou agora. Mantendo o ultimo estado disponivel.",
+          }));
+        } else {
+          setAvailability({
+            status: "error",
+            message:
+              "Falha ao consultar disponibilidade no momento. Tente novamente.",
+            data: null,
+          });
+        }
       }
-    }, 260);
+    };
+
+    const initialTimeout = setTimeout(() => {
+      hasLoadedOnce = true;
+      void runAvailabilityRefresh({ silent: false });
+    }, 200);
+    const realtimeInterval = setInterval(() => {
+      void runAvailabilityRefresh({ silent: hasLoadedOnce });
+      hasLoadedOnce = true;
+    }, 10000);
 
     return () => {
       active = false;
-      clearTimeout(timeout);
-      controller.abort();
+      clearTimeout(initialTimeout);
+      clearInterval(realtimeInterval);
+      latestController?.abort();
     };
   }, [
     hasValidAvailabilityFilters,
@@ -307,11 +364,18 @@ export function ReservationForm({
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--sage)]">
             Disponibilidade em tempo real
           </p>
-          {availabilityView.status === "loading" ? (
-            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">
-              Atualizando
-            </span>
-          ) : null}
+          <div className="flex items-center gap-2">
+            {availabilityView.data?.generatedAt ? (
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(21,35,29,0.58)]">
+                Atualizado {formatRealtimeMoment(availabilityView.data.generatedAt)}
+              </span>
+            ) : null}
+            {availabilityView.status === "loading" ? (
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">
+                Atualizando
+              </span>
+            ) : null}
+          </div>
         </div>
 
         {availabilityView.data ? (
@@ -364,6 +428,85 @@ export function ReservationForm({
                   {availabilityView.data.suggestedTable.area}).
                 </p>
               ) : null}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-[rgba(20,35,29,0.1)] bg-white/80 p-3">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-[rgba(21,35,29,0.64)]">
+                Setores da casa
+              </p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {(availabilityView.data.areaSummaries ?? []).map((areaSummary) => (
+                  <div
+                    key={areaSummary.area}
+                    className="rounded-xl border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] px-3 py-2"
+                  >
+                    <p className="text-sm font-semibold text-[var(--forest)]">
+                      {areaSummary.area}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+                      {areaSummary.free} livre(s) · {areaSummary.occupied} ocupada(s)
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl border border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.08)] p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                  Mesas livres{" "}
+                  {reservationArea === "__ANY__"
+                    ? "na casa"
+                    : `em ${availabilityView.data.selectedAreaSummary?.area ?? "area selecionada"}`}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(availabilityView.data.tablesOverviewInView ?? [])
+                    .filter((table) => !table.occupied)
+                    .map((table) => (
+                      <span
+                        key={table.id}
+                        className="inline-flex items-center rounded-full border border-[rgba(95,123,109,0.28)] bg-white/90 px-3 py-1 text-xs font-semibold text-[var(--forest)]"
+                      >
+                        {table.name} · {table.capacity}p
+                      </span>
+                    ))}
+                  {(availabilityView.data.tablesOverviewInView ?? []).filter(
+                    (table) => !table.occupied,
+                  ).length === 0 ? (
+                    <span className="text-xs text-[rgba(21,35,29,0.66)]">
+                      Nenhuma mesa livre nesta selecao.
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] p-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--clay)]">
+                  Mesas ocupadas{" "}
+                  {reservationArea === "__ANY__"
+                    ? "na casa"
+                    : `em ${availabilityView.data.selectedAreaSummary?.area ?? "area selecionada"}`}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(availabilityView.data.tablesOverviewInView ?? [])
+                    .filter((table) => table.occupied)
+                    .map((table) => (
+                      <span
+                        key={table.id}
+                        className="inline-flex items-center rounded-full border border-[rgba(138,93,59,0.3)] bg-white/90 px-3 py-1 text-xs font-semibold text-[rgba(96,65,42,1)]"
+                      >
+                        {table.name} · {table.capacity}p
+                      </span>
+                    ))}
+                  {(availabilityView.data.tablesOverviewInView ?? []).filter(
+                    (table) => table.occupied,
+                  ).length === 0 ? (
+                    <span className="text-xs text-[rgba(96,65,42,0.76)]">
+                      Nenhuma mesa ocupada nesta selecao.
+                    </span>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </>
         ) : (

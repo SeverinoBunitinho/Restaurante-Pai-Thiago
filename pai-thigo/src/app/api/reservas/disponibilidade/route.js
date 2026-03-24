@@ -36,6 +36,7 @@ export async function GET(request) {
       {
         ok: true,
         data: {
+          generatedAt: result.generatedAt,
           reservationDate: result.reservationDate,
           reservationTime: result.reservationTime,
           guests: result.guests,
@@ -48,6 +49,10 @@ export async function GET(request) {
           compatibleFreeTables: result.compatibleFreeTables,
           preferredAreaCompatibleTables: result.preferredAreaCompatibleTables,
           preferredAreaFreeTables: result.preferredAreaFreeTables,
+          areaSummaries: result.areaSummaries,
+          selectedAreaSummary: result.selectedAreaSummary,
+          tablesOverview: result.tablesOverview,
+          tablesOverviewInView: result.tablesOverviewInView,
           areaAdjusted: result.areaAdjusted,
           suggestedTable: result.suggestedTable,
           guidance: result.guidance,

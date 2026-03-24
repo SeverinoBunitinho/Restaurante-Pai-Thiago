@@ -196,6 +196,62 @@ function findReservationTableAssignment({
     : availableTables;
   const sortedPreferredAreaTables = sortTablesByBestFit(preferredAreaAvailableTables);
   const sortedAvailableTables = sortTablesByBestFit(availableTables);
+  const areaSummaryMap = new Map();
+  const tableSnapshots = sortTablesByBestFit(activeTables).map((table) => {
+    const tableArea = String(table.area ?? "").trim() || "Salao principal";
+    const normalizedTableArea = normalizeReservationArea(tableArea);
+    const tableCapacity = Number(table.capacity ?? 0);
+    const isOccupied = busyTableIds.has(table.id);
+    const isCompatible = tableCapacity >= guests;
+    const isPreferredArea =
+      normalizedAreaPreference &&
+      normalizedTableArea === normalizedAreaPreference;
+    const currentAreaSummary = areaSummaryMap.get(tableArea) ?? {
+      area: tableArea,
+      total: 0,
+      occupied: 0,
+      free: 0,
+      compatible: 0,
+      compatibleFree: 0,
+    };
+
+    currentAreaSummary.total += 1;
+    currentAreaSummary.occupied += isOccupied ? 1 : 0;
+    currentAreaSummary.free += isOccupied ? 0 : 1;
+    currentAreaSummary.compatible += isCompatible ? 1 : 0;
+    currentAreaSummary.compatibleFree += isCompatible && !isOccupied ? 1 : 0;
+    areaSummaryMap.set(tableArea, currentAreaSummary);
+
+    return {
+      id: table.id,
+      name: table.name,
+      area: tableArea,
+      capacity: tableCapacity,
+      status: isOccupied ? "occupied" : "free",
+      occupied: isOccupied,
+      compatible: isCompatible,
+      preferredArea: Boolean(isPreferredArea),
+    };
+  });
+  const tableSnapshotsInView = normalizedAreaPreference
+    ? tableSnapshots.filter((table) => table.preferredArea)
+    : tableSnapshots;
+  const sortedAreaSummaries = Array.from(areaSummaryMap.values()).sort(
+    (left, right) => left.area.localeCompare(right.area, "pt-BR"),
+  );
+  const selectedAreaSummary = normalizedAreaPreference
+    ? sortedAreaSummaries.find(
+        (areaSummary) =>
+          normalizeReservationArea(areaSummary.area) === normalizedAreaPreference,
+      ) ?? {
+        area: areaPreference || "Area selecionada",
+        total: 0,
+        occupied: 0,
+        free: 0,
+        compatible: 0,
+        compatibleFree: 0,
+      }
+    : null;
 
   if (sortedPreferredAreaTables.length) {
     return {
@@ -208,6 +264,10 @@ function findReservationTableAssignment({
       preferredAreaCapacityCount: preferredAreaCapacityTables.length,
       availableCount: availableTables.length,
       preferredAreaAvailableCount: preferredAreaAvailableTables.length,
+      areaSummaries: sortedAreaSummaries,
+      selectedAreaSummary,
+      tablesOverview: tableSnapshots,
+      tablesOverviewInView: tableSnapshotsInView,
     };
   }
 
@@ -222,6 +282,10 @@ function findReservationTableAssignment({
       preferredAreaCapacityCount: preferredAreaCapacityTables.length,
       availableCount: availableTables.length,
       preferredAreaAvailableCount: preferredAreaAvailableTables.length,
+      areaSummaries: sortedAreaSummaries,
+      selectedAreaSummary,
+      tablesOverview: tableSnapshots,
+      tablesOverviewInView: tableSnapshotsInView,
     };
   }
 
@@ -235,6 +299,10 @@ function findReservationTableAssignment({
     preferredAreaCapacityCount: preferredAreaCapacityTables.length,
     availableCount: availableTables.length,
     preferredAreaAvailableCount: preferredAreaAvailableTables.length,
+    areaSummaries: sortedAreaSummaries,
+    selectedAreaSummary,
+    tablesOverview: tableSnapshots,
+    tablesOverviewInView: tableSnapshotsInView,
   };
 }
 
@@ -893,6 +961,7 @@ export async function getReservationAvailabilitySnapshot(input) {
   return {
     ok: true,
     status: 200,
+    generatedAt: new Date().toISOString(),
     reservationDate: parsedInput.reservationDate,
     reservationTime: parsedInput.reservationTime,
     guests: parsedInput.guests,
@@ -905,6 +974,10 @@ export async function getReservationAvailabilitySnapshot(input) {
     compatibleFreeTables: assignment.availableCount,
     preferredAreaCompatibleTables: assignment.preferredAreaCapacityCount,
     preferredAreaFreeTables: assignment.preferredAreaAvailableCount,
+    areaSummaries: assignment.areaSummaries,
+    selectedAreaSummary: assignment.selectedAreaSummary,
+    tablesOverview: assignment.tablesOverview,
+    tablesOverviewInView: assignment.tablesOverviewInView,
     areaAdjusted: assignment.areaAdjusted,
     suggestedTable: assignment.selectedTable
       ? {
