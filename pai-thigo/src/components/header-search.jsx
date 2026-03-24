@@ -97,22 +97,23 @@ export function HeaderSearch({ staffSession = false }) {
       const rect = panelElement.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const margin = 8;
-      let nextShift = 0;
-
-      if (rect.left < margin) {
-        nextShift += margin - rect.left;
-      }
-
-      if (rect.right > viewportWidth - margin) {
-        nextShift -= rect.right - (viewportWidth - margin);
-      }
 
       setPanelShift((currentValue) => {
-        if (Math.abs(currentValue - nextShift) < 0.5) {
+        let adjustedValue = currentValue;
+
+        if (rect.left < margin) {
+          adjustedValue += margin - rect.left;
+        }
+
+        if (rect.right > viewportWidth - margin) {
+          adjustedValue -= rect.right - (viewportWidth - margin);
+        }
+
+        if (Math.abs(currentValue - adjustedValue) < 0.5) {
           return currentValue;
         }
 
-        return nextShift;
+        return adjustedValue;
       });
     };
 

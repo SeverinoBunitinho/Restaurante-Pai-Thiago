@@ -641,10 +641,12 @@ textarea {
 .site-header-shell {
   padding-top: 0;
   padding-bottom: 0.65rem;
+  overflow: visible;
 }
 
 .site-header-card {
   pointer-events: auto;
+  overflow: visible;
 }
 
 .site-header-offset {
@@ -908,10 +910,12 @@ textarea {
 
 .header-search-panel {
   position: absolute;
-  right: 0;
+  left: 0;
+  right: auto;
   top: calc(100% + 0.55rem);
   z-index: 92;
   width: min(30rem, calc(100vw - 1rem));
+  max-width: calc(100vw - 1rem);
   border-radius: 1.4rem;
   border: 1px solid rgba(20, 35, 29, 0.12);
   background:
