@@ -10,6 +10,17 @@ function getNowInBrazil() {
   );
 }
 
+function formatDateForMessage(value) {
+  const parts = String(value ?? "").split("-");
+
+  if (parts.length !== 3) {
+    return String(value ?? "");
+  }
+
+  const [year, month, day] = parts;
+  return `${day}/${month}/${year}`;
+}
+
 export async function submitReservationAction(_previousState, formData) {
   const guestName = String(formData.get("guestName") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
@@ -17,7 +28,8 @@ export async function submitReservationAction(_previousState, formData) {
   const date = String(formData.get("date") ?? "").trim();
   const time = String(formData.get("time") ?? "").trim();
   const guests = Number(formData.get("guests") ?? 0);
-  const areaPreference = String(formData.get("areaPreference") ?? "").trim();
+  const rawAreaPreference = String(formData.get("areaPreference") ?? "").trim();
+  const areaPreference = rawAreaPreference === "__ANY__" ? "" : rawAreaPreference;
   const occasion = String(formData.get("occasion") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
@@ -106,10 +118,20 @@ export async function submitReservationAction(_previousState, formData) {
     };
   }
 
+  const messageParts = [
+    `Reserva enviada para ${formatDateForMessage(date)} as ${time}.`,
+    result.assignedTable?.name
+      ? `Mesa separada: ${result.assignedTable.name}.`
+      : "",
+    result.assignedTable?.area ? `Area: ${result.assignedTable.area}.` : "",
+    result.areaAdjusted
+      ? "Nao havia vaga na area preferida nesse horario, entao ajustamos para a melhor opcao disponivel."
+      : "",
+  ].filter(Boolean);
+
   return {
     status: "success",
     mode: "supabase",
-    message:
-      "Reserva enviada com sucesso. A equipe ja pode acompanhar esse atendimento no painel interno.",
+    message: messageParts.join(" "),
   };
 }

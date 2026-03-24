@@ -7,6 +7,7 @@ import {
   testimonials as fallbackTestimonials,
 } from "@/lib/mock-data";
 import { getRestaurantProfile } from "@/lib/restaurant-profile";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
   formatCurrency,
@@ -20,6 +21,15 @@ const fallbackReservationAreas = [
   "Sala reservada",
   "Varanda",
 ];
+const RESERVATION_SLOT_MINUTES = 120;
+const ACTIVE_RESERVATION_STATUSES = ["pending", "confirmed", "seated"];
+const ANY_AREA_PREFERENCE_VALUES = new Set([
+  "",
+  "__any__",
+  "sem preferencia",
+  "qualquer area",
+  "qualquer",
+]);
 
 const DEFAULT_MENU_ITEM_IMAGE = "/images/menu-placeholder.svg";
 
@@ -80,6 +90,152 @@ function resolveMenuItemImage(itemId, itemName, imageUrl) {
     sanitizeMenuItemImageUrl(fallbackMenuImageByName.get(normalizeMenuImageKey(itemName))) ||
     DEFAULT_MENU_ITEM_IMAGE
   );
+}
+
+function normalizeReservationArea(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isAnyAreaPreference(value) {
+  const normalizedArea = normalizeReservationArea(value);
+  return ANY_AREA_PREFERENCE_VALUES.has(normalizedArea);
+}
+
+function normalizeReservationTime(value) {
+  const normalizedTime = String(value ?? "").trim().slice(0, 5);
+
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(normalizedTime)) {
+    return null;
+  }
+
+  return normalizedTime;
+}
+
+function convertTimeToMinutes(value) {
+  const normalizedTime = normalizeReservationTime(value);
+
+  if (!normalizedTime) {
+    return null;
+  }
+
+  const [hours, minutes] = normalizedTime.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function hasReservationTimeOverlap(startMinutes, compareMinutes) {
+  if (
+    startMinutes == null ||
+    compareMinutes == null ||
+    !Number.isFinite(startMinutes) ||
+    !Number.isFinite(compareMinutes)
+  ) {
+    return false;
+  }
+
+  const targetEnd = startMinutes + RESERVATION_SLOT_MINUTES;
+  const compareEnd = compareMinutes + RESERVATION_SLOT_MINUTES;
+
+  return startMinutes < compareEnd && compareMinutes < targetEnd;
+}
+
+function sortTablesByBestFit(tables) {
+  return [...tables].sort((left, right) => {
+    const leftCapacity = Number(left.capacity ?? 0);
+    const rightCapacity = Number(right.capacity ?? 0);
+
+    if (leftCapacity !== rightCapacity) {
+      return leftCapacity - rightCapacity;
+    }
+
+    return String(left.name ?? "").localeCompare(String(right.name ?? ""), "pt-BR");
+  });
+}
+
+function findReservationTableAssignment({
+  tables,
+  reservations,
+  guests,
+  reservationTime,
+  areaPreference,
+}) {
+  const requestedMinutes = convertTimeToMinutes(reservationTime);
+  const normalizedAreaPreference = isAnyAreaPreference(areaPreference)
+    ? ""
+    : normalizeReservationArea(areaPreference);
+  const activeTables = tables.filter((table) => table.is_active);
+  const capacityCompatibleTables = activeTables.filter(
+    (table) => Number(table.capacity ?? 0) >= guests,
+  );
+  const matchesPreferredArea = (table) =>
+    normalizeReservationArea(table.area) === normalizedAreaPreference;
+
+  const preferredAreaCapacityTables = normalizedAreaPreference
+    ? capacityCompatibleTables.filter(matchesPreferredArea)
+    : capacityCompatibleTables;
+  const busyTableIds = new Set(
+    reservations
+      .filter((reservation) => reservation.assigned_table_id)
+      .filter((reservation) =>
+        hasReservationTimeOverlap(
+          requestedMinutes,
+          convertTimeToMinutes(reservation.reservation_time),
+        ),
+      )
+      .map((reservation) => reservation.assigned_table_id),
+  );
+  const availableTables = capacityCompatibleTables.filter(
+    (table) => !busyTableIds.has(table.id),
+  );
+  const preferredAreaAvailableTables = normalizedAreaPreference
+    ? availableTables.filter(matchesPreferredArea)
+    : availableTables;
+  const sortedPreferredAreaTables = sortTablesByBestFit(preferredAreaAvailableTables);
+  const sortedAvailableTables = sortTablesByBestFit(availableTables);
+
+  if (sortedPreferredAreaTables.length) {
+    return {
+      selectedTable: sortedPreferredAreaTables[0],
+      areaAdjusted: false,
+      totalActiveTables: activeTables.length,
+      occupiedTablesCount: busyTableIds.size,
+      freeTablesCount: Math.max(activeTables.length - busyTableIds.size, 0),
+      capacityCompatibleCount: capacityCompatibleTables.length,
+      preferredAreaCapacityCount: preferredAreaCapacityTables.length,
+      availableCount: availableTables.length,
+      preferredAreaAvailableCount: preferredAreaAvailableTables.length,
+    };
+  }
+
+  if (normalizedAreaPreference && sortedAvailableTables.length) {
+    return {
+      selectedTable: sortedAvailableTables[0],
+      areaAdjusted: true,
+      totalActiveTables: activeTables.length,
+      occupiedTablesCount: busyTableIds.size,
+      freeTablesCount: Math.max(activeTables.length - busyTableIds.size, 0),
+      capacityCompatibleCount: capacityCompatibleTables.length,
+      preferredAreaCapacityCount: preferredAreaCapacityTables.length,
+      availableCount: availableTables.length,
+      preferredAreaAvailableCount: preferredAreaAvailableTables.length,
+    };
+  }
+
+  return {
+    selectedTable: null,
+    areaAdjusted: false,
+    totalActiveTables: activeTables.length,
+    occupiedTablesCount: busyTableIds.size,
+    freeTablesCount: Math.max(activeTables.length - busyTableIds.size, 0),
+    capacityCompatibleCount: capacityCompatibleTables.length,
+    preferredAreaCapacityCount: preferredAreaCapacityTables.length,
+    availableCount: availableTables.length,
+    preferredAreaAvailableCount: preferredAreaAvailableTables.length,
+  };
 }
 
 function getTodayInBrazil() {
@@ -587,6 +743,181 @@ export async function getDashboardData(role = "manager") {
   return getStaffDashboard(role);
 }
 
+function parseReservationAvailabilityInput(input) {
+  const guests = Number(input.guests ?? 0);
+  const reservationDate = String(input.date ?? "").trim();
+  const reservationTime = normalizeReservationTime(input.time);
+  const areaPreference = String(input.areaPreference ?? "").trim();
+  const normalizedAreaPreference = isAnyAreaPreference(areaPreference)
+    ? null
+    : areaPreference;
+
+  if (
+    !Number.isFinite(guests) ||
+    guests < 1 ||
+    guests > 20 ||
+    !reservationDate ||
+    !reservationTime
+  ) {
+    return {
+      ok: false,
+      message:
+        "Preencha data, horario e quantidade de pessoas validos para concluir a reserva.",
+    };
+  }
+
+  return {
+    ok: true,
+    guests,
+    reservationDate,
+    reservationTime,
+    normalizedAreaPreference,
+  };
+}
+
+async function resolveReservationAvailability({
+  supabase,
+  reservationDate,
+  reservationTime,
+  guests,
+  areaPreference,
+}) {
+  const adminClient = getSupabaseAdminClient();
+  const availabilityClient = adminClient ?? supabase;
+  const [tablesResult, occupiedReservationsResult] = await Promise.all([
+    availabilityClient
+      .from("restaurant_tables")
+      .select("id, name, area, capacity, is_active")
+      .eq("is_active", true),
+    availabilityClient
+      .from("reservations")
+      .select("assigned_table_id, reservation_time")
+      .eq("reservation_date", reservationDate)
+      .in("status", ACTIVE_RESERVATION_STATUSES)
+      .not("assigned_table_id", "is", null),
+  ]);
+
+  if (tablesResult.error || occupiedReservationsResult.error) {
+    return {
+      ok: false,
+      message:
+        "Nao foi possivel validar a disponibilidade de mesas agora. Tente novamente em instantes.",
+    };
+  }
+
+  const assignment = findReservationTableAssignment({
+    tables: tablesResult.data ?? [],
+    reservations: occupiedReservationsResult.data ?? [],
+    guests,
+    reservationTime,
+    areaPreference,
+  });
+
+  return {
+    ok: true,
+    assignment,
+  };
+}
+
+export async function getReservationAvailabilitySnapshot(input) {
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    return {
+      ok: false,
+      status: 503,
+      message:
+        "O banco do Supabase nao esta disponivel agora. Verifique a configuracao antes de consultar disponibilidade real.",
+    };
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      ok: false,
+      status: 401,
+      message: "Entre no sistema para consultar disponibilidade de mesas.",
+    };
+  }
+
+  const parsedInput = parseReservationAvailabilityInput(input);
+
+  if (!parsedInput.ok) {
+    return {
+      ok: false,
+      status: 400,
+      message: parsedInput.message,
+    };
+  }
+
+  const availability = await resolveReservationAvailability({
+    supabase,
+    reservationDate: parsedInput.reservationDate,
+    reservationTime: parsedInput.reservationTime,
+    guests: parsedInput.guests,
+    areaPreference: parsedInput.normalizedAreaPreference,
+  });
+
+  if (!availability.ok) {
+    return {
+      ok: false,
+      status: 503,
+      message: availability.message,
+    };
+  }
+
+  const { assignment } = availability;
+  const hasAvailability = Boolean(assignment.selectedTable);
+  let guidance = "Ha mesas disponiveis para esse horario.";
+
+  if (!hasAvailability) {
+    if (!assignment.capacityCompatibleCount) {
+      guidance = `Nao existe mesa ativa para ${parsedInput.guests} pessoa(s).`;
+    } else if (
+      parsedInput.normalizedAreaPreference &&
+      !assignment.preferredAreaCapacityCount
+    ) {
+      guidance = "A area escolhida nao comporta essa quantidade de pessoas.";
+    } else {
+      guidance = "Nao ha mesa livre nesse horario para essa quantidade.";
+    }
+  } else if (assignment.areaAdjusted) {
+    guidance =
+      "A area preferida esta ocupada nesse horario, mas existe vaga em outro setor.";
+  }
+
+  return {
+    ok: true,
+    status: 200,
+    reservationDate: parsedInput.reservationDate,
+    reservationTime: parsedInput.reservationTime,
+    guests: parsedInput.guests,
+    areaPreference: parsedInput.normalizedAreaPreference || "Sem preferencia",
+    hasAvailability,
+    totalTables: assignment.totalActiveTables,
+    occupiedTables: assignment.occupiedTablesCount,
+    freeTables: assignment.freeTablesCount,
+    compatibleTables: assignment.capacityCompatibleCount,
+    compatibleFreeTables: assignment.availableCount,
+    preferredAreaCompatibleTables: assignment.preferredAreaCapacityCount,
+    preferredAreaFreeTables: assignment.preferredAreaAvailableCount,
+    areaAdjusted: assignment.areaAdjusted,
+    suggestedTable: assignment.selectedTable
+      ? {
+          id: assignment.selectedTable.id,
+          name: assignment.selectedTable.name,
+          area: assignment.selectedTable.area,
+          capacity: Number(assignment.selectedTable.capacity ?? 0),
+        }
+      : null,
+    guidance,
+  };
+}
+
 export async function createReservation(input) {
   const supabase = await getSupabaseServerClient();
 
@@ -629,6 +960,12 @@ export async function createReservation(input) {
     };
   }
 
+  const parsedInput = parseReservationAvailabilityInput(input);
+
+  if (!parsedInput.ok) {
+    return parsedInput;
+  }
+
   if (
     guestName.length > 100 ||
     phone.length > 40 ||
@@ -642,15 +979,56 @@ export async function createReservation(input) {
     };
   }
 
+  const availability = await resolveReservationAvailability({
+    supabase,
+    reservationDate: parsedInput.reservationDate,
+    reservationTime: parsedInput.reservationTime,
+    guests: parsedInput.guests,
+    areaPreference: parsedInput.normalizedAreaPreference,
+  });
+
+  if (!availability.ok) {
+    return availability;
+  }
+
+  const { assignment } = availability;
+
+  if (!assignment.selectedTable) {
+    if (!assignment.capacityCompatibleCount) {
+      return {
+        ok: false,
+        message: `Nao existe mesa ativa para ${parsedInput.guests} pessoa(s) neste momento. Ajuste a quantidade ou fale com a equipe.`,
+      };
+    }
+
+    if (
+      parsedInput.normalizedAreaPreference &&
+      !assignment.preferredAreaCapacityCount
+    ) {
+      return {
+        ok: false,
+        message:
+          "A area escolhida nao comporta essa quantidade de pessoas. Selecione outra area ou sem preferencia.",
+      };
+    }
+
+    return {
+      ok: false,
+      message:
+        "Nao ha mesa disponivel nesse horario para essa quantidade. Tente outro horario ou area.",
+    };
+  }
+
   const payload = {
     user_id: isStaff ? null : user.id,
+    assigned_table_id: assignment.selectedTable.id,
     guest_name: guestName,
     email: email || null,
     phone,
-    reservation_date: input.date,
-    reservation_time: input.time,
-    guests: input.guests,
-    area_preference: input.areaPreference || null,
+    reservation_date: parsedInput.reservationDate,
+    reservation_time: parsedInput.reservationTime,
+    guests: parsedInput.guests,
+    area_preference: parsedInput.normalizedAreaPreference,
     occasion: input.occasion || null,
     notes: input.notes || null,
     status: "pending",
@@ -670,6 +1048,12 @@ export async function createReservation(input) {
   return {
     ok: true,
     mode: "supabase",
+    assignedTable: {
+      name: assignment.selectedTable.name,
+      area: assignment.selectedTable.area,
+      capacity: Number(assignment.selectedTable.capacity ?? 0),
+    },
+    areaAdjusted: assignment.areaAdjusted,
   };
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { initialReservationState } from "@/app/reservas/action-state";
 import { submitReservationAction } from "@/app/reservas/actions";
@@ -31,13 +31,134 @@ export function ReservationForm({
   const resolvedAreas = areaOptions.length
     ? areaOptions
     : ["Salao principal", "Lounge", "Sala reservada", "Varanda"];
+  const areaSelectOptions = [
+    { value: "__ANY__", label: "Sem preferencia" },
+    ...resolvedAreas.map((option) => ({
+      value: option,
+      label: option,
+    })),
+  ];
+  const defaultAreaValue = defaults.areaPreference
+    ? defaults.areaPreference
+    : "__ANY__";
+  const [reservationDate, setReservationDate] = useState(defaults.date ?? "");
+  const [reservationTime, setReservationTime] = useState(defaults.time ?? "");
+  const [reservationGuests, setReservationGuests] = useState(
+    String(defaults.guests ?? 2),
+  );
+  const [reservationArea, setReservationArea] = useState(defaultAreaValue);
+  const [availability, setAvailability] = useState({
+    status: "idle",
+    message: "Selecione data, horario e pessoas para consultar as mesas em tempo real.",
+    data: null,
+  });
+  const guestsNumber = Number(reservationGuests);
+  const hasValidAvailabilityFilters =
+    liveMode &&
+    Boolean(reservationDate) &&
+    Boolean(reservationTime) &&
+    Number.isFinite(guestsNumber) &&
+    guestsNumber >= 1 &&
+    guestsNumber <= 20;
+  const availabilityView = hasValidAvailabilityFilters
+    ? availability
+    : {
+        status: liveMode ? "idle" : "unavailable",
+        message: liveMode
+          ? "Selecione data, horario e pessoas para consultar as mesas em tempo real."
+          : "Conecte o Supabase para liberar a leitura real de ocupacao de mesas.",
+        data: null,
+      };
+
+  useEffect(() => {
+    if (!hasValidAvailabilityFilters) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    let active = true;
+
+    const timeout = setTimeout(async () => {
+      setAvailability({
+        status: "loading",
+        message: "Atualizando disponibilidade...",
+        data: null,
+      });
+
+      try {
+        const params = new URLSearchParams({
+          date: reservationDate,
+          time: reservationTime,
+          guests: String(guestsNumber),
+        });
+
+        if (reservationArea && reservationArea !== "__ANY__") {
+          params.set("area", reservationArea);
+        }
+
+        const response = await fetch(
+          `/api/reservas/disponibilidade?${params.toString()}`,
+          {
+            method: "GET",
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+        const payload = await response.json().catch(() => null);
+
+        if (!active) {
+          return;
+        }
+
+        if (!response.ok || !payload?.ok || !payload.data) {
+          setAvailability({
+            status: "error",
+            message:
+              payload?.message ??
+              "Nao foi possivel consultar as mesas agora. Tente novamente.",
+            data: null,
+          });
+          return;
+        }
+
+        setAvailability({
+          status: "success",
+          message: payload.data.guidance ?? "Disponibilidade atualizada.",
+          data: payload.data,
+        });
+      } catch (error) {
+        if (error?.name === "AbortError" || !active) {
+          return;
+        }
+
+        setAvailability({
+          status: "error",
+          message:
+            "Falha ao consultar disponibilidade no momento. Tente novamente.",
+          data: null,
+        });
+      }
+    }, 260);
+
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [
+    hasValidAvailabilityFilters,
+    reservationArea,
+    reservationDate,
+    reservationTime,
+    guestsNumber,
+  ]);
 
   return (
     <form action={formAction} className="grid gap-4">
       <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
         {isStaff
-          ? "Use este formulario para registrar reservas por telefone, WhatsApp ou atendimento da equipe."
-          : "Seus dados da conta ajudam a acelerar a reserva e deixam o atendimento mais preciso."}
+          ? "Use este formulario para registrar reservas por telefone, WhatsApp ou atendimento da equipe. O sistema valida disponibilidade real por horario e capacidade."
+          : "Seus dados da conta ajudam a acelerar a reserva. Antes de salvar, o sistema valida disponibilidade real de mesa no horario escolhido."}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -102,6 +223,8 @@ export function ReservationForm({
             name="date"
             type="date"
             min={getTodayInBrazil()}
+            value={reservationDate}
+            onChange={(event) => setReservationDate(event.target.value)}
             required
             className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 pr-12 outline-none transition focus:border-[var(--gold)]"
           />
@@ -111,6 +234,8 @@ export function ReservationForm({
           <input
             name="time"
             type="time"
+            value={reservationTime}
+            onChange={(event) => setReservationTime(event.target.value)}
             required
             className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 pr-12 outline-none transition focus:border-[var(--gold)]"
           />
@@ -122,7 +247,8 @@ export function ReservationForm({
             type="number"
             min={1}
             max={20}
-            defaultValue={2}
+            value={reservationGuests}
+            onChange={(event) => setReservationGuests(event.target.value)}
             required
             className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
@@ -131,16 +257,88 @@ export function ReservationForm({
           Area
           <select
             name="areaPreference"
-            defaultValue={resolvedAreas[0] ?? "Salao principal"}
+            value={reservationArea}
+            onChange={(event) => setReservationArea(event.target.value)}
             className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           >
-            {resolvedAreas.map((option) => (
-              <option key={option} value={option}>
-                {option}
+            {areaSelectOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
         </label>
+      </div>
+
+      <div className="rounded-[1.6rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--sage)]">
+            Disponibilidade em tempo real
+          </p>
+          {availabilityView.status === "loading" ? (
+            <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">
+              Atualizando
+            </span>
+          ) : null}
+        </div>
+
+        {availabilityView.data ? (
+          <>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  label: "Mesas ativas",
+                  value: availabilityView.data.totalTables,
+                },
+                {
+                  label: "Reservadas no horario",
+                  value: availabilityView.data.occupiedTables,
+                },
+                {
+                  label: "Livres no horario",
+                  value: availabilityView.data.freeTables,
+                },
+                {
+                  label: `Livres para ${availabilityView.data.guests} pessoa(s)`,
+                  value: availabilityView.data.compatibleFreeTables,
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-[rgba(20,35,29,0.1)] bg-white/80 px-3 py-3"
+                >
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[rgba(21,35,29,0.62)]">
+                    {item.label}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                    {item.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div
+              className={cn(
+                "mt-4 rounded-2xl border px-4 py-3 text-sm leading-6",
+                availabilityView.data.hasAvailability
+                  ? "border-[rgba(95,123,109,0.2)] bg-[rgba(95,123,109,0.08)] text-[var(--forest)]"
+                  : "border-[rgba(138,93,59,0.22)] bg-[rgba(138,93,59,0.08)] text-[var(--clay)]",
+              )}
+            >
+              <p>{availabilityView.message}</p>
+              {availabilityView.data.suggestedTable ? (
+                <p className="mt-1">
+                  Sugestao atual: {availabilityView.data.suggestedTable.name} (
+                  {availabilityView.data.suggestedTable.area}).
+                </p>
+              ) : null}
+            </div>
+          </>
+        ) : (
+          <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.66)]">
+            {availabilityView.message}
+          </p>
+        )}
       </div>
 
       <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
@@ -158,7 +356,7 @@ export function ReservationForm({
         <SubmitButton />
         <p className="max-w-md text-sm leading-6 text-[rgba(21,35,29,0.66)]">
           {liveMode
-            ? "Reserva salva no Supabase e liberada para acompanhamento da equipe."
+            ? "Reserva salva com validacao de disponibilidade em tempo real no Supabase."
             : "As credenciais do Supabase precisam estar ativas para registrar reservas reais."}
         </p>
       </div>
