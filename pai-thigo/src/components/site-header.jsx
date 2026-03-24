@@ -83,37 +83,131 @@ async function getHeaderNotificationContext(session) {
     items: [],
   };
 
-  if (!session) {
-    return emptyContext;
-  }
+  try {
+    if (!session) {
+      return emptyContext;
+    }
 
-  const supabase = await getSupabaseServerClient();
+    const supabase = await getSupabaseServerClient();
 
-  if (!supabase) {
-    return emptyContext;
-  }
+    if (!supabase) {
+      return emptyContext;
+    }
 
-  if (isStaffRole(session.role)) {
-    const [ordersCountResult, reservationsCountResult, recentOrdersResult, recentReservationsResult] = await Promise.all([
+    if (isStaffRole(session.role)) {
+      const [ordersCountResult, reservationsCountResult, recentOrdersResult, recentReservationsResult] = await Promise.all([
+        supabase
+          .from("orders")
+          .select("*", { head: true, count: "exact" })
+          .eq("status", "received"),
+        supabase
+          .from("reservations")
+          .select("*", { head: true, count: "exact" })
+          .eq("status", "pending"),
+        supabase
+          .from("orders")
+          .select("id, checkout_reference, guest_name, status, item_name, updated_at, created_at")
+          .order("updated_at", { ascending: false })
+          .limit(8),
+        supabase
+          .from("reservations")
+          .select("id, guest_name, status, reservation_date, reservation_time, updated_at, created_at")
+          .order("updated_at", { ascending: false })
+          .limit(8),
+      ]);
+
+      if (
+        ordersCountResult.error ||
+        reservationsCountResult.error ||
+        recentOrdersResult.error ||
+        recentReservationsResult.error
+      ) {
+        return emptyContext;
+      }
+
+      const feed = [];
+      let ordersLatestAt = 0;
+      let reservationsLatestAt = 0;
+
+      for (const order of recentOrdersResult.data ?? []) {
+        const eventAt = order.updated_at ?? order.created_at;
+        ordersLatestAt = Math.max(ordersLatestAt, toEpoch(eventAt));
+        feed.push({
+          id: `order:${order.id}:${order.status}`,
+          kind: "order",
+          title: getOrderStatusLabel(order.status),
+          detail: order.checkout_reference
+            ? `${order.checkout_reference}${order.guest_name ? ` | ${order.guest_name}` : ""}`
+            : order.guest_name || order.item_name || "Atualizacao de pedido",
+          href: "/operacao/comandas",
+          timestamp: formatFeedMoment(eventAt),
+          sortAt: toEpoch(eventAt),
+        });
+      }
+
+      for (const reservation of recentReservationsResult.data ?? []) {
+        const eventAt = reservation.updated_at ?? reservation.created_at;
+        reservationsLatestAt = Math.max(reservationsLatestAt, toEpoch(eventAt));
+        const hourLabel = String(reservation.reservation_time ?? "").slice(0, 5);
+        feed.push({
+          id: `reservation:${reservation.id}:${reservation.status}`,
+          kind: "reservation",
+          title: getReservationStatusLabel(reservation.status),
+          detail: `${reservation.guest_name || "Reserva"}${hourLabel ? ` | ${hourLabel}` : ""}`,
+          href: "/operacao/reservas",
+          timestamp: formatFeedMoment(eventAt),
+          sortAt: toEpoch(eventAt),
+        });
+      }
+
+      const uniqueFeed = Array.from(
+        new Map(
+          feed
+            .sort((left, right) => right.sortAt - left.sortAt)
+            .map((item) => [item.id, item]),
+        ).values(),
+      )
+        .slice(0, 10)
+        .map((item) => {
+          const { sortAt, ...normalizedItem } = item;
+          void sortAt;
+          return normalizedItem;
+        });
+
+      return {
+        orders: ordersCountResult.count ?? 0,
+        reservations: reservationsCountResult.count ?? 0,
+        ordersLatestAt,
+        reservationsLatestAt,
+        items: uniqueFeed,
+      };
+    }
+
+    const [ordersCountResult, reservationsCountResult, recentOrdersResult, recentReservationsResult] =
+      await Promise.all([
       supabase
         .from("orders")
         .select("*", { head: true, count: "exact" })
-        .eq("status", "received"),
+        .eq("user_id", session.user.id)
+        .in("status", ["received", "preparing", "ready", "dispatching"]),
       supabase
         .from("reservations")
         .select("*", { head: true, count: "exact" })
-        .eq("status", "pending"),
+        .eq("user_id", session.user.id)
+        .in("status", ["pending", "confirmed", "seated"]),
       supabase
         .from("orders")
-        .select("id, checkout_reference, guest_name, status, item_name, updated_at, created_at")
+        .select("id, checkout_reference, status, item_name, updated_at, created_at")
+        .eq("user_id", session.user.id)
         .order("updated_at", { ascending: false })
         .limit(8),
       supabase
         .from("reservations")
-        .select("id, guest_name, status, reservation_date, reservation_time, updated_at, created_at")
+        .select("id, status, reservation_date, reservation_time, updated_at, created_at")
+        .eq("user_id", session.user.id)
         .order("updated_at", { ascending: false })
         .limit(8),
-    ]);
+      ]);
 
     if (
       ordersCountResult.error ||
@@ -136,9 +230,9 @@ async function getHeaderNotificationContext(session) {
         kind: "order",
         title: getOrderStatusLabel(order.status),
         detail: order.checkout_reference
-          ? `${order.checkout_reference}${order.guest_name ? ` | ${order.guest_name}` : ""}`
-          : order.guest_name || order.item_name || "Atualizacao de pedido",
-        href: "/operacao/comandas",
+          ? `${order.checkout_reference}${order.item_name ? ` | ${order.item_name}` : ""}`
+          : order.item_name || "Atualizacao de pedido",
+        href: "/pedidos",
         timestamp: formatFeedMoment(eventAt),
         sortAt: toEpoch(eventAt),
       });
@@ -147,13 +241,14 @@ async function getHeaderNotificationContext(session) {
     for (const reservation of recentReservationsResult.data ?? []) {
       const eventAt = reservation.updated_at ?? reservation.created_at;
       reservationsLatestAt = Math.max(reservationsLatestAt, toEpoch(eventAt));
+      const dayLabel = String(reservation.reservation_date ?? "");
       const hourLabel = String(reservation.reservation_time ?? "").slice(0, 5);
       feed.push({
         id: `reservation:${reservation.id}:${reservation.status}`,
         kind: "reservation",
         title: getReservationStatusLabel(reservation.status),
-        detail: `${reservation.guest_name || "Reserva"}${hourLabel ? ` | ${hourLabel}` : ""}`,
-        href: "/operacao/reservas",
+        detail: `${dayLabel}${hourLabel ? ` | ${hourLabel}` : ""}`,
+        href: "/reservas",
         timestamp: formatFeedMoment(eventAt),
         sortAt: toEpoch(eventAt),
       });
@@ -180,100 +275,9 @@ async function getHeaderNotificationContext(session) {
       reservationsLatestAt,
       items: uniqueFeed,
     };
-  }
-
-  const [ordersCountResult, reservationsCountResult, recentOrdersResult, recentReservationsResult] =
-    await Promise.all([
-    supabase
-      .from("orders")
-      .select("*", { head: true, count: "exact" })
-      .eq("user_id", session.user.id)
-      .in("status", ["received", "preparing", "ready", "dispatching"]),
-    supabase
-      .from("reservations")
-      .select("*", { head: true, count: "exact" })
-      .eq("user_id", session.user.id)
-      .in("status", ["pending", "confirmed", "seated"]),
-    supabase
-      .from("orders")
-      .select("id, checkout_reference, status, item_name, updated_at, created_at")
-      .eq("user_id", session.user.id)
-      .order("updated_at", { ascending: false })
-      .limit(8),
-    supabase
-      .from("reservations")
-      .select("id, status, reservation_date, reservation_time, updated_at, created_at")
-      .eq("user_id", session.user.id)
-      .order("updated_at", { ascending: false })
-      .limit(8),
-    ]);
-
-  if (
-    ordersCountResult.error ||
-    reservationsCountResult.error ||
-    recentOrdersResult.error ||
-    recentReservationsResult.error
-  ) {
+  } catch {
     return emptyContext;
   }
-
-  const feed = [];
-  let ordersLatestAt = 0;
-  let reservationsLatestAt = 0;
-
-  for (const order of recentOrdersResult.data ?? []) {
-    const eventAt = order.updated_at ?? order.created_at;
-    ordersLatestAt = Math.max(ordersLatestAt, toEpoch(eventAt));
-    feed.push({
-      id: `order:${order.id}:${order.status}`,
-      kind: "order",
-      title: getOrderStatusLabel(order.status),
-      detail: order.checkout_reference
-        ? `${order.checkout_reference}${order.item_name ? ` | ${order.item_name}` : ""}`
-        : order.item_name || "Atualizacao de pedido",
-      href: "/pedidos",
-      timestamp: formatFeedMoment(eventAt),
-      sortAt: toEpoch(eventAt),
-    });
-  }
-
-  for (const reservation of recentReservationsResult.data ?? []) {
-    const eventAt = reservation.updated_at ?? reservation.created_at;
-    reservationsLatestAt = Math.max(reservationsLatestAt, toEpoch(eventAt));
-    const dayLabel = String(reservation.reservation_date ?? "");
-    const hourLabel = String(reservation.reservation_time ?? "").slice(0, 5);
-    feed.push({
-      id: `reservation:${reservation.id}:${reservation.status}`,
-      kind: "reservation",
-      title: getReservationStatusLabel(reservation.status),
-      detail: `${dayLabel}${hourLabel ? ` | ${hourLabel}` : ""}`,
-      href: "/reservas",
-      timestamp: formatFeedMoment(eventAt),
-      sortAt: toEpoch(eventAt),
-    });
-  }
-
-  const uniqueFeed = Array.from(
-    new Map(
-      feed
-        .sort((left, right) => right.sortAt - left.sortAt)
-        .map((item) => [item.id, item]),
-    ).values(),
-  )
-    .slice(0, 10)
-    .map((item) => {
-      const { sortAt, ...normalizedItem } = item;
-      void sortAt;
-      return normalizedItem;
-    });
-
-  return {
-    orders: ordersCountResult.count ?? 0,
-    reservations: reservationsCountResult.count ?? 0,
-    ordersLatestAt,
-    reservationsLatestAt,
-    items: uniqueFeed,
-  };
 }
 
 export async function SiteHeader() {

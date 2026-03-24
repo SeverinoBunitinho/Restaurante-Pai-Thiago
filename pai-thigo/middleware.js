@@ -61,13 +61,25 @@ export async function middleware(request) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+
+  try {
+    const {
+      data: { user: resolvedUser },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (!userError) {
+      user = resolvedUser ?? null;
+    }
+  } catch {
+    user = null;
+  }
 
   if (!user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
+    loginUrl.searchParams.set("forcePublic", "1");
     return NextResponse.redirect(loginUrl);
   }
 

@@ -35,59 +35,63 @@ export function isStaffRole(role) {
 }
 
 export const getCurrentSession = cache(async function getCurrentSession() {
-  if (!isSupabaseConfigured()) {
+  try {
+    if (!isSupabaseConfigured()) {
+      return null;
+    }
+
+    const supabase = await getSupabaseServerClient();
+
+    if (!supabase) {
+      return null;
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return null;
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, email, phone, role, loyalty_points")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const fallbackProfile = {
+      user_id: user.id,
+      full_name:
+        user.user_metadata?.full_name ??
+        user.email?.split("@")[0] ??
+        "Usuario",
+      email: user.email ?? "",
+      phone: user.user_metadata?.phone ?? "",
+      role: "customer",
+      loyalty_points: 0,
+    };
+
+    const resolvedProfile = {
+      user_id: profile?.user_id ?? fallbackProfile.user_id,
+      full_name: String(profile?.full_name ?? "").trim() || fallbackProfile.full_name,
+      email: String(profile?.email ?? "").trim() || fallbackProfile.email,
+      phone: String(profile?.phone ?? "").trim() || fallbackProfile.phone,
+      role: normalizeRole(profile?.role),
+      loyalty_points: Number.isFinite(Number(profile?.loyalty_points))
+        ? Number(profile.loyalty_points)
+        : 0,
+    };
+
+    return {
+      user,
+      profile: resolvedProfile,
+      role: resolvedProfile.role,
+    };
+  } catch {
     return null;
   }
-
-  const supabase = await getSupabaseServerClient();
-
-  if (!supabase) {
-    return null;
-  }
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return null;
-  }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("user_id, full_name, email, phone, role, loyalty_points")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  const fallbackProfile = {
-    user_id: user.id,
-    full_name:
-      user.user_metadata?.full_name ??
-      user.email?.split("@")[0] ??
-      "Usuario",
-    email: user.email ?? "",
-    phone: user.user_metadata?.phone ?? "",
-    role: "customer",
-    loyalty_points: 0,
-  };
-
-  const resolvedProfile = {
-    user_id: profile?.user_id ?? fallbackProfile.user_id,
-    full_name: String(profile?.full_name ?? "").trim() || fallbackProfile.full_name,
-    email: String(profile?.email ?? "").trim() || fallbackProfile.email,
-    phone: String(profile?.phone ?? "").trim() || fallbackProfile.phone,
-    role: normalizeRole(profile?.role),
-    loyalty_points: Number.isFinite(Number(profile?.loyalty_points))
-      ? Number(profile.loyalty_points)
-      : 0,
-  };
-
-  return {
-    user,
-    profile: resolvedProfile,
-    role: resolvedProfile.role,
-  };
 });
 
 export async function redirectIfAuthenticated() {
