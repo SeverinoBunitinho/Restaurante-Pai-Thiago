@@ -30,6 +30,7 @@ export async function submitReservationAction(_previousState, formData) {
   const guests = Number(formData.get("guests") ?? 0);
   const rawAreaPreference = String(formData.get("areaPreference") ?? "").trim();
   const areaPreference = rawAreaPreference === "__ANY__" ? "" : rawAreaPreference;
+  const selectedTableId = String(formData.get("selectedTableId") ?? "").trim();
   const occasion = String(formData.get("occasion") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
@@ -107,6 +108,7 @@ export async function submitReservationAction(_previousState, formData) {
     time,
     guests,
     areaPreference,
+    selectedTableId,
     occasion,
     notes,
   });
@@ -120,6 +122,7 @@ export async function submitReservationAction(_previousState, formData) {
 
   const messageParts = [
     `Reserva enviada para ${formatDateForMessage(date)} as ${time}.`,
+    result.selectedByUser ? "Mesa escolhida pelo cliente e validada no sistema." : "",
     result.assignedTable?.name
       ? `Mesa separada: ${result.assignedTable.name}.`
       : "",

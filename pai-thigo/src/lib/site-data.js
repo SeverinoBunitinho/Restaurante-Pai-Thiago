@@ -880,10 +880,14 @@ async function resolveReservationAvailability({
     reservationTime,
     areaPreference,
   });
+  const requestedMinutes = convertTimeToMinutes(reservationTime);
 
   return {
     ok: true,
     assignment,
+    tables: tablesResult.data ?? [],
+    reservations: occupiedReservationsResult.data ?? [],
+    requestedMinutes,
   };
 }
 
@@ -1022,6 +1026,7 @@ export async function createReservation(input) {
 
   const actingRole = profile?.role ?? "customer";
   const isStaff = ["waiter", "manager", "owner"].includes(actingRole);
+  const selectedTableId = String(input.selectedTableId ?? "").trim();
   const guestName = (input.guestName || profile?.full_name || "").trim();
   const email = (input.email || profile?.email || user.email || "").trim();
   const phone = (input.phone || profile?.phone || "").trim();
@@ -1064,9 +1069,53 @@ export async function createReservation(input) {
     return availability;
   }
 
-  const { assignment } = availability;
+  const { assignment, tables, reservations, requestedMinutes } = availability;
+  let resolvedTable = assignment.selectedTable;
+  let selectedByUser = false;
 
-  if (!assignment.selectedTable) {
+  if (selectedTableId) {
+    const selectedTable = tables.find((table) => table.id === selectedTableId);
+
+    if (!selectedTable || !selectedTable.is_active) {
+      return {
+        ok: false,
+        message:
+          "A mesa escolhida nao esta mais ativa. Escolha outra mesa livre para concluir.",
+      };
+    }
+
+    if (Number(selectedTable.capacity ?? 0) < parsedInput.guests) {
+      return {
+        ok: false,
+        message:
+          "A mesa escolhida nao comporta essa quantidade de pessoas. Escolha outra mesa.",
+      };
+    }
+
+    const selectedTableBusy = reservations.some((reservation) => {
+      if (reservation.assigned_table_id !== selectedTableId) {
+        return false;
+      }
+
+      return hasReservationTimeOverlap(
+        requestedMinutes,
+        convertTimeToMinutes(reservation.reservation_time),
+      );
+    });
+
+    if (selectedTableBusy) {
+      return {
+        ok: false,
+        message:
+          "Essa mesa acabou de ficar ocupada neste horario. Escolha outra mesa livre.",
+      };
+    }
+
+    resolvedTable = selectedTable;
+    selectedByUser = true;
+  }
+
+  if (!resolvedTable) {
     if (!assignment.capacityCompatibleCount) {
       return {
         ok: false,
@@ -1094,7 +1143,7 @@ export async function createReservation(input) {
 
   const payload = {
     user_id: isStaff ? null : user.id,
-    assigned_table_id: assignment.selectedTable.id,
+    assigned_table_id: resolvedTable.id,
     guest_name: guestName,
     email: email || null,
     phone,
@@ -1122,11 +1171,12 @@ export async function createReservation(input) {
     ok: true,
     mode: "supabase",
     assignedTable: {
-      name: assignment.selectedTable.name,
-      area: assignment.selectedTable.area,
-      capacity: Number(assignment.selectedTable.capacity ?? 0),
+      name: resolvedTable.name,
+      area: resolvedTable.area,
+      capacity: Number(resolvedTable.capacity ?? 0),
     },
-    areaAdjusted: assignment.areaAdjusted,
+    areaAdjusted: assignment.areaAdjusted && !selectedByUser,
+    selectedByUser,
   };
 }
 

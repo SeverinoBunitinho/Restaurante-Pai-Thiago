@@ -97,6 +97,7 @@ export function ReservationForm({
     String(defaults.guests ?? 2),
   );
   const [reservationArea, setReservationArea] = useState(defaultAreaValue);
+  const [selectedTableId, setSelectedTableId] = useState("");
   const [availability, setAvailability] = useState({
     status: "idle",
     message: "Selecione data, horario e pessoas para consultar as mesas em tempo real.",
@@ -119,6 +120,17 @@ export function ReservationForm({
           : "Conecte o Supabase para liberar a leitura real de ocupacao de mesas.",
         data: null,
       };
+  const tablesInCurrentView = availabilityView.data?.tablesOverviewInView ?? [];
+  const freeTablesInCurrentView = tablesInCurrentView.filter((table) => !table.occupied);
+  const compatibleFreeTablesInCurrentView = freeTablesInCurrentView.filter(
+    (table) => table.compatible,
+  );
+  const selectedTableSnapshot =
+    tablesInCurrentView.find((table) => table.id === selectedTableId) ?? null;
+  const isSelectedTableStillAvailable = compatibleFreeTablesInCurrentView.some(
+    (table) => table.id === selectedTableId,
+  );
+  const effectiveSelectedTableId = isSelectedTableStillAvailable ? selectedTableId : "";
 
   useEffect(() => {
     if (!hasValidAvailabilityFilters) {
@@ -244,6 +256,8 @@ export function ReservationForm({
 
   return (
     <form action={formAction} className="grid gap-4">
+      <input type="hidden" name="selectedTableId" value={effectiveSelectedTableId} />
+
       <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
         {isStaff
           ? "Use este formulario para registrar reservas por telefone, WhatsApp ou atendimento da equipe. O sistema valida disponibilidade real por horario e capacidade."
@@ -507,6 +521,67 @@ export function ReservationForm({
                   ) : null}
                 </div>
               </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.85)] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                  Escolha da mesa (opcional)
+                </p>
+                {effectiveSelectedTableId ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTableId("")}
+                    className="rounded-full border border-[rgba(20,35,29,0.16)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--forest)]"
+                  >
+                    Limpar escolha
+                  </button>
+                ) : null}
+              </div>
+
+              <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.7)]">
+                Voce pode selecionar uma mesa livre agora. Se nao selecionar, o sistema escolhe automaticamente a melhor opcao.
+              </p>
+
+              {selectedTableId && !isSelectedTableStillAvailable ? (
+                <p className="mt-2 rounded-xl border border-[rgba(138,93,59,0.22)] bg-[rgba(138,93,59,0.08)] px-3 py-2 text-xs font-semibold text-[var(--clay)]">
+                  A mesa escolhida saiu da disponibilidade neste instante. Escolha outra mesa livre.
+                </p>
+              ) : null}
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {compatibleFreeTablesInCurrentView.map((table) => {
+                  const active = table.id === effectiveSelectedTableId;
+
+                  return (
+                    <button
+                      key={table.id}
+                      type="button"
+                      onClick={() => setSelectedTableId(table.id)}
+                      className={cn(
+                        "inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold",
+                        active
+                          ? "border-[rgba(57,111,91,0.45)] bg-[rgba(95,123,109,0.16)] text-[var(--forest)]"
+                          : "border-[rgba(20,35,29,0.18)] bg-white/90 text-[rgba(21,35,29,0.84)]",
+                      )}
+                    >
+                      {table.name} · {table.capacity}p
+                    </button>
+                  );
+                })}
+                {!compatibleFreeTablesInCurrentView.length ? (
+                  <span className="text-xs text-[rgba(21,35,29,0.66)]">
+                    Nenhuma mesa livre compativel para essa configuracao agora.
+                  </span>
+                ) : null}
+              </div>
+
+              {selectedTableSnapshot ? (
+                <p className="mt-2 text-xs leading-5 text-[rgba(21,35,29,0.72)]">
+                  Selecionada: {selectedTableSnapshot.name} ({selectedTableSnapshot.area}) -{" "}
+                  {selectedTableSnapshot.capacity} lugares.
+                </p>
+              ) : null}
             </div>
           </>
         ) : (
