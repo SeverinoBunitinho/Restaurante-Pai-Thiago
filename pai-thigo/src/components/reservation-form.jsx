@@ -16,6 +16,34 @@ function getTodayInBrazil() {
   }).format(new Date());
 }
 
+function getNextReservationTimeInBrazil() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+  const hoursPart = Number(
+    parts.find((part) => part.type === "hour")?.value ?? "19",
+  );
+  const minutesPart = Number(
+    parts.find((part) => part.type === "minute")?.value ?? "00",
+  );
+
+  if (!Number.isFinite(hoursPart) || !Number.isFinite(minutesPart)) {
+    return "19:00";
+  }
+
+  let totalMinutes = hoursPart * 60 + minutesPart + 60;
+  totalMinutes = Math.ceil(totalMinutes / 30) * 30;
+  totalMinutes = Math.min(Math.max(totalMinutes, 0), 23 * 60 + 30);
+
+  const normalizedHours = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+  const normalizedMinutes = String(totalMinutes % 60).padStart(2, "0");
+
+  return `${normalizedHours}:${normalizedMinutes}`;
+}
+
 export function ReservationForm({
   defaults = {},
   role = "customer",
@@ -41,8 +69,12 @@ export function ReservationForm({
   const defaultAreaValue = defaults.areaPreference
     ? defaults.areaPreference
     : "__ANY__";
-  const [reservationDate, setReservationDate] = useState(defaults.date ?? "");
-  const [reservationTime, setReservationTime] = useState(defaults.time ?? "");
+  const [reservationDate, setReservationDate] = useState(
+    defaults.date ?? getTodayInBrazil(),
+  );
+  const [reservationTime, setReservationTime] = useState(
+    defaults.time ?? getNextReservationTimeInBrazil(),
+  );
   const [reservationGuests, setReservationGuests] = useState(
     String(defaults.guests ?? 2),
   );
@@ -335,9 +367,31 @@ export function ReservationForm({
             </div>
           </>
         ) : (
-          <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.66)]">
-            {availabilityView.message}
-          </p>
+          <>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                "Mesas ativas",
+                "Reservadas no horario",
+                "Livres no horario",
+                `Livres para ${Number.isFinite(guestsNumber) ? guestsNumber : "--"} pessoa(s)`,
+              ].map((label) => (
+                <div
+                  key={label}
+                  className="rounded-2xl border border-[rgba(20,35,29,0.1)] bg-white/70 px-3 py-3"
+                >
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-[rgba(21,35,29,0.62)]">
+                    {label}
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[rgba(21,35,29,0.34)]">
+                    --
+                  </p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.66)]">
+              {availabilityView.message}
+            </p>
+          </>
         )}
       </div>
 
