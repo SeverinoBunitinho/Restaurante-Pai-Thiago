@@ -2225,6 +2225,41 @@ textarea {
     right: 0;
     left: 0;
     width: auto;
+    padding: 0.78rem;
+  }
+
+  .header-search-input-shell {
+    border-radius: 1rem;
+    padding: 0.52rem 0.64rem;
+  }
+
+  .header-search-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+
+  .header-search-meta-pill,
+  .header-search-meta-info {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .header-search-feed {
+    max-height: min(52vh, 20rem);
+    padding-right: 0;
+  }
+
+  .header-search-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.48rem;
+  }
+
+  .header-search-item-action {
+    width: 100%;
+    text-align: center;
+    padding: 0.44rem 0.62rem;
   }
 
   .feature-stat-body,
