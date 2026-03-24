@@ -386,11 +386,11 @@ export async function SiteHeader() {
     <>
       <header className="site-header-fixed">
         <div className="site-header-shell shell">
-          <div className="site-header-card nav-pill rounded-[1.65rem] px-3 py-2.5 sm:rounded-[2.2rem] sm:px-6 sm:py-4">
+          <div className="site-header-card nav-pill rounded-[1.7rem] px-3 py-2.5 sm:rounded-[2.2rem] sm:px-6 sm:py-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <Link href="/" className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:gap-4">
-                <div className="relative flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(217,185,122,0.18)] bg-[linear-gradient(135deg,var(--forest),#223a31)] text-[var(--cream)] shadow-[0_18px_34px_rgba(20,35,29,0.22)] sm:h-13 sm:w-13">
-                  <span className="display-title text-[1.2rem] font-semibold sm:text-2xl">P</span>
+                <div className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(217,185,122,0.18)] bg-[linear-gradient(135deg,var(--forest),#223a31)] text-[var(--cream)] shadow-[0_18px_34px_rgba(20,35,29,0.22)] sm:h-13 sm:w-13">
+                  <span className="display-title text-[1.28rem] font-semibold sm:text-2xl">P</span>
                   <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-[rgba(255,255,255,0.72)] bg-[var(--gold-soft)] sm:h-3 sm:w-3" />
                 </div>
                 <div className="min-w-0">
@@ -399,7 +399,7 @@ export async function SiteHeader() {
                     <Dot size={14} />
                     <span>{staffSession ? "acesso interno" : "reservas e atendimento"}</span>
                   </div>
-                  <p className="display-title text-[1.16rem] leading-none text-[var(--forest)] sm:text-[2rem]">
+                  <p className="display-title text-[1.22rem] leading-none text-[var(--forest)] sm:text-[2rem]">
                     {restaurantInfo.name}
                   </p>
                 </div>
