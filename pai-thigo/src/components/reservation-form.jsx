@@ -100,15 +100,17 @@ export function ReservationForm({
   const [guestPhone, setGuestPhone] = useState(defaults.phone ?? "");
   const [reservationArea, setReservationArea] = useState(defaultAreaValue);
   const [selectedTableId, setSelectedTableId] = useState("");
+  const [availabilityRequested, setAvailabilityRequested] = useState(false);
   const [availability, setAvailability] = useState({
     status: "idle",
     message:
-      "Preencha nome, telefone, data, horario, pessoas e area para abrir a disponibilidade em tempo real.",
+      "Preencha os dados e clique em Ver disponibilidade para consultar as mesas em tempo real.",
     data: null,
   });
   const guestsNumber = Number(reservationGuests);
   const hasCoreCredentials =
     guestName.trim().length >= 3 && guestPhone.trim().length >= 8;
+  const hasAreaSelected = Boolean(reservationArea) && reservationArea !== "__ANY__";
   const hasValidAvailabilityFilters =
     liveMode &&
     Boolean(reservationDate) &&
@@ -116,14 +118,15 @@ export function ReservationForm({
     Number.isFinite(guestsNumber) &&
     guestsNumber >= 1 &&
     guestsNumber <= 20 &&
-    Boolean(reservationArea);
-  const isAvailabilityUnlocked = hasCoreCredentials && hasValidAvailabilityFilters;
+    hasAreaSelected;
+  const canRequestAvailability = hasCoreCredentials && hasValidAvailabilityFilters;
+  const isAvailabilityUnlocked = availabilityRequested && canRequestAvailability;
   const availabilityView = isAvailabilityUnlocked
     ? availability
     : {
         status: liveMode ? "idle" : "unavailable",
         message: liveMode
-          ? "Preencha os campos obrigatorios e escolha a area para mostrar mesas livres e ocupadas."
+          ? "Preencha os campos obrigatorios, selecione a area e clique em Ver disponibilidade."
           : "Conecte o Supabase para liberar a leitura real de ocupacao de mesas.",
         data: null,
       };
@@ -279,7 +282,11 @@ export function ReservationForm({
             required
             autoComplete="name"
             value={guestName}
-            onChange={(event) => setGuestName(event.target.value)}
+            onChange={(event) => {
+              setGuestName(event.target.value);
+              setAvailabilityRequested(false);
+              setSelectedTableId("");
+            }}
             maxLength={100}
             placeholder="Ex.: Juliana Araujo"
             className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
@@ -293,7 +300,11 @@ export function ReservationForm({
             autoComplete="tel"
             inputMode="tel"
             value={guestPhone}
-            onChange={(event) => setGuestPhone(event.target.value)}
+            onChange={(event) => {
+              setGuestPhone(event.target.value);
+              setAvailabilityRequested(false);
+              setSelectedTableId("");
+            }}
             maxLength={40}
             placeholder="(11) 99999-9999"
             className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
@@ -336,7 +347,11 @@ export function ReservationForm({
             type="date"
             min={getTodayInBrazil()}
             value={reservationDate}
-            onChange={(event) => setReservationDate(event.target.value)}
+            onChange={(event) => {
+              setReservationDate(event.target.value);
+              setAvailabilityRequested(false);
+              setSelectedTableId("");
+            }}
             required
             className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 pr-12 outline-none transition focus:border-[var(--gold)]"
           />
@@ -347,7 +362,11 @@ export function ReservationForm({
             name="time"
             type="time"
             value={reservationTime}
-            onChange={(event) => setReservationTime(event.target.value)}
+            onChange={(event) => {
+              setReservationTime(event.target.value);
+              setAvailabilityRequested(false);
+              setSelectedTableId("");
+            }}
             required
             className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 pr-12 outline-none transition focus:border-[var(--gold)]"
           />
@@ -360,7 +379,11 @@ export function ReservationForm({
             min={1}
             max={20}
             value={reservationGuests}
-            onChange={(event) => setReservationGuests(event.target.value)}
+            onChange={(event) => {
+              setReservationGuests(event.target.value);
+              setAvailabilityRequested(false);
+              setSelectedTableId("");
+            }}
             required
             className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
@@ -372,6 +395,7 @@ export function ReservationForm({
             value={reservationArea}
             onChange={(event) => {
               setReservationArea(event.target.value);
+              setAvailabilityRequested(false);
               setSelectedTableId("");
             }}
             className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
@@ -383,6 +407,36 @@ export function ReservationForm({
             ))}
           </select>
         </label>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (!canRequestAvailability) {
+              setAvailability({
+                status: "idle",
+                message:
+                  "Preencha nome, telefone, data, horario, pessoas e escolha uma area especifica para liberar as mesas.",
+                data: null,
+              });
+              return;
+            }
+
+            setAvailabilityRequested(true);
+          }}
+          className={cn(
+            "inline-flex items-center rounded-full border px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] transition",
+            canRequestAvailability
+              ? "border-[rgba(20,35,29,0.2)] bg-[rgba(20,35,29,0.9)] text-white hover:-translate-y-0.5"
+              : "cursor-not-allowed border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.7)] text-[rgba(21,35,29,0.48)]",
+          )}
+        >
+          Ver disponibilidade
+        </button>
+        <p className="text-xs leading-5 text-[rgba(21,35,29,0.62)]">
+          O mapa de mesas libera depois dos dados principais e atualiza em tempo real.
+        </p>
       </div>
 
       <div className="rounded-[1.6rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] p-4">
@@ -606,14 +660,17 @@ export function ReservationForm({
                 <p className={cn(hasCoreCredentials ? "text-[var(--forest)]" : "")}>
                   1. Nome e telefone preenchidos
                 </p>
-                <p className={cn(Boolean(reservationArea) ? "text-[var(--forest)]" : "")}>
-                  2. Area selecionada
+                <p className={cn(hasAreaSelected ? "text-[var(--forest)]" : "")}>
+                  2. Area especifica selecionada
                 </p>
                 <p className={cn(Boolean(reservationDate) ? "text-[var(--forest)]" : "")}>
                   3. Data informada
                 </p>
                 <p className={cn(Boolean(reservationTime) ? "text-[var(--forest)]" : "")}>
                   4. Horario informado
+                </p>
+                <p className={cn(availabilityRequested ? "text-[var(--forest)]" : "")}>
+                  5. Botao Ver disponibilidade acionado
                 </p>
               </div>
             </div>

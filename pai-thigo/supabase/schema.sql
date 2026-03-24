@@ -1088,7 +1088,25 @@ values
   ('Mesa 03', 'Salao principal', 4),
   ('Mesa 04', 'Lounge', 6),
   ('Mesa 05', 'Sala reservada', 8),
-  ('Mesa 06', 'Varanda', 4)
+  ('Mesa 06', 'Varanda', 4),
+  ('Mesa 07', 'Salao principal', 2),
+  ('Mesa 08', 'Salao principal', 6),
+  ('Mesa 09', 'Salao principal', 4),
+  ('Mesa 10', 'Salao principal', 8),
+  ('Mesa 11', 'Lounge', 4),
+  ('Mesa 12', 'Lounge', 6),
+  ('Mesa 13', 'Lounge', 8),
+  ('Mesa 14', 'Lounge', 10),
+  ('Mesa 15', 'Sala reservada', 6),
+  ('Mesa 16', 'Sala reservada', 8),
+  ('Mesa 17', 'Sala reservada', 10),
+  ('Mesa 18', 'Sala reservada', 12),
+  ('Mesa 19', 'Varanda', 2),
+  ('Mesa 20', 'Varanda', 4),
+  ('Mesa 21', 'Varanda', 6),
+  ('Mesa 22', 'Varanda', 8),
+  ('Mesa 23', 'Varanda', 10),
+  ('Mesa 24', 'Varanda', 12)
 on conflict (name) do nothing;
 
 insert into public.menu_categories (name, slug, description, highlight_color, sort_order)
