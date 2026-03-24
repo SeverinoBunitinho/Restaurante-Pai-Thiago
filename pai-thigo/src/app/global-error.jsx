@@ -24,8 +24,8 @@ export default function GlobalError({ reset }) {
                   <RefreshCw size={16} />
                   Recarregar
                 </button>
-                <Link href="/login?forcePublic=1" className="button-secondary">
-                  Voltar ao login
+                <Link href="/" className="button-secondary">
+                  Voltar para a home
                 </Link>
               </div>
             </section>

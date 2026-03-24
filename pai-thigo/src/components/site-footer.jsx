@@ -11,29 +11,13 @@ import {
 } from "lucide-react";
 
 import { getCurrentSession, isStaffRole } from "@/lib/auth";
-import { restaurantInfo as fallbackRestaurantInfo } from "@/lib/mock-data";
 import { getRestaurantProfile } from "@/lib/restaurant-profile";
 
 export async function SiteFooter() {
-  let restaurantInfo = fallbackRestaurantInfo;
-  let session = null;
-
-  try {
-    const [resolvedRestaurantInfo, resolvedSession] = await Promise.all([
-      getRestaurantProfile(),
-      getCurrentSession(),
-    ]);
-
-    restaurantInfo = {
-      ...fallbackRestaurantInfo,
-      ...(resolvedRestaurantInfo ?? {}),
-    };
-    session = resolvedSession ?? null;
-  } catch {}
-
-  const scheduleLines = Array.isArray(restaurantInfo.schedule)
-    ? restaurantInfo.schedule
-    : fallbackRestaurantInfo.schedule;
+  const [restaurantInfo, session] = await Promise.all([
+    getRestaurantProfile(),
+    getCurrentSession(),
+  ]);
   const showMenuShortcut = session ? isStaffRole(session.role) : true;
 
   return (
@@ -119,7 +103,7 @@ export async function SiteFooter() {
                   Horarios
                 </p>
                 <div className="mt-2 space-y-1 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
-                  {scheduleLines.map((item) => (
+                  {restaurantInfo.schedule.map((item) => (
                     <p key={item}>{item}</p>
                   ))}
                 </div>

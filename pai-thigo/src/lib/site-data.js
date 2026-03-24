@@ -481,110 +481,106 @@ export async function getCustomerDashboard(userId) {
 }
 
 export async function getStaffDashboard(role = "waiter") {
-  try {
-    const supabase = await getSupabaseServerClient();
+  const supabase = await getSupabaseServerClient();
 
-    if (!supabase) {
-      return buildFallbackStaffDashboard(role);
-    }
-
-    const today = getTodayInBrazil();
-
-    const [
-      { count: totalReservations, error: totalReservationsError },
-      { count: pendingReservations, error: pendingReservationsError },
-      { count: todayReservations, error: todayReservationsError },
-      { count: menuItemsCount, error: menuItemsError },
-      { count: tablesCount, error: tablesCountError },
-      reservationQueueResult,
-    ] = await Promise.all([
-      supabase.from("reservations").select("*", { head: true, count: "exact" }),
-      supabase
-        .from("reservations")
-        .select("*", { head: true, count: "exact" })
-        .eq("status", "pending"),
-      supabase
-        .from("reservations")
-        .select("*", { head: true, count: "exact" })
-        .eq("reservation_date", today),
-      supabase.from("menu_items").select("*", { head: true, count: "exact" }),
-      supabase
-        .from("restaurant_tables")
-        .select("*", { head: true, count: "exact" })
-        .eq("is_active", true),
-      supabase
-        .from("reservations")
-        .select(
-          "id, guest_name, reservation_date, reservation_time, guests, occasion, status, notes, area_preference, assigned_table:restaurant_tables(name, area)",
-        )
-        .order("reservation_date", { ascending: true })
-        .order("reservation_time", { ascending: true })
-        .limit(8),
-    ]);
-
-    if (
-      totalReservationsError ||
-      pendingReservationsError ||
-      todayReservationsError ||
-      menuItemsError ||
-      tablesCountError ||
-      reservationQueueResult.error
-    ) {
-      return buildFallbackStaffDashboard(role);
-    }
-
-    const roleSpecificStat = {
-      waiter: {
-        label: "Mesas ativas",
-        value: String(tablesCount ?? 0),
-        description: "Estrutura pronta para acomodar o turno.",
-      },
-      manager: {
-        label: "Itens no cardapio",
-        value: String(menuItemsCount ?? 0),
-        description: "Catalogo vivo para a operacao da casa.",
-      },
-      owner: {
-        label: "Base de reservas",
-        value: String(totalReservations ?? 0),
-        description: "Leitura executiva do relacionamento com clientes.",
-      },
-    };
-
-    return {
-      stats: [
-        {
-          label: "Reservas totais",
-          value: String(totalReservations ?? 0),
-          description: "Fluxo consolidado no Supabase.",
-        },
-        {
-          label: "Pendentes",
-          value: String(pendingReservations ?? 0),
-          description: "Demandas aguardando retorno da equipe.",
-        },
-        {
-          label: "Hoje",
-          value: String(todayReservations ?? 0),
-          description: `Atendimentos previstos para ${today}.`,
-        },
-        roleSpecificStat[role] ?? roleSpecificStat.waiter,
-      ],
-      reservations: (reservationQueueResult.data ?? []).map(mapReservation),
-      modules: operationsModules,
-      alerts: [
-        pendingReservations
-          ? `${pendingReservations} reserva(s) aguardando confirmacao da equipe.`
-          : "Nenhuma reserva pendente no momento.",
-        todayReservations
-          ? `${todayReservations} atendimento(s) programado(s) para hoje.`
-          : "Nao ha atendimentos registrados para hoje ainda.",
-      ],
-      usingSupabase: true,
-    };
-  } catch {
+  if (!supabase) {
     return buildFallbackStaffDashboard(role);
   }
+
+  const today = getTodayInBrazil();
+
+  const [
+    { count: totalReservations, error: totalReservationsError },
+    { count: pendingReservations, error: pendingReservationsError },
+    { count: todayReservations, error: todayReservationsError },
+    { count: menuItemsCount, error: menuItemsError },
+    { count: tablesCount, error: tablesCountError },
+    reservationQueueResult,
+  ] = await Promise.all([
+    supabase.from("reservations").select("*", { head: true, count: "exact" }),
+    supabase
+      .from("reservations")
+      .select("*", { head: true, count: "exact" })
+      .eq("status", "pending"),
+    supabase
+      .from("reservations")
+      .select("*", { head: true, count: "exact" })
+      .eq("reservation_date", today),
+    supabase.from("menu_items").select("*", { head: true, count: "exact" }),
+    supabase
+      .from("restaurant_tables")
+      .select("*", { head: true, count: "exact" })
+      .eq("is_active", true),
+    supabase
+      .from("reservations")
+      .select(
+        "id, guest_name, reservation_date, reservation_time, guests, occasion, status, notes, area_preference, assigned_table:restaurant_tables(name, area)",
+      )
+      .order("reservation_date", { ascending: true })
+      .order("reservation_time", { ascending: true })
+      .limit(8),
+  ]);
+
+  if (
+    totalReservationsError ||
+    pendingReservationsError ||
+    todayReservationsError ||
+    menuItemsError ||
+    tablesCountError ||
+    reservationQueueResult.error
+  ) {
+    return buildFallbackStaffDashboard(role);
+  }
+
+  const roleSpecificStat = {
+    waiter: {
+      label: "Mesas ativas",
+      value: String(tablesCount ?? 0),
+      description: "Estrutura pronta para acomodar o turno.",
+    },
+    manager: {
+      label: "Itens no cardapio",
+      value: String(menuItemsCount ?? 0),
+      description: "Catalogo vivo para a operacao da casa.",
+    },
+    owner: {
+      label: "Base de reservas",
+      value: String(totalReservations ?? 0),
+      description: "Leitura executiva do relacionamento com clientes.",
+    },
+  };
+
+  return {
+    stats: [
+      {
+        label: "Reservas totais",
+        value: String(totalReservations ?? 0),
+        description: "Fluxo consolidado no Supabase.",
+      },
+      {
+        label: "Pendentes",
+        value: String(pendingReservations ?? 0),
+        description: "Demandas aguardando retorno da equipe.",
+      },
+      {
+        label: "Hoje",
+        value: String(todayReservations ?? 0),
+        description: `Atendimentos previstos para ${today}.`,
+      },
+      roleSpecificStat[role] ?? roleSpecificStat.waiter,
+    ],
+    reservations: (reservationQueueResult.data ?? []).map(mapReservation),
+    modules: operationsModules,
+    alerts: [
+      pendingReservations
+        ? `${pendingReservations} reserva(s) aguardando confirmacao da equipe.`
+        : "Nenhuma reserva pendente no momento.",
+      todayReservations
+        ? `${todayReservations} atendimento(s) programado(s) para hoje.`
+        : "Nao ha atendimentos registrados para hoje ainda.",
+    ],
+    usingSupabase: true,
+  };
 }
 
 export async function getDashboardData(role = "manager") {

@@ -104,53 +104,16 @@ const roleBlueprints = {
   },
 };
 
-function buildSafeDashboardFallback() {
-  return {
-    alerts: [
-      "A base interna entrou em modo seguro temporario, mas o acesso da equipe segue disponivel.",
-      "Os indicadores do turno voltam automaticamente assim que o Supabase responder normalmente.",
-    ],
-  };
-}
-
 function getModuleLink(modules, key, fallback = "/operacao") {
   return modules.find((item) => item.key === key)?.href ?? fallback;
-}
-
-function getFirstName(fullName, fallback = "Equipe") {
-  const normalizedName = String(fullName ?? "").trim();
-
-  if (!normalizedName) {
-    return fallback;
-  }
-
-  return normalizedName.split(/\s+/)[0];
 }
 
 export default async function AreaFuncionarioPage() {
   const session = await requireRole(["waiter", "manager", "owner"]);
   const modules = getStaffModules(session.role);
-  let dashboard = buildSafeDashboardFallback();
-
-  try {
-    const resolvedDashboard = await getStaffDashboard(session.role);
-    const resolvedAlerts = Array.isArray(resolvedDashboard?.alerts)
-      ? resolvedDashboard.alerts.filter(Boolean)
-      : [];
-
-    dashboard = {
-      ...dashboard,
-      ...(resolvedDashboard ?? {}),
-      alerts: resolvedAlerts.length ? resolvedAlerts : dashboard.alerts,
-    };
-  } catch {}
-
+  const dashboard = await getStaffDashboard(session.role);
   const blueprint = roleBlueprints[session.role] ?? roleBlueprints.waiter;
-  const firstName = getFirstName(
-    session.profile?.full_name ??
-      session.user?.user_metadata?.full_name ??
-      session.user?.email?.split("@")[0],
-  );
+  const firstName = session.profile.full_name.split(" ")[0];
   const nextHref = getModuleLink(modules, blueprint.nextKey, "/operacao");
   const moduleHighlights = modules.slice(0, 6);
 
