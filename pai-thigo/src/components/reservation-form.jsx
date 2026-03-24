@@ -652,29 +652,6 @@ export function ReservationForm({
           </>
         ) : (
           <>
-            <div className="mt-3 rounded-2xl border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.82)] px-3 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[rgba(21,35,29,0.62)]">
-                Etapas para liberar o mapa de mesas
-              </p>
-              <div className="mt-2 grid gap-2 text-xs leading-5 text-[rgba(21,35,29,0.72)] sm:grid-cols-2">
-                <p className={cn(hasCoreCredentials ? "text-[var(--forest)]" : "")}>
-                  1. Nome e telefone preenchidos
-                </p>
-                <p className={cn(hasAreaSelected ? "text-[var(--forest)]" : "")}>
-                  2. Area especifica selecionada
-                </p>
-                <p className={cn(Boolean(reservationDate) ? "text-[var(--forest)]" : "")}>
-                  3. Data informada
-                </p>
-                <p className={cn(Boolean(reservationTime) ? "text-[var(--forest)]" : "")}>
-                  4. Horario informado
-                </p>
-                <p className={cn(availabilityRequested ? "text-[var(--forest)]" : "")}>
-                  5. Botao Ver disponibilidade acionado
-                </p>
-              </div>
-            </div>
-
             <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 "Mesas ativas",
