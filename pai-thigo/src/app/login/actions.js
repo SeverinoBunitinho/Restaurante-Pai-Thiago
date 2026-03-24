@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getSiteUrl } from "@/lib/site-url";
 import { getRouteForRole, isStaffRole } from "@/lib/auth";
 import { getSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 
 function normalizeAuthMailError(message = "") {
   if (/email address not authorized/i.test(message)) {
@@ -16,6 +17,14 @@ function normalizeAuthMailError(message = "") {
   }
 
   return message;
+}
+
+function normalizeProfileRole(value) {
+  if (value === "customer" || value === "waiter" || value === "manager" || value === "owner") {
+    return value;
+  }
+
+  return "customer";
 }
 
 export async function submitLoginAction(_previousState, formData) {
@@ -86,13 +95,42 @@ export async function submitLoginAction(_previousState, formData) {
     };
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
     .eq("user_id", data.user.id)
     .maybeSingle();
 
-  const resolvedRole = profile?.role ?? "customer";
+  let resolvedRole = normalizeProfileRole(profile?.role);
+
+  if (profileError || !profile?.role || (role === "staff" && !isStaffRole(resolvedRole))) {
+    try {
+      const admin = getSupabaseAdminClient();
+
+      if (admin) {
+        const { data: adminProfile } = await admin
+          .from("profiles")
+          .select("role")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+
+        if (adminProfile?.role) {
+          resolvedRole = normalizeProfileRole(adminProfile.role);
+        } else if (data.user.email) {
+          const { data: staffEntry } = await admin
+            .from("staff_directory")
+            .select("role, active")
+            .eq("email", data.user.email.toLowerCase())
+            .eq("active", true)
+            .maybeSingle();
+
+          if (staffEntry?.role) {
+            resolvedRole = normalizeProfileRole(staffEntry.role);
+          }
+        }
+      }
+    } catch {}
+  }
 
   if (role === "staff" && !isStaffRole(resolvedRole)) {
     await supabase.auth.signOut();

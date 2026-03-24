@@ -855,13 +855,15 @@ export async function getStaffDirectoryBoard() {
   }
 
   const profileEmails = new Set(
-    (profilesResult.data ?? []).map((profile) => profile.email.toLowerCase()),
+    (profilesResult.data ?? [])
+      .map((profile) => String(profile?.email ?? "").trim().toLowerCase())
+      .filter(Boolean),
   );
 
   const staff = (staffDirectoryResult.data ?? [])
     .map((member) => ({
       ...member,
-      hasAccount: profileEmails.has(member.email.toLowerCase()),
+      hasAccount: profileEmails.has(String(member?.email ?? "").trim().toLowerCase()),
     }))
     .sort(sortStaffDirectory);
 

@@ -19,6 +19,7 @@ import {
   getStaffRoleLabel,
   isStaffRole,
 } from "@/lib/auth";
+import { restaurantInfo as fallbackRestaurantInfo } from "@/lib/mock-data";
 import { getRestaurantProfile } from "@/lib/restaurant-profile";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -74,14 +75,18 @@ function toEpoch(rawValue) {
   return Number.isFinite(time) ? time : 0;
 }
 
-async function getHeaderNotificationContext(session) {
-  const emptyContext = {
+function createEmptyNotificationContext() {
+  return {
     orders: 0,
     reservations: 0,
     ordersLatestAt: 0,
     reservationsLatestAt: 0,
     items: [],
   };
+}
+
+async function getHeaderNotificationContext(session) {
+  const emptyContext = createEmptyNotificationContext();
 
   try {
     if (!session) {
@@ -281,11 +286,34 @@ async function getHeaderNotificationContext(session) {
 }
 
 export async function SiteHeader() {
-  const session = await getCurrentSession();
-  const [restaurantInfo, notificationContext] = await Promise.all([
-    getRestaurantProfile(),
-    getHeaderNotificationContext(session),
-  ]);
+  let session = null;
+
+  try {
+    session = await getCurrentSession();
+  } catch {}
+
+  let restaurantInfo = fallbackRestaurantInfo;
+  let notificationContext = createEmptyNotificationContext();
+
+  try {
+    const [resolvedRestaurantInfo, resolvedNotificationContext] = await Promise.all([
+      getRestaurantProfile(),
+      getHeaderNotificationContext(session),
+    ]);
+
+    restaurantInfo = {
+      ...fallbackRestaurantInfo,
+      ...(resolvedRestaurantInfo ?? {}),
+    };
+    notificationContext = {
+      ...notificationContext,
+      ...(resolvedNotificationContext ?? {}),
+      items: Array.isArray(resolvedNotificationContext?.items)
+        ? resolvedNotificationContext.items
+        : [],
+    };
+  } catch {}
+
   const staffSession = isStaffRole(session?.role);
   const navItems = staffSession
       ? [
