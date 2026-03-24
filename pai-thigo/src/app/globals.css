@@ -2133,14 +2133,25 @@ textarea {
     min-width: 0;
   }
 
+  .site-mobile-cart-link,
+  .site-mobile-role-chip {
+    order: 1;
+  }
+
+  .site-header-logout-form {
+    order: 2;
+  }
+
   .site-header-actions .header-search {
     grid-column: 1 / -1;
     min-width: 0;
+    order: 3;
   }
 
   .site-header-actions .notification-center {
     grid-column: 1 / -1;
     min-width: 0;
+    order: 4;
   }
 
   .site-mobile-role-chip,
