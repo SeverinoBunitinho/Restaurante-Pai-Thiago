@@ -386,12 +386,12 @@ export async function SiteHeader() {
     <>
       <header className="site-header-fixed">
         <div className="site-header-shell shell">
-          <div className="site-header-card nav-pill rounded-[2.2rem] px-4 py-4 sm:px-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-              <Link href="/" className="flex w-full min-w-0 items-center gap-4 sm:w-auto">
-                <div className="relative flex h-13 w-13 items-center justify-center rounded-full border border-[rgba(217,185,122,0.18)] bg-[linear-gradient(135deg,var(--forest),#223a31)] text-[var(--cream)] shadow-[0_18px_34px_rgba(20,35,29,0.22)]">
-                  <span className="display-title text-2xl font-semibold">P</span>
-                  <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border border-[rgba(255,255,255,0.72)] bg-[var(--gold-soft)]" />
+          <div className="site-header-card nav-pill rounded-[1.8rem] px-3 py-3 sm:rounded-[2.2rem] sm:px-6 sm:py-4">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+              <Link href="/" className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:gap-4">
+                <div className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(217,185,122,0.18)] bg-[linear-gradient(135deg,var(--forest),#223a31)] text-[var(--cream)] shadow-[0_18px_34px_rgba(20,35,29,0.22)] sm:h-13 sm:w-13">
+                  <span className="display-title text-[1.35rem] font-semibold sm:text-2xl">P</span>
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-[rgba(255,255,255,0.72)] bg-[var(--gold-soft)] sm:h-3 sm:w-3" />
                 </div>
                 <div className="min-w-0">
                   <div className="hidden items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--sage)] sm:flex">
@@ -399,7 +399,7 @@ export async function SiteHeader() {
                     <Dot size={14} />
                     <span>{staffSession ? "acesso interno" : "reservas e atendimento"}</span>
                   </div>
-                  <p className="display-title text-[1.45rem] leading-none text-[var(--forest)] sm:text-[2rem]">
+                  <p className="display-title text-[1.28rem] leading-none text-[var(--forest)] sm:text-[2rem]">
                     {restaurantInfo.name}
                   </p>
                 </div>
@@ -431,7 +431,7 @@ export async function SiteHeader() {
                 ))}
               </nav>
 
-              <div className="site-header-actions flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end">
+              <div className="site-header-actions flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-2">
                 {session ? (
                   <>
                     {session.role === "customer" ? (
