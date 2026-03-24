@@ -96,27 +96,34 @@ export function ReservationForm({
   const [reservationGuests, setReservationGuests] = useState(
     String(defaults.guests ?? 2),
   );
+  const [guestName, setGuestName] = useState(defaults.guestName ?? "");
+  const [guestPhone, setGuestPhone] = useState(defaults.phone ?? "");
   const [reservationArea, setReservationArea] = useState(defaultAreaValue);
   const [selectedTableId, setSelectedTableId] = useState("");
   const [availability, setAvailability] = useState({
     status: "idle",
-    message: "Selecione data, horario e pessoas para consultar as mesas em tempo real.",
+    message:
+      "Preencha nome, telefone, data, horario, pessoas e area para abrir a disponibilidade em tempo real.",
     data: null,
   });
   const guestsNumber = Number(reservationGuests);
+  const hasCoreCredentials =
+    guestName.trim().length >= 3 && guestPhone.trim().length >= 8;
   const hasValidAvailabilityFilters =
     liveMode &&
     Boolean(reservationDate) &&
     Boolean(reservationTime) &&
     Number.isFinite(guestsNumber) &&
     guestsNumber >= 1 &&
-    guestsNumber <= 20;
-  const availabilityView = hasValidAvailabilityFilters
+    guestsNumber <= 20 &&
+    Boolean(reservationArea);
+  const isAvailabilityUnlocked = hasCoreCredentials && hasValidAvailabilityFilters;
+  const availabilityView = isAvailabilityUnlocked
     ? availability
     : {
         status: liveMode ? "idle" : "unavailable",
         message: liveMode
-          ? "Selecione data, horario e pessoas para consultar as mesas em tempo real."
+          ? "Preencha os campos obrigatorios e escolha a area para mostrar mesas livres e ocupadas."
           : "Conecte o Supabase para liberar a leitura real de ocupacao de mesas.",
         data: null,
       };
@@ -133,7 +140,7 @@ export function ReservationForm({
   const effectiveSelectedTableId = isSelectedTableStillAvailable ? selectedTableId : "";
 
   useEffect(() => {
-    if (!hasValidAvailabilityFilters) {
+    if (!isAvailabilityUnlocked) {
       return undefined;
     }
 
@@ -247,7 +254,7 @@ export function ReservationForm({
       latestController?.abort();
     };
   }, [
-    hasValidAvailabilityFilters,
+    isAvailabilityUnlocked,
     reservationArea,
     reservationDate,
     reservationTime,
@@ -271,7 +278,8 @@ export function ReservationForm({
             name="guestName"
             required
             autoComplete="name"
-            defaultValue={defaults.guestName ?? ""}
+            value={guestName}
+            onChange={(event) => setGuestName(event.target.value)}
             maxLength={100}
             placeholder="Ex.: Juliana Araujo"
             className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
@@ -284,7 +292,8 @@ export function ReservationForm({
             required
             autoComplete="tel"
             inputMode="tel"
-            defaultValue={defaults.phone ?? ""}
+            value={guestPhone}
+            onChange={(event) => setGuestPhone(event.target.value)}
             maxLength={40}
             placeholder="(11) 99999-9999"
             className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
@@ -361,7 +370,10 @@ export function ReservationForm({
           <select
             name="areaPreference"
             value={reservationArea}
-            onChange={(event) => setReservationArea(event.target.value)}
+            onChange={(event) => {
+              setReservationArea(event.target.value);
+              setSelectedTableId("");
+            }}
             className="min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           >
             {areaSelectOptions.map((option) => (
@@ -458,7 +470,7 @@ export function ReservationForm({
                       {areaSummary.area}
                     </p>
                     <p className="mt-1 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
-                      {areaSummary.free} livre(s) · {areaSummary.occupied} ocupada(s)
+                      {areaSummary.free} livre(s) - {areaSummary.occupied} ocupada(s)
                     </p>
                   </div>
                 ))}
@@ -481,7 +493,7 @@ export function ReservationForm({
                         key={table.id}
                         className="inline-flex items-center rounded-full border border-[rgba(95,123,109,0.28)] bg-white/90 px-3 py-1 text-xs font-semibold text-[var(--forest)]"
                       >
-                        {table.name} · {table.capacity}p
+                        {table.name} - {table.capacity}p
                       </span>
                     ))}
                   {(availabilityView.data.tablesOverviewInView ?? []).filter(
@@ -509,7 +521,7 @@ export function ReservationForm({
                         key={table.id}
                         className="inline-flex items-center rounded-full border border-[rgba(138,93,59,0.3)] bg-white/90 px-3 py-1 text-xs font-semibold text-[rgba(96,65,42,1)]"
                       >
-                        {table.name} · {table.capacity}p
+                        {table.name} - {table.capacity}p
                       </span>
                     ))}
                   {(availabilityView.data.tablesOverviewInView ?? []).filter(
@@ -565,7 +577,7 @@ export function ReservationForm({
                           : "border-[rgba(20,35,29,0.18)] bg-white/90 text-[rgba(21,35,29,0.84)]",
                       )}
                     >
-                      {table.name} · {table.capacity}p
+                      {table.name} - {table.capacity}p
                     </button>
                   );
                 })}
@@ -586,6 +598,26 @@ export function ReservationForm({
           </>
         ) : (
           <>
+            <div className="mt-3 rounded-2xl border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.82)] px-3 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[rgba(21,35,29,0.62)]">
+                Etapas para liberar o mapa de mesas
+              </p>
+              <div className="mt-2 grid gap-2 text-xs leading-5 text-[rgba(21,35,29,0.72)] sm:grid-cols-2">
+                <p className={cn(hasCoreCredentials ? "text-[var(--forest)]" : "")}>
+                  1. Nome e telefone preenchidos
+                </p>
+                <p className={cn(Boolean(reservationArea) ? "text-[var(--forest)]" : "")}>
+                  2. Area selecionada
+                </p>
+                <p className={cn(Boolean(reservationDate) ? "text-[var(--forest)]" : "")}>
+                  3. Data informada
+                </p>
+                <p className={cn(Boolean(reservationTime) ? "text-[var(--forest)]" : "")}>
+                  4. Horario informado
+                </p>
+              </div>
+            </div>
+
             <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 "Mesas ativas",
