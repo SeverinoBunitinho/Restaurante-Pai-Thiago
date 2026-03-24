@@ -1,10 +1,17 @@
 import Link from "next/link";
 import {
+  BriefcaseBusiness,
   CalendarRange,
+  ClipboardList,
   Dot,
+  House,
+  LayoutDashboard,
+  LogIn,
   LogOut,
   Shield,
   Sparkles,
+  UserRound,
+  UtensilsCrossed,
 } from "lucide-react";
 
 import { logoutAction } from "@/app/login/actions";
@@ -322,6 +329,56 @@ export async function SiteHeader() {
         },
         { href: "/area-cliente", label: "Perfil", exact: true },
       ];
+  const mobileDockItems = session
+    ? staffSession
+      ? [
+          { href: "/painel", label: "Painel", exact: true, icon: LayoutDashboard },
+          {
+            href: "/operacao/comandas",
+            label: "Pedidos",
+            icon: ClipboardList,
+            badgeCount: notificationContext.orders,
+            badgeKind: "orders",
+            badgeLatestAt: notificationContext.ordersLatestAt,
+          },
+          {
+            href: "/operacao/reservas",
+            label: "Reservas",
+            icon: CalendarRange,
+            badgeCount: notificationContext.reservations,
+            badgeKind: "reservations",
+            badgeLatestAt: notificationContext.reservationsLatestAt,
+          },
+          { href: "/operacao", label: "Central", exact: true, icon: BriefcaseBusiness },
+        ]
+      : [
+          { href: "/cardapio", label: "Cardapio", exact: true, icon: UtensilsCrossed },
+          {
+            href: "/pedidos",
+            label: "Pedidos",
+            exact: true,
+            icon: ClipboardList,
+            badgeCount: notificationContext.orders,
+            badgeKind: "orders",
+            badgeLatestAt: notificationContext.ordersLatestAt,
+          },
+          {
+            href: "/reservas",
+            label: "Reservas",
+            exact: true,
+            icon: CalendarRange,
+            badgeCount: notificationContext.reservations,
+            badgeKind: "reservations",
+            badgeLatestAt: notificationContext.reservationsLatestAt,
+          },
+          { href: "/area-cliente", label: "Perfil", exact: true, icon: UserRound },
+        ]
+    : [
+        { href: "/", label: "Inicio", exact: true, icon: House },
+        { href: "/cardapio", label: "Cardapio", exact: true, icon: UtensilsCrossed },
+        { href: "/reservas", label: "Reservas", exact: true, icon: CalendarRange },
+        { href: "/login", label: "Entrar", exact: true, icon: LogIn },
+      ];
 
   const dashboardHref = session ? getRouteForRole(session.role) : "/login";
 
@@ -379,14 +436,14 @@ export async function SiteHeader() {
                   <>
                     {session.role === "customer" ? (
                       <>
-                        <CartHeaderLink compact className="md:hidden" />
+                        <CartHeaderLink compact className="md:hidden site-mobile-cart-link" />
                         <CartHeaderLink className="hidden md:inline-flex" />
                       </>
                     ) : null}
                     {staffSession ? (
                       <Link
                         href={dashboardHref}
-                        className="site-header-role-badge floating-badge inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold text-[var(--forest)] sm:px-4 sm:text-sm"
+                        className="site-header-role-badge site-mobile-role-chip floating-badge inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold text-[var(--forest)] sm:px-4 sm:text-sm"
                       >
                         <Shield size={16} />
                         {getStaffRoleLabel(session.role)}
@@ -401,7 +458,7 @@ export async function SiteHeader() {
                       reservationsLatestAt={notificationContext.reservationsLatestAt}
                       items={notificationContext.items}
                     />
-                    <form action={logoutAction}>
+                    <form action={logoutAction} className="site-header-logout-form">
                       <button type="submit" className="site-header-logout button-primary px-3 py-2 sm:px-4 sm:py-2.5">
                         <LogOut size={16} />
                         Sair
@@ -462,7 +519,35 @@ export async function SiteHeader() {
         </div>
       </header>
 
+      <nav className="mobile-bottom-nav lg:hidden" aria-label="Navegacao rapida no celular">
+        {mobileDockItems.map((item) => (
+          <ActiveLink
+            key={item.href}
+            href={item.href}
+            exact={item.exact}
+            className="mobile-bottom-nav-link"
+            activeClassName="mobile-bottom-nav-link-active"
+          >
+            <span className="mobile-bottom-nav-icon">
+              <item.icon size={15} />
+            </span>
+            <span className="mobile-bottom-nav-label">{item.label}</span>
+            {item.badgeCount && item.badgeKind ? (
+              <NotificationCountBadge
+                count={item.badgeCount}
+                latestAt={item.badgeLatestAt}
+                kind={item.badgeKind}
+                staffSession={staffSession}
+                className="mobile-bottom-nav-badge"
+                ariaLabel={`${item.badgeCount} notificacoes`}
+              />
+            ) : null}
+          </ActiveLink>
+        ))}
+      </nav>
+
       <div aria-hidden className="site-header-offset" />
+      <div aria-hidden className="mobile-bottom-nav-spacer lg:hidden" />
     </>
   );
 }
