@@ -665,6 +665,24 @@ textarea {
   margin-left: auto;
 }
 
+.site-mobile-cart-link {
+  display: inline-flex;
+}
+
+.site-desktop-cart-link {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .site-mobile-cart-link {
+    display: none !important;
+  }
+
+  .site-desktop-cart-link {
+    display: inline-flex !important;
+  }
+}
+
 .site-header-role-badge {
   white-space: nowrap;
 }

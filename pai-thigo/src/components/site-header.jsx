@@ -436,8 +436,8 @@ export async function SiteHeader() {
                   <>
                     {session.role === "customer" ? (
                       <>
-                        <CartHeaderLink compact className="md:hidden site-mobile-cart-link" />
-                        <CartHeaderLink className="hidden md:inline-flex" />
+                        <CartHeaderLink compact className="site-mobile-cart-link" />
+                        <CartHeaderLink className="site-desktop-cart-link" />
                       </>
                     ) : null}
                     {staffSession ? (
