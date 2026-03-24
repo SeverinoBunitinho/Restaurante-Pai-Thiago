@@ -108,12 +108,26 @@ function getModuleLink(modules, key, fallback = "/operacao") {
   return modules.find((item) => item.key === key)?.href ?? fallback;
 }
 
+function getFirstName(fullName, fallback = "Equipe") {
+  const normalizedName = String(fullName ?? "").trim();
+
+  if (!normalizedName) {
+    return fallback;
+  }
+
+  return normalizedName.split(/\s+/)[0];
+}
+
 export default async function AreaFuncionarioPage() {
   const session = await requireRole(["waiter", "manager", "owner"]);
   const modules = getStaffModules(session.role);
   const dashboard = await getStaffDashboard(session.role);
   const blueprint = roleBlueprints[session.role] ?? roleBlueprints.waiter;
-  const firstName = session.profile.full_name.split(" ")[0];
+  const firstName = getFirstName(
+    session.profile?.full_name ??
+      session.user?.user_metadata?.full_name ??
+      session.user?.email?.split("@")[0],
+  );
   const nextHref = getModuleLink(modules, blueprint.nextKey, "/operacao");
   const moduleHighlights = modules.slice(0, 6);
 
