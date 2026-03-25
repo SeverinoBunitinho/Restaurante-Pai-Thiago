@@ -77,16 +77,16 @@ export default async function OperacaoMesasPage() {
       </section>
 
       <section className="pt-6">
-        <div className="flex w-full flex-wrap gap-2 rounded-[1.2rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.6)] p-2 sm:w-fit">
+        <div className="module-switch">
           <Link
             href="/operacao/reservas"
-            className="pill-wrap-safe inline-flex rounded-full border border-[rgba(20,35,29,0.14)] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
+            className="module-tab"
           >
             Fila de reservas
           </Link>
           <Link
             href="/operacao/mesas"
-            className="pill-wrap-safe inline-flex rounded-full bg-[var(--forest)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--cream)]"
+            className="module-tab module-tab-active"
           >
             Mapa de mesas
           </Link>
