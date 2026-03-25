@@ -132,6 +132,9 @@ export function ReservationForm({
       };
   const tablesInCurrentView = availabilityView.data?.tablesOverviewInView ?? [];
   const freeTablesInCurrentView = tablesInCurrentView.filter((table) => !table.occupied);
+  const occupiedTablesInCurrentView = tablesInCurrentView.filter(
+    (table) => table.occupied,
+  );
   const compatibleFreeTablesInCurrentView = freeTablesInCurrentView.filter(
     (table) => table.compatible,
   );
@@ -539,25 +542,14 @@ export function ReservationForm({
                     ? "na casa"
                     : `em ${availabilityView.data.selectedAreaSummary?.area ?? "area selecionada"}`}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(availabilityView.data.tablesOverviewInView ?? [])
-                    .filter((table) => !table.occupied)
-                    .map((table) => (
-                      <span
-                        key={table.id}
-                        className="inline-flex items-center rounded-full border border-[rgba(95,123,109,0.28)] bg-white/90 px-3 py-1 text-xs font-semibold text-[var(--forest)]"
-                      >
-                        {table.name} - {table.capacity}p
-                      </span>
-                    ))}
-                  {(availabilityView.data.tablesOverviewInView ?? []).filter(
-                    (table) => !table.occupied,
-                  ).length === 0 ? (
-                    <span className="text-xs text-[rgba(21,35,29,0.66)]">
-                      Nenhuma mesa livre nesta selecao.
-                    </span>
-                  ) : null}
-                </div>
+                <p className="mt-2 text-3xl font-semibold text-[var(--forest)]">
+                  {freeTablesInCurrentView.length}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+                  {freeTablesInCurrentView.length
+                    ? `${freeTablesInCurrentView.length} mesa(s) livre(s) neste setor para o horario escolhido.`
+                    : "Nenhuma mesa livre nesta selecao."}
+                </p>
               </div>
 
               <div className="rounded-2xl border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] p-3">
@@ -567,25 +559,14 @@ export function ReservationForm({
                     ? "na casa"
                     : `em ${availabilityView.data.selectedAreaSummary?.area ?? "area selecionada"}`}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(availabilityView.data.tablesOverviewInView ?? [])
-                    .filter((table) => table.occupied)
-                    .map((table) => (
-                      <span
-                        key={table.id}
-                        className="inline-flex items-center rounded-full border border-[rgba(138,93,59,0.3)] bg-white/90 px-3 py-1 text-xs font-semibold text-[rgba(96,65,42,1)]"
-                      >
-                        {table.name} - {table.capacity}p
-                      </span>
-                    ))}
-                  {(availabilityView.data.tablesOverviewInView ?? []).filter(
-                    (table) => table.occupied,
-                  ).length === 0 ? (
-                    <span className="text-xs text-[rgba(96,65,42,0.76)]">
-                      Nenhuma mesa ocupada nesta selecao.
-                    </span>
-                  ) : null}
-                </div>
+                <p className="mt-2 text-3xl font-semibold text-[rgba(96,65,42,1)]">
+                  {occupiedTablesInCurrentView.length}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[rgba(96,65,42,0.76)]">
+                  {occupiedTablesInCurrentView.length
+                    ? `${occupiedTablesInCurrentView.length} mesa(s) ocupada(s) neste setor para o horario escolhido.`
+                    : "Nenhuma mesa ocupada nesta selecao."}
+                </p>
               </div>
             </div>
 
