@@ -89,6 +89,15 @@ export default async function OperacaoReservasPage({ searchParams }) {
             compact
           />
 
+          <div className="mt-6">
+            <Link
+              href="/operacao/mesas"
+              className="pill-wrap-safe inline-flex rounded-full border border-[rgba(20,35,29,0.14)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
+            >
+              Abrir controle de mesas
+            </Link>
+          </div>
+
           <div className="mt-6 flex flex-wrap gap-3">
             {reservationFilters.map((filter) => {
               const href =

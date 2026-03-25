@@ -16,6 +16,12 @@ const tableStateStyles = {
   ocupada: "bg-[rgba(20,35,29,0.12)] text-[var(--forest)]",
   pausada: "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]",
 };
+const tableStatusResumeCards = [
+  { key: "livre", label: "Livres", tone: "text-[var(--sage)]" },
+  { key: "reservada", label: "Reservadas", tone: "text-[var(--gold)]" },
+  { key: "ocupada", label: "Ocupadas", tone: "text-[var(--forest)]" },
+  { key: "pausada", label: "Pausadas", tone: "text-[var(--clay)]" },
+];
 
 function getStatusView(status) {
   return (
@@ -24,6 +30,23 @@ function getStatusView(status) {
       badge: "bg-[rgba(20,35,29,0.08)] text-[var(--forest)]",
     }
   );
+}
+
+function formatUpdatedAt(value) {
+  const parsedDate = new Date(value ?? "");
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+    .format(parsedDate)
+    .replace(",", "");
 }
 
 export default async function OperacaoMesasPage() {
@@ -48,6 +71,52 @@ export default async function OperacaoMesasPage() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="pt-8">
+        <div className="luxury-card rounded-[2rem] p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <SectionHeading
+              eyebrow="Controle imediato"
+              title="Leitura de ocupacao por status e area"
+              description="Equipe enxerga rapidamente o salao antes de acomodar reservas ou abrir novas comandas."
+              compact
+            />
+            <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.8)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(21,35,29,0.64)]">
+              Atualizado {formatUpdatedAt(board.updatedAt)}
+            </span>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {tableStatusResumeCards.map((card) => (
+              <article
+                key={card.key}
+                className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.78)] px-4 py-4"
+              >
+                <p className="text-[11px] uppercase tracking-[0.2em] text-[rgba(21,35,29,0.6)]">
+                  {card.label}
+                </p>
+                <p className={`mt-2 text-3xl font-semibold ${card.tone}`}>
+                  {board.statusCounters?.[card.key] ?? 0}
+                </p>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {(board.areaStatus ?? []).map((area) => (
+              <article
+                key={area.area}
+                className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.78)] px-4 py-4"
+              >
+                <p className="text-sm font-semibold text-[var(--forest)]">{area.area}</p>
+                <p className="mt-2 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+                  {area.livre} livre(s) - {area.reservada} reservada(s) - {area.ocupada} ocupada(s)
+                </p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 

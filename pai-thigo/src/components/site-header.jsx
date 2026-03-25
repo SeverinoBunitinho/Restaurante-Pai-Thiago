@@ -307,6 +307,7 @@ export async function SiteHeader() {
           badgeKind: "reservations",
           badgeLatestAt: notificationContext.reservationsLatestAt,
         },
+        { href: "/operacao/mesas", label: "Mesas", exact: true },
         { href: "/operacao", label: "Central", exact: true },
       ]
     : [
@@ -349,6 +350,7 @@ export async function SiteHeader() {
             badgeKind: "reservations",
             badgeLatestAt: notificationContext.reservationsLatestAt,
           },
+          { href: "/operacao/mesas", label: "Mesas", exact: true, icon: LayoutDashboard },
           { href: "/operacao", label: "Central", exact: true, icon: BriefcaseBusiness },
         ]
       : [

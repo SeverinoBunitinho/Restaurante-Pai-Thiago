@@ -288,6 +288,14 @@ function buildFallbackSeatingBoard() {
     opportunities: [],
     assignments: [],
     tables: [],
+    statusCounters: {
+      livre: 0,
+      reservada: 0,
+      ocupada: 0,
+      pausada: 0,
+    },
+    areaStatus: [],
+    updatedAt: new Date().toISOString(),
     usingSupabase: false,
   };
 }
@@ -680,6 +688,30 @@ export async function getSeatingBoard() {
         capacity: reservation.assigned_table.capacity,
       },
     }));
+  const statusCounters = {
+    livre: 0,
+    reservada: 0,
+    ocupada: 0,
+    pausada: 0,
+  };
+  const areaStatusMap = new Map();
+
+  for (const table of mappedTables) {
+    statusCounters[table.state] = (statusCounters[table.state] ?? 0) + 1;
+
+    const currentArea = areaStatusMap.get(table.area) ?? {
+      area: table.area,
+      total: 0,
+      livre: 0,
+      reservada: 0,
+      ocupada: 0,
+      pausada: 0,
+    };
+
+    currentArea.total += 1;
+    currentArea[table.state] = (currentArea[table.state] ?? 0) + 1;
+    areaStatusMap.set(table.area, currentArea);
+  }
 
   return {
     summary: [
@@ -708,6 +740,11 @@ export async function getSeatingBoard() {
     opportunities,
     assignments,
     tables: mappedTables,
+    statusCounters,
+    areaStatus: Array.from(areaStatusMap.values()).sort((left, right) =>
+      left.area.localeCompare(right.area, "pt-BR"),
+    ),
+    updatedAt: new Date().toISOString(),
     usingSupabase: true,
   };
 }
