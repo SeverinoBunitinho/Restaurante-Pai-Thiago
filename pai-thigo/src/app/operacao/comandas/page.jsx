@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  AlertTriangle,
   CreditCard,
   Printer,
   ReceiptText,
@@ -15,9 +14,9 @@ import {
   closeOrderCheckoutAction,
   closeServiceCheckAction,
   openServiceCheckAction,
-  runEmergencyCleanupAction,
   updateOrderCheckoutStatusAction,
 } from "@/app/operacao/actions";
+import { EmergencyCleanupPanel } from "@/components/emergency-cleanup-panel";
 import { SectionHeading } from "@/components/section-heading";
 import { requireRole } from "@/lib/auth";
 import { getServiceChecksBoard, serviceCheckStatusMeta } from "@/lib/checks-data";
@@ -189,12 +188,6 @@ export default async function OperacaoComandasPage({ searchParams }) {
   const orderCheckoutError = Array.isArray(resolvedSearchParams?.pedidoError)
     ? resolvedSearchParams.pedidoError[0]
     : resolvedSearchParams?.pedidoError;
-  const purgeNotice = Array.isArray(resolvedSearchParams?.purgeNotice)
-    ? resolvedSearchParams.purgeNotice[0]
-    : resolvedSearchParams?.purgeNotice;
-  const purgeError = Array.isArray(resolvedSearchParams?.purgeError)
-    ? resolvedSearchParams.purgeError[0]
-    : resolvedSearchParams?.purgeError;
 
   const [checksBoard, ordersBoard] = await Promise.all([
     getServiceChecksBoard(tableQuery ?? ""),
@@ -305,68 +298,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
               </div>
             ) : null}
 
-            {canRunEmergencyCleanup ? (
-              <div className="mt-6 rounded-[1.6rem] border border-[rgba(217,185,122,0.24)] bg-[rgba(255,255,255,0.06)] p-4">
-                <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(217,185,122,0.92)]">
-                  <AlertTriangle size={14} />
-                  Modo extremo
-                </div>
-                <p className="mt-3 text-sm leading-6 text-[rgba(255,247,232,0.8)]">
-                  Remove apenas historico encerrado de pedidos e reservas (notificacoes antigas), sem tocar em fluxo ativo.
-                </p>
-
-                {purgeError ? (
-                  <div className="mt-4 rounded-[1.3rem] border border-[rgba(138,93,59,0.28)] bg-[rgba(138,93,59,0.2)] px-4 py-3 text-sm leading-6 text-[rgba(255,247,232,0.9)]">
-                    {purgeError}
-                  </div>
-                ) : null}
-
-                {purgeNotice ? (
-                  <div className="mt-4 rounded-[1.3rem] border border-[rgba(95,123,109,0.28)] bg-[rgba(95,123,109,0.2)] px-4 py-3 text-sm leading-6 text-[rgba(255,247,232,0.9)]">
-                    {purgeNotice}
-                  </div>
-                ) : null}
-
-                <form
-                  action={runEmergencyCleanupAction}
-                  className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-3"
-                >
-                  <label className="grid gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(217,185,122,0.88)]">
-                      Dias
-                    </span>
-                    <input
-                      name="retentionDays"
-                      type="number"
-                      min="1"
-                      max="3650"
-                      defaultValue="30"
-                      className="w-full min-w-0 rounded-[1.1rem] border border-[rgba(217,185,122,0.2)] bg-[rgba(255,255,255,0.1)] px-3 py-2.5 text-sm text-white outline-none"
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(217,185,122,0.88)]">
-                      Confirmacao
-                    </span>
-                    <input
-                      name="confirmationText"
-                      type="text"
-                      required
-                      placeholder="Digite LIMPEZA EXTREMA"
-                      className="w-full min-w-0 rounded-[1.1rem] border border-[rgba(217,185,122,0.2)] bg-[rgba(255,255,255,0.1)] px-3 py-2.5 text-sm uppercase text-white outline-none placeholder:text-[rgba(255,247,232,0.5)]"
-                    />
-                  </label>
-
-                  <button
-                    type="submit"
-                    className="button-secondary col-span-full w-full justify-center self-end"
-                  >
-                    Executar limpeza
-                  </button>
-                </form>
-              </div>
-            ) : null}
+            {canRunEmergencyCleanup ? <EmergencyCleanupPanel /> : null}
           </div>
 
           <div className="luxury-card rounded-[2.2rem] p-6">

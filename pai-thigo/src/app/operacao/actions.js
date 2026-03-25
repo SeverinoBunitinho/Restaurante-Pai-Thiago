@@ -1521,7 +1521,7 @@ export async function closeOrderCheckoutAction(formData) {
   );
 }
 
-export async function runEmergencyCleanupAction(formData) {
+export async function runEmergencyCleanupAction(_previousState, formData) {
   const session = await requireRole(["owner"]);
   const confirmationText = String(formData.get("confirmationText") ?? "")
     .trim()
@@ -1531,21 +1531,19 @@ export async function runEmergencyCleanupAction(formData) {
   const retentionDays = Number.isInteger(parsedRetentionDays)
     ? Math.min(Math.max(parsedRetentionDays, 1), 3650)
     : 30;
-  const redirectWithError = (purgeError) =>
-    redirect(
-      buildRouteWithParams("/operacao/comandas", {
-        purgeError,
-      }),
-    );
-  const redirectWithNotice = (purgeNotice) =>
-    redirect(
-      buildRouteWithParams("/operacao/comandas", {
-        purgeNotice,
-      }),
-    );
+  const buildErrorResponse = (message) => ({
+    status: "error",
+    message,
+    refreshKey: "",
+  });
+  const buildSuccessResponse = (message) => ({
+    status: "success",
+    message,
+    refreshKey: `${Date.now()}`,
+  });
 
   if (confirmationText !== emergencyCleanupConfirmationText) {
-    redirectWithError(
+    return buildErrorResponse(
       `Digite exatamente "${emergencyCleanupConfirmationText}" para confirmar a limpeza emergencial.`,
     );
   }
@@ -1553,7 +1551,7 @@ export async function runEmergencyCleanupAction(formData) {
   const supabase = await getSupabaseServerClient();
 
   if (!supabase) {
-    redirectWithError(
+    return buildErrorResponse(
       "Nao foi possivel conectar ao Supabase para executar a limpeza emergencial.",
     );
   }
@@ -1576,7 +1574,7 @@ export async function runEmergencyCleanupAction(formData) {
   ]);
 
   if (ordersResult.error || reservationsResult.error) {
-    redirectWithError(
+    return buildErrorResponse(
       "Nao foi possivel listar os registros para limpeza. Tente novamente em instantes.",
     );
   }
@@ -1594,7 +1592,7 @@ export async function runEmergencyCleanupAction(formData) {
       .select("id");
 
     if (removeOrdersResult.error) {
-      redirectWithError(
+      return buildErrorResponse(
         "A limpeza foi interrompida ao remover pedidos encerrados.",
       );
     }
@@ -1610,7 +1608,7 @@ export async function runEmergencyCleanupAction(formData) {
       .select("id");
 
     if (removeReservationsResult.error) {
-      redirectWithError(
+      return buildErrorResponse(
         "A limpeza foi interrompida ao remover reservas encerradas.",
       );
     }
@@ -1637,12 +1635,12 @@ export async function runEmergencyCleanupAction(formData) {
   revalidateStaffPaths();
 
   if (!removedOrders && !removedReservations) {
-    redirectWithNotice(
+    return buildSuccessResponse(
       `Nenhum registro encerrado com mais de ${retentionDays} dia(s) foi encontrado para limpeza.`,
     );
   }
 
-  redirectWithNotice(
+  return buildSuccessResponse(
     `Limpeza emergencial concluida: ${removedOrders} pedido(s) e ${removedReservations} reserva(s) encerrados removidos.`,
   );
 }
