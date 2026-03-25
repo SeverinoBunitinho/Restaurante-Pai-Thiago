@@ -1,4 +1,5 @@
 import {
+  createLowOccupancyCouponAction,
   createCampaignAction,
   createCouponAction,
   setCampaignStatusAction,
@@ -57,6 +58,69 @@ export default async function OperacaoCampanhasPage({ searchParams }) {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="pt-14">
+        <div className="luxury-card rounded-[2.2rem] p-6">
+          <SectionHeading
+            eyebrow="Leitura de ocupacao"
+            title="Sinal em tempo real para cupom automatico"
+            description="Use a leitura atual do salao para decidir quando ativar incentivo sem comprometer operacao."
+            compact
+          />
+
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                Ocupacao
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                {Math.round((board.occupancySignal?.pressure ?? 0) * 100)}%
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                {board.occupancySignal?.label ?? "Sem leitura"}
+              </p>
+            </article>
+            <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                Mesas ativas
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                {board.occupancySignal?.activeTables ?? 0}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                Com {board.occupancySignal?.openChecks ?? 0} conta(s) aberta(s) agora.
+              </p>
+            </article>
+            <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-4">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                Reservas ativas hoje
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                {board.occupancySignal?.activeReservations ?? 0}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                {board.occupancySignal?.message ?? "Sem sinal para recomendacao."}
+              </p>
+            </article>
+          </div>
+
+          <div className="mt-5 rounded-[1.4rem] border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.08)] px-4 py-3 text-sm leading-6 text-[var(--forest)]">
+            {board.autoCouponSuggestion?.canCreate
+              ? `Sugestao automatica: ${board.autoCouponSuggestion.discount}% de desconto com pedido minimo de R$ ${board.autoCouponSuggestion.minOrder}.`
+              : `Cupom automatico bloqueado agora: ${board.autoCouponSuggestion?.reason ?? "sem leitura suficiente."}`}
+          </div>
+
+          <form action={createLowOccupancyCouponAction} className="mt-4">
+            <button
+              type="submit"
+              disabled={!board.autoCouponSuggestion?.canCreate}
+              className="button-primary disabled:cursor-not-allowed disabled:opacity-45"
+            >
+              Criar cupom automatico por baixa ocupacao
+            </button>
+          </form>
         </div>
       </section>
 

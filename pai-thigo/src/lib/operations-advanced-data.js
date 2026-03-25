@@ -1,6 +1,7 @@
 import "server-only";
 
 import { orderStatusMeta } from "@/lib/staff-data";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 const kitchenColumns = [
@@ -64,6 +65,87 @@ const campaignStatusMeta = {
   },
 };
 
+const demandShiftBuckets = [
+  {
+    key: "lunch",
+    title: "Almoco",
+    timeRange: "11h as 15h",
+  },
+  {
+    key: "dinner",
+    title: "Jantar",
+    timeRange: "18h as 23h",
+  },
+  {
+    key: "offpeak",
+    title: "Entre turnos",
+    timeRange: "demais horarios",
+  },
+];
+
+const checklistTemplate = {
+  opening: [
+    {
+      key: "room-ready",
+      label: "Salao pronto para abertura",
+      description: "Mesas limpas, materiais repostos e fluxo de entrada liberado.",
+    },
+    {
+      key: "kitchen-briefing",
+      label: "Briefing da cozinha",
+      description: "Equipe alinhada com menu ativo, indisponibilidades e ritmo esperado.",
+    },
+    {
+      key: "team-positioning",
+      label: "Equipe posicionada",
+      description: "Garcons e lideranca com setores definidos para o turno.",
+    },
+    {
+      key: "systems-check",
+      label: "Sistema e impressao testados",
+      description: "Comandas, impressao e notificacoes validadas antes da abertura.",
+    },
+  ],
+  closing: [
+    {
+      key: "checks-closed",
+      label: "Contas fechadas",
+      description: "Comandas do turno encerradas ou justificadas para continuidade.",
+    },
+    {
+      key: "cash-reconciliation",
+      label: "Conferencia financeira",
+      description: "Fechamento de caixa e meios de pagamento revisados pela lideranca.",
+    },
+    {
+      key: "next-shift-handoff",
+      label: "Passagem de turno",
+      description: "Pendencias, reservas e observacoes transferidas para o proximo ciclo.",
+    },
+    {
+      key: "sanitization-done",
+      label: "Higienizacao final",
+      description: "Salao e apoio fechados conforme padrao da casa.",
+    },
+  ],
+};
+
+function getTodayInBrazilWithTime() {
+  const now = new Date();
+  const date = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  }).format(now);
+
+  return {
+    date,
+    startIso: `${date}T00:00:00-03:00`,
+    endIso: `${date}T23:59:59-03:00`,
+  };
+}
+
 function formatBrazilDate(value) {
   return new Intl.DateTimeFormat("pt-BR", {
     year: "numeric",
@@ -85,6 +167,50 @@ function getTodayInBrazil() {
 function parseDateTime(value) {
   const parsed = new Date(value ?? "");
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getBrazilHourFromDate(value) {
+  const parsedDate = parseDateTime(value);
+
+  if (!parsedDate) {
+    return null;
+  }
+
+  const hour = Number(
+    new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      hour12: false,
+      timeZone: "America/Sao_Paulo",
+    }).format(parsedDate),
+  );
+
+  return Number.isFinite(hour) ? hour : null;
+}
+
+function getHourFromTime(value) {
+  const normalized = String(value ?? "").slice(0, 5);
+
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(normalized)) {
+    return null;
+  }
+
+  return Number.parseInt(normalized.split(":")[0], 10);
+}
+
+function resolveDemandShiftByHour(hour) {
+  if (!Number.isFinite(hour)) {
+    return "offpeak";
+  }
+
+  if (hour >= 11 && hour <= 15) {
+    return "lunch";
+  }
+
+  if (hour >= 18 && hour <= 23) {
+    return "dinner";
+  }
+
+  return "offpeak";
 }
 
 function elapsedMinutesSince(value) {
@@ -386,6 +512,67 @@ export async function getShiftBoard() {
   };
 }
 
+function buildOccupancySignal({
+  activeTables = 0,
+  openChecks = 0,
+  activeReservations = 0,
+}) {
+  const normalizedActiveTables = Math.max(0, Number(activeTables ?? 0));
+  const normalizedOpenChecks = Math.max(0, Number(openChecks ?? 0));
+  const normalizedActiveReservations = Math.max(
+    0,
+    Number(activeReservations ?? 0),
+  );
+  const pressure =
+    normalizedActiveTables > 0
+      ? (normalizedOpenChecks + normalizedActiveReservations * 0.55) /
+        normalizedActiveTables
+      : 0;
+
+  if (pressure <= 0.38) {
+    return {
+      level: "baixa",
+      label: "Ocupacao baixa",
+      message:
+        "Janela favoravel para campanha de estimulacao com cupom automatico.",
+      pressure,
+      activeTables: normalizedActiveTables,
+      openChecks: normalizedOpenChecks,
+      activeReservations: normalizedActiveReservations,
+      discount: 15,
+      minOrder: 60,
+    };
+  }
+
+  if (pressure <= 0.62) {
+    return {
+      level: "moderada",
+      label: "Ocupacao moderada",
+      message:
+        "Da para ativar campanha leve sem pressionar a operacao do salao.",
+      pressure,
+      activeTables: normalizedActiveTables,
+      openChecks: normalizedOpenChecks,
+      activeReservations: normalizedActiveReservations,
+      discount: 10,
+      minOrder: 80,
+    };
+  }
+
+  return {
+    level: "alta",
+    label: "Ocupacao alta",
+    message:
+      "Fluxo aquecido. Priorize experiencia e evite novas ofertas agressivas agora.",
+    pressure,
+    activeTables: normalizedActiveTables,
+    openChecks: normalizedOpenChecks,
+    activeReservations: normalizedActiveReservations,
+    discount: 0,
+    minOrder: 0,
+  };
+}
+
 export async function getCampaignsBoard() {
   const supabase = await getSupabaseServerClient();
 
@@ -410,12 +597,18 @@ export async function getCampaignsBoard() {
           description: "Sem agenda de expiracao no momento.",
         },
       ],
+      occupancySignal: buildOccupancySignal({}),
+      autoCouponSuggestion: {
+        canCreate: false,
+        reason: "Sem conexao ativa para ler ocupacao em tempo real.",
+      },
       statusMeta: campaignStatusMeta,
       usingSupabase: false,
     };
   }
 
-  const [campaignsResult, couponsResult] = await Promise.all([
+  const { date: todayDate } = getTodayInBrazilWithTime();
+  const [campaignsResult, couponsResult, tablesResult, openChecksResult, reservationsResult] = await Promise.all([
     supabase
       .from("marketing_campaigns")
       .select(
@@ -430,9 +623,28 @@ export async function getCampaignsBoard() {
       )
       .order("created_at", { ascending: false })
       .limit(120),
+    supabase
+      .from("restaurant_tables")
+      .select("id", { head: true, count: "exact" })
+      .eq("is_active", true),
+    supabase
+      .from("service_checks")
+      .select("id", { head: true, count: "exact" })
+      .eq("status", "open"),
+    supabase
+      .from("reservations")
+      .select("id", { head: true, count: "exact" })
+      .eq("reservation_date", todayDate)
+      .in("status", ["pending", "confirmed", "seated"]),
   ]);
 
-  if (campaignsResult.error || couponsResult.error) {
+  if (
+    campaignsResult.error ||
+    couponsResult.error ||
+    tablesResult.error ||
+    openChecksResult.error ||
+    reservationsResult.error
+  ) {
     return {
       campaigns: [],
       coupons: [],
@@ -454,6 +666,11 @@ export async function getCampaignsBoard() {
           description: "Sem leitura de expiracao no momento.",
         },
       ],
+      occupancySignal: buildOccupancySignal({}),
+      autoCouponSuggestion: {
+        canCreate: false,
+        reason: "Nao foi possivel ler ocupacao para sugerir cupom automatico.",
+      },
       statusMeta: campaignStatusMeta,
       usingSupabase: false,
     };
@@ -499,6 +716,20 @@ export async function getCampaignsBoard() {
     }
     return endDate >= today && endDate <= nextWeek;
   });
+  const occupancySignal = buildOccupancySignal({
+    activeTables: tablesResult.count ?? 0,
+    openChecks: openChecksResult.count ?? 0,
+    activeReservations: reservationsResult.count ?? 0,
+  });
+  const autoCouponSuggestion = {
+    canCreate: occupancySignal.level !== "alta",
+    discount: occupancySignal.discount,
+    minOrder: occupancySignal.minOrder,
+    reason:
+      occupancySignal.level === "alta"
+        ? "Fluxo de atendimento alto no momento."
+        : "Sinal favoravel para ativacao de cupom por baixa ocupacao.",
+  };
 
   return {
     campaigns,
@@ -520,6 +751,8 @@ export async function getCampaignsBoard() {
         description: "Cupons ativos com vencimento nos proximos 7 dias.",
       },
     ],
+    occupancySignal,
+    autoCouponSuggestion,
     statusMeta: campaignStatusMeta,
     usingSupabase: true,
   };
@@ -671,6 +904,14 @@ export async function getForecastBoard() {
       ],
       topItems: [],
       demandByWeekday: [],
+      shiftForecast: demandShiftBuckets.map((bucket) => ({
+        ...bucket,
+        reservations: 0,
+        orders: 0,
+        revenue: 0,
+        pressure: "leve",
+      })),
+      hourlyPeaks: [],
       insights: [
         "Sem conexao ativa para calcular previsao de demanda.",
       ],
@@ -683,7 +924,7 @@ export async function getForecastBoard() {
   const [reservationsResult, ordersResult, checksResult] = await Promise.all([
     supabase
       .from("reservations")
-      .select("id, reservation_date, status")
+      .select("id, reservation_date, reservation_time, status")
       .gte("created_at", startIso),
     supabase
       .from("orders")
@@ -691,7 +932,7 @@ export async function getForecastBoard() {
       .gte("created_at", startIso),
     supabase
       .from("service_checks")
-      .select("id, total, status, opened_at")
+      .select("id, total, status, opened_at, closed_at")
       .gte("opened_at", startIso),
   ]);
 
@@ -719,6 +960,14 @@ export async function getForecastBoard() {
       ],
       topItems: [],
       demandByWeekday: [],
+      shiftForecast: demandShiftBuckets.map((bucket) => ({
+        ...bucket,
+        reservations: 0,
+        orders: 0,
+        revenue: 0,
+        pressure: "leve",
+      })),
+      hourlyPeaks: [],
       insights: [
         "A previsao volta a ficar completa apos a sincronizacao do banco.",
       ],
@@ -741,11 +990,28 @@ export async function getForecastBoard() {
   const revenueByDay = new Map();
   const weekdayDemand = new Map();
   const itemDemand = new Map();
+  const hourlyDemand = new Map();
+  const shiftReservations = new Map(
+    demandShiftBuckets.map((bucket) => [bucket.key, 0]),
+  );
+  const shiftOrders = new Map(demandShiftBuckets.map((bucket) => [bucket.key, 0]));
+  const shiftRevenue = new Map(demandShiftBuckets.map((bucket) => [bucket.key, 0]));
   let deliveryOrders = 0;
 
   for (const reservation of reservations) {
     const day = String(reservation.reservation_date ?? "");
     reservationsByDay.set(day, (reservationsByDay.get(day) ?? 0) + 1);
+
+    const reservationHour = getHourFromTime(reservation.reservation_time);
+    if (reservationHour != null) {
+      const shiftKey = resolveDemandShiftByHour(reservationHour);
+      shiftReservations.set(
+        shiftKey,
+        (shiftReservations.get(shiftKey) ?? 0) + 1,
+      );
+      const hourLabel = `${String(reservationHour).padStart(2, "0")}:00`;
+      hourlyDemand.set(hourLabel, (hourlyDemand.get(hourLabel) ?? 0) + 1);
+    }
   }
 
   for (const order of orders) {
@@ -756,6 +1022,14 @@ export async function getForecastBoard() {
 
     const day = formatBrazilDate(createdAt).split("/").reverse().join("-");
     ordersByDay.set(day, (ordersByDay.get(day) ?? 0) + 1);
+    const orderHour = getBrazilHourFromDate(createdAt);
+
+    if (orderHour != null) {
+      const shiftKey = resolveDemandShiftByHour(orderHour);
+      shiftOrders.set(shiftKey, (shiftOrders.get(shiftKey) ?? 0) + 1);
+      const hourLabel = `${String(orderHour).padStart(2, "0")}:00`;
+      hourlyDemand.set(hourLabel, (hourlyDemand.get(hourLabel) ?? 0) + 1);
+    }
 
     if (order.fulfillment_type === "delivery") {
       deliveryOrders += 1;
@@ -777,13 +1051,24 @@ export async function getForecastBoard() {
   }
 
   for (const check of checks) {
-    const openedAt = parseDateTime(check.opened_at);
-    if (!openedAt) {
+    const checkMoment = parseDateTime(check.closed_at || check.opened_at);
+    if (!checkMoment) {
       continue;
     }
 
-    const day = formatBrazilDate(openedAt).split("/").reverse().join("-");
+    const day = formatBrazilDate(checkMoment).split("/").reverse().join("-");
     revenueByDay.set(day, (revenueByDay.get(day) ?? 0) + Number(check.total ?? 0));
+
+    const checkHour = getBrazilHourFromDate(checkMoment);
+    if (checkHour != null) {
+      const shiftKey = resolveDemandShiftByHour(checkHour);
+      shiftRevenue.set(
+        shiftKey,
+        (shiftRevenue.get(shiftKey) ?? 0) + Number(check.total ?? 0),
+      );
+      const hourLabel = `${String(checkHour).padStart(2, "0")}:00`;
+      hourlyDemand.set(hourLabel, (hourlyDemand.get(hourLabel) ?? 0) + 1);
+    }
   }
 
   const lastSevenDays = [];
@@ -817,6 +1102,29 @@ export async function getForecastBoard() {
   const demandByWeekday = Array.from(weekdayDemand.entries())
     .map(([weekday, count]) => ({ weekday, count }))
     .sort((left, right) => right.count - left.count);
+  const shiftForecast = demandShiftBuckets.map((bucket) => {
+    const reservationsCount = shiftReservations.get(bucket.key) ?? 0;
+    const ordersCount = shiftOrders.get(bucket.key) ?? 0;
+    const revenueTotal = shiftRevenue.get(bucket.key) ?? 0;
+    const reservationsForecast = round(reservationsCount / 30);
+    const ordersForecast = round(ordersCount / 30);
+    const revenueForecast = round(revenueTotal / 30);
+    const pressureScore = ordersForecast + reservationsForecast;
+    const pressure =
+      pressureScore >= 16 ? "alto" : pressureScore >= 9 ? "medio" : "leve";
+
+    return {
+      ...bucket,
+      reservations: reservationsForecast,
+      orders: ordersForecast,
+      revenue: revenueForecast,
+      pressure,
+    };
+  });
+  const hourlyPeaks = Array.from(hourlyDemand.entries())
+    .map(([hour, count]) => ({ hour, count }))
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 4);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -840,6 +1148,8 @@ export async function getForecastBoard() {
     ],
     topItems,
     demandByWeekday,
+    shiftForecast,
+    hourlyPeaks,
     insights: [
       `${deliveryShare}% dos pedidos recentes foram em delivery.`,
       topItems.length
@@ -848,9 +1158,340 @@ export async function getForecastBoard() {
       demandByWeekday.length
         ? `Dia da semana com maior demanda: ${demandByWeekday[0].weekday}.`
         : "Ainda nao ha historico suficiente para leitura por dia da semana.",
+      shiftForecast.length
+        ? `Turno com maior pressao prevista: ${shiftForecast.slice().sort((left, right) => (right.orders + right.reservations) - (left.orders + left.reservations))[0]?.title}.`
+        : "Sem leitura de turno disponivel no momento.",
     ],
     usingSupabase: true,
   };
 }
 
-export { campaignStatusMeta, kitchenColumns, shiftStatusMeta };
+function buildChecklistItemsFromTemplate(shift, latestStateMap) {
+  return (checklistTemplate[shift] ?? []).map((item) => {
+    const itemState = latestStateMap.get(`${shift}:${item.key}`);
+
+    return {
+      ...item,
+      checked: Boolean(itemState?.checked),
+      note: itemState?.note ?? "",
+      actorName: itemState?.actorName ?? "",
+      actorRole: itemState?.actorRole ?? "",
+      updatedAt: itemState?.updatedAt ?? null,
+    };
+  });
+}
+
+function createChecklistFallbackBoard() {
+  const { date } = getTodayInBrazilWithTime();
+  const openingItems = buildChecklistItemsFromTemplate("opening", new Map());
+  const closingItems = buildChecklistItemsFromTemplate("closing", new Map());
+
+  return {
+    date,
+    summary: [
+      {
+        label: "Abertura",
+        value: `0/${openingItems.length}`,
+        description: "Itens concluidos na abertura do turno.",
+      },
+      {
+        label: "Fechamento",
+        value: `0/${closingItems.length}`,
+        description: "Itens concluidos para encerrar o turno com seguranca.",
+      },
+      {
+        label: "Progresso total",
+        value: "0%",
+        description: "Checklist fica ativo assim que o banco estiver conectado.",
+      },
+    ],
+    openingItems,
+    closingItems,
+    latestEvents: [],
+    usingSupabase: false,
+  };
+}
+
+export async function getOperationalChecklistBoard() {
+  const adminClient = getSupabaseAdminClient();
+
+  if (!adminClient) {
+    return createChecklistFallbackBoard();
+  }
+
+  const { date, startIso, endIso } = getTodayInBrazilWithTime();
+  const logsResult = await adminClient
+    .from("operation_audit_logs")
+    .select(
+      "id, actor_name, actor_role, event_type, entity_id, entity_label, metadata, created_at",
+    )
+    .eq("event_type", "checklist_item_set")
+    .gte("created_at", startIso)
+    .lte("created_at", endIso)
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  if (logsResult.error) {
+    return createChecklistFallbackBoard();
+  }
+
+  const latestStateMap = new Map();
+  const latestEvents = [];
+
+  for (const row of logsResult.data ?? []) {
+    const metadata = row.metadata ?? {};
+    const shift = String(metadata.shift ?? "").trim().toLowerCase();
+    const itemKey = String(metadata.itemKey ?? "").trim();
+
+    if (!["opening", "closing"].includes(shift) || !itemKey) {
+      continue;
+    }
+
+    const mapKey = `${shift}:${itemKey}`;
+    if (!latestStateMap.has(mapKey)) {
+      latestStateMap.set(mapKey, {
+        checked: Boolean(metadata.checked),
+        note: String(metadata.note ?? "").trim(),
+        actorName: row.actor_name || "Equipe",
+        actorRole: row.actor_role || "staff",
+        updatedAt: row.created_at,
+      });
+    }
+
+    if (latestEvents.length < 8) {
+      latestEvents.push({
+        id: row.id,
+        shift,
+        itemLabel:
+          String(metadata.itemLabel ?? "").trim() || row.entity_label || itemKey,
+        checked: Boolean(metadata.checked),
+        actorName: row.actor_name || "Equipe",
+        actorRole: row.actor_role || "staff",
+        createdAt: row.created_at,
+      });
+    }
+  }
+
+  const openingItems = buildChecklistItemsFromTemplate("opening", latestStateMap);
+  const closingItems = buildChecklistItemsFromTemplate("closing", latestStateMap);
+  const openingDone = openingItems.filter((item) => item.checked).length;
+  const closingDone = closingItems.filter((item) => item.checked).length;
+  const totalItems = openingItems.length + closingItems.length;
+  const totalDone = openingDone + closingDone;
+  const progressValue = totalItems
+    ? `${Math.round((totalDone / totalItems) * 100)}%`
+    : "0%";
+
+  return {
+    date,
+    summary: [
+      {
+        label: "Abertura",
+        value: `${openingDone}/${openingItems.length}`,
+        description: "Itens concluidos na abertura do turno.",
+      },
+      {
+        label: "Fechamento",
+        value: `${closingDone}/${closingItems.length}`,
+        description: "Itens concluidos para encerrar o turno com seguranca.",
+      },
+      {
+        label: "Progresso total",
+        value: progressValue,
+        description: "Visao unificada da disciplina operacional do dia.",
+      },
+    ],
+    openingItems,
+    closingItems,
+    latestEvents,
+    usingSupabase: true,
+  };
+}
+
+function getIncidentSeverityRank(severity) {
+  const rank = {
+    critical: 4,
+    high: 3,
+    medium: 2,
+    low: 1,
+  };
+
+  return rank[severity] ?? 1;
+}
+
+function createIncidentsFallbackBoard() {
+  return {
+    summary: [
+      {
+        label: "Incidentes abertos",
+        value: "0",
+        description: "Sem leitura de incidentes no momento.",
+      },
+      {
+        label: "Criticidade alta",
+        value: "0",
+        description: "Sem leitura de severidade no momento.",
+      },
+      {
+        label: "Resolvidos hoje",
+        value: "0",
+        description: "Sem leitura de resolucoes no momento.",
+      },
+    ],
+    openIncidents: [],
+    resolvedIncidents: [],
+    recentIncidents: [],
+    usingSupabase: false,
+  };
+}
+
+export async function getIncidentsBoard() {
+  const adminClient = getSupabaseAdminClient();
+
+  if (!adminClient) {
+    return createIncidentsFallbackBoard();
+  }
+
+  const { date, startIso, endIso } = getTodayInBrazilWithTime();
+  const logsResult = await adminClient
+    .from("operation_audit_logs")
+    .select(
+      "id, actor_name, actor_role, event_type, entity_id, entity_label, description, metadata, created_at",
+    )
+    .in("event_type", ["incident_reported", "incident_resolved"])
+    .order("created_at", { ascending: true })
+    .limit(500);
+
+  if (logsResult.error) {
+    return createIncidentsFallbackBoard();
+  }
+
+  const incidentsMap = new Map();
+
+  for (const row of logsResult.data ?? []) {
+    const metadata = row.metadata ?? {};
+    const incidentId = String(row.entity_id ?? "").trim();
+    if (!incidentId) {
+      continue;
+    }
+
+    const currentIncident = incidentsMap.get(incidentId) ?? {
+      id: incidentId,
+      title: String(metadata.title ?? "").trim() || row.entity_label || incidentId,
+      category: String(metadata.category ?? "geral").trim(),
+      severity: String(metadata.severity ?? "low").trim(),
+      location: String(metadata.location ?? "").trim(),
+      description: String(metadata.description ?? row.description ?? "").trim(),
+      status: "open",
+      reportedBy: row.actor_name || "Equipe",
+      reportedByRole: row.actor_role || "staff",
+      createdAt: row.created_at,
+      resolvedAt: null,
+      resolvedBy: "",
+      resolutionNote: "",
+    };
+
+    if (row.event_type === "incident_reported") {
+      currentIncident.status = "open";
+      currentIncident.createdAt = currentIncident.createdAt || row.created_at;
+      currentIncident.title =
+        String(metadata.title ?? "").trim() || currentIncident.title;
+      currentIncident.category =
+        String(metadata.category ?? "").trim() || currentIncident.category;
+      currentIncident.severity =
+        String(metadata.severity ?? "").trim() || currentIncident.severity;
+      currentIncident.location =
+        String(metadata.location ?? "").trim() || currentIncident.location;
+      currentIncident.description =
+        String(metadata.description ?? "").trim() || currentIncident.description;
+      currentIncident.reportedBy = row.actor_name || currentIncident.reportedBy;
+      currentIncident.reportedByRole =
+        row.actor_role || currentIncident.reportedByRole;
+    }
+
+    if (row.event_type === "incident_resolved") {
+      currentIncident.status = "resolved";
+      currentIncident.resolvedAt = row.created_at;
+      currentIncident.resolvedBy = row.actor_name || "Equipe";
+      currentIncident.resolutionNote = String(metadata.resolutionNote ?? "").trim();
+    }
+
+    incidentsMap.set(incidentId, currentIncident);
+  }
+
+  const allIncidents = Array.from(incidentsMap.values());
+  const openIncidents = allIncidents
+    .filter((incident) => incident.status === "open")
+    .sort((left, right) => {
+      const severityDiff =
+        getIncidentSeverityRank(right.severity) -
+        getIncidentSeverityRank(left.severity);
+      if (severityDiff !== 0) {
+        return severityDiff;
+      }
+
+      return (
+        (parseDateTime(right.createdAt)?.getTime() ?? 0) -
+        (parseDateTime(left.createdAt)?.getTime() ?? 0)
+      );
+    });
+  const resolvedIncidents = allIncidents
+    .filter((incident) => incident.status === "resolved")
+    .sort(
+      (left, right) =>
+        (parseDateTime(right.resolvedAt)?.getTime() ?? 0) -
+        (parseDateTime(left.resolvedAt)?.getTime() ?? 0),
+    );
+  const resolvedToday = resolvedIncidents.filter((incident) => {
+    if (!incident.resolvedAt) {
+      return false;
+    }
+
+    const resolvedTimestamp = parseDateTime(incident.resolvedAt)?.getTime();
+    const startTimestamp = parseDateTime(startIso)?.getTime() ?? 0;
+    const endTimestamp = parseDateTime(endIso)?.getTime() ?? 0;
+
+    if (!resolvedTimestamp) {
+      return false;
+    }
+
+    return resolvedTimestamp >= startTimestamp && resolvedTimestamp <= endTimestamp;
+  });
+
+  return {
+    summary: [
+      {
+        label: "Incidentes abertos",
+        value: String(openIncidents.length),
+        description: "Itens que ainda exigem acompanhamento da equipe.",
+      },
+      {
+        label: "Criticidade alta",
+        value: String(
+          openIncidents.filter((incident) =>
+            ["critical", "high"].includes(incident.severity),
+          ).length,
+        ),
+        description: "Ocorrencias abertas com risco elevado para operacao.",
+      },
+      {
+        label: "Resolvidos hoje",
+        value: String(resolvedToday.length),
+        description: `Incidentes concluidos em ${date}.`,
+      },
+    ],
+    openIncidents,
+    resolvedIncidents,
+    recentIncidents: allIncidents
+      .slice()
+      .sort(
+        (left, right) =>
+          (parseDateTime(right.createdAt)?.getTime() ?? 0) -
+          (parseDateTime(left.createdAt)?.getTime() ?? 0),
+      )
+      .slice(0, 8),
+    usingSupabase: true,
+  };
+}
+
+export { campaignStatusMeta, checklistTemplate, kitchenColumns, shiftStatusMeta };

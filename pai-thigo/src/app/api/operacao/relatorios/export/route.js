@@ -38,7 +38,30 @@ function createCsv(board) {
     );
   });
 
+  board.financialTimeline.forEach((entry) => {
+    lines.push(
+      `financeiro,${escapeCsv(entry.date)},${escapeCsv(entry.revenue)},${escapeCsv(`contas fechadas ${entry.closedChecks}`)}`,
+    );
+  });
+
   return `${lines.join("\n")}\n`;
+}
+
+function createJson(board) {
+  return JSON.stringify(
+    {
+      generatedAt: new Date().toISOString(),
+      period: board.period,
+      periodLabel: board.periodLabel,
+      commissionRate: board.commissionRate,
+      summary: board.summary,
+      waiterCommissions: board.waiterCommissions,
+      tableOccupancy: board.tableOccupancy,
+      financialTimeline: board.financialTimeline,
+    },
+    null,
+    2,
+  );
 }
 
 export async function GET(request) {
@@ -56,19 +79,22 @@ export async function GET(request) {
   const period = searchParams.get("period") || "30d";
   const startDate = searchParams.get("start") || "";
   const endDate = searchParams.get("end") || "";
+  const format = searchParams.get("format") === "json" ? "json" : "csv";
 
   const board = await getServiceReportsBoard(period, {
     startDate,
     endDate,
   });
-  const csv = createCsv(board);
   const safePeriodLabel = board.periodLabel.replace(/\s+/g, "-").replace(/[^\w-]/g, "");
-  const filename = `relatorio-operacao-${safePeriodLabel || "periodo"}.csv`;
+  const filename = `relatorio-operacao-${safePeriodLabel || "periodo"}.${format}`;
+  const payload = format === "json" ? createJson(board) : createCsv(board);
+  const contentType =
+    format === "json" ? "application/json; charset=utf-8" : "text/csv; charset=utf-8";
 
-  return new NextResponse(csv, {
+  return new NextResponse(payload, {
     status: 200,
     headers: {
-      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Type": contentType,
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "no-store",
     },

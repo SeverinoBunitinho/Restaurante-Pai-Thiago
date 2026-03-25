@@ -120,6 +120,22 @@ const STAFF_ENTRY_CATALOG = [
     roles: ["manager", "owner"],
   },
   {
+    id: "staff:checklists",
+    title: "Checklist do turno",
+    description: "Abertura e fechamento com rastreio da equipe.",
+    href: "/operacao/checklists",
+    group: "Gestao interna",
+    roles: ["manager", "owner"],
+  },
+  {
+    id: "staff:incidentes",
+    title: "Centro de incidentes",
+    description: "Registro e resolucao de ocorrencias operacionais.",
+    href: "/operacao/incidentes",
+    group: "Operacao",
+    roles: ["waiter", "manager", "owner"],
+  },
+  {
     id: "staff:equipe",
     title: "Equipe",
     description: "Cadastro de equipe interna e controle de acesso.",

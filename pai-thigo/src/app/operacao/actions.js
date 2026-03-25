@@ -278,6 +278,14 @@ function getCampanhasRedirect(extras = {}) {
   return buildRouteWithParams("/operacao/campanhas", extras);
 }
 
+function getChecklistsRedirect(extras = {}) {
+  return buildRouteWithParams("/operacao/checklists", extras);
+}
+
+function getIncidentesRedirect(extras = {}) {
+  return buildRouteWithParams("/operacao/incidentes", extras);
+}
+
 async function writeOperationAuditLog(supabase, session, payload) {
   if (!supabase || !session?.profile?.user_id) {
     return;
@@ -373,12 +381,34 @@ function revalidateStaffPaths() {
   revalidatePath("/operacao/cozinha");
   revalidatePath("/operacao/escala");
   revalidatePath("/operacao/campanhas");
+  revalidatePath("/operacao/checklists");
+  revalidatePath("/operacao/incidentes");
   revalidatePath("/operacao/auditoria");
   revalidatePath("/operacao/previsao");
   revalidatePath("/impressao/conta");
   revalidatePath("/cardapio");
   revalidatePath("/carrinho");
   revalidatePath("/reservas");
+}
+
+function getTodayInBrazilDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function addDaysToDateString(dateString, daysToAdd) {
+  const baseDate = new Date(`${dateString}T00:00:00-03:00`);
+  baseDate.setDate(baseDate.getDate() + Number(daysToAdd ?? 0));
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(baseDate);
 }
 
 export async function createStaffAccountAction(formData) {
@@ -1350,6 +1380,88 @@ export async function updateReservationStatusAction(formData) {
 
   revalidateStaffPaths();
   redirectWithNotice(reservationNotice);
+}
+
+export async function markReservationNoShowAction(formData) {
+  const session = await requireRole(["waiter", "manager", "owner"]);
+
+  const reservationId = String(formData.get("reservationId") ?? "").trim();
+  const statusFilter = String(formData.get("statusFilter") ?? "").trim();
+  const redirectWithError = (reservationError) =>
+    redirect(
+      buildReservationsRedirectPath({
+        statusFilter,
+        reservationError,
+      }),
+    );
+  const redirectWithNotice = (reservationNotice) =>
+    redirect(
+      buildReservationsRedirectPath({
+        statusFilter,
+        reservationNotice,
+      }),
+    );
+
+  if (!reservationId) {
+    redirectWithError("Nao foi possivel identificar a reserva para no-show.");
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirectWithError("Nao foi possivel conectar ao banco para marcar no-show.");
+  }
+
+  const reservationResult = await supabase
+    .from("reservations")
+    .select(
+      "id, guest_name, reservation_date, reservation_time, status, assigned_table_id",
+    )
+    .eq("id", reservationId)
+    .maybeSingle();
+
+  if (reservationResult.error || !reservationResult.data) {
+    redirectWithError("Reserva nao encontrada para marcar no-show.");
+  }
+
+  const reservation = reservationResult.data;
+
+  if (reservation.status === "completed") {
+    redirectWithError("Reserva finalizada nao pode ser marcada como no-show.");
+  }
+
+  if (reservation.status === "cancelled") {
+    redirectWithError("Reserva ja esta cancelada.");
+  }
+
+  const { error } = await supabase
+    .from("reservations")
+    .update({
+      status: "cancelled",
+      assigned_table_id: null,
+    })
+    .eq("id", reservationId);
+
+  if (error) {
+    redirectWithError("Nao foi possivel registrar o no-show dessa reserva.");
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "reservation_marked_no_show",
+    entityType: "reservation",
+    entityId: reservationId,
+    entityLabel: reservation.guest_name || reservationId,
+    description: "Reserva marcada como no-show e liberada da fila ativa.",
+    metadata: {
+      previousStatus: reservation.status,
+      reservationDate: reservation.reservation_date,
+      reservationTime: String(reservation.reservation_time ?? "").slice(0, 5),
+      releasedTable: Boolean(reservation.assigned_table_id),
+    },
+  });
+
+  revalidateStaffPaths();
+  redirectWithNotice("No-show registrado com sucesso e mesa liberada.");
 }
 
 export async function assignReservationTableAction(formData) {
@@ -2407,6 +2519,317 @@ export async function toggleCouponActiveAction(formData) {
   redirect(
     getCampanhasRedirect({
       campaignNotice: "Estado do cupom atualizado.",
+    }),
+  );
+}
+
+export async function createLowOccupancyCouponAction() {
+  const session = await requireRole(["manager", "owner"]);
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError:
+          "Nao foi possivel conectar ao banco para criar a acao de ocupacao.",
+      }),
+    );
+  }
+
+  const today = getTodayInBrazilDate();
+  const [tablesResult, openChecksResult, reservationsResult] = await Promise.all([
+    supabase
+      .from("restaurant_tables")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true),
+    supabase
+      .from("service_checks")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "open"),
+    supabase
+      .from("reservations")
+      .select("id", { count: "exact", head: true })
+      .eq("reservation_date", today)
+      .in("status", ["pending", "confirmed", "seated"]),
+  ]);
+
+  if (tablesResult.error || openChecksResult.error || reservationsResult.error) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError:
+          "Nao foi possivel ler ocupacao atual para montar o cupom automatico.",
+      }),
+    );
+  }
+
+  const activeTables = Number(tablesResult.count ?? 0);
+  const openChecks = Number(openChecksResult.count ?? 0);
+  const activeReservations = Number(reservationsResult.count ?? 0);
+
+  if (activeTables < 1) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError:
+          "Sem mesas ativas para avaliar ocupacao. Ative mesas antes de criar esta acao.",
+      }),
+    );
+  }
+
+  const occupancyScore =
+    (openChecks + activeReservations * 0.55) / Math.max(activeTables, 1);
+
+  if (occupancyScore >= 0.78) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError:
+          "A ocupacao atual esta alta. O cupom automatico foi bloqueado para evitar sobrecarga.",
+      }),
+    );
+  }
+
+  const discountAmount = occupancyScore <= 0.35 ? 15 : occupancyScore <= 0.5 ? 12 : 8;
+  const minOrder = occupancyScore <= 0.35 ? 60 : 80;
+  const endsOn = addDaysToDateString(today, 3);
+  const campaignTitle = `Impulso de ocupacao ${today}`;
+  const couponCode = `CASA${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+
+  const campaignInsert = await supabase
+    .from("marketing_campaigns")
+    .insert({
+      created_by_user_id: session.profile.user_id,
+      title: campaignTitle,
+      description:
+        "Campanha gerada automaticamente para estimular demanda em janela de ocupacao abaixo do alvo.",
+      channel: "site",
+      starts_on: today,
+      ends_on: endsOn,
+      status: "active",
+      target_audience: "Clientes de baixa recorrencia e visitantes ocasionais",
+      highlight_offer: `${discountAmount}% em pedidos selecionados`,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (campaignInsert.error || !campaignInsert.data) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError: "Nao foi possivel criar a campanha automatica agora.",
+      }),
+    );
+  }
+
+  const couponInsert = await supabase.from("marketing_coupons").insert({
+    campaign_id: campaignInsert.data.id,
+    created_by_user_id: session.profile.user_id,
+    code: couponCode,
+    coupon_type: "percentage",
+    amount: discountAmount,
+    min_order: minOrder,
+    usage_limit: 120,
+    is_active: true,
+    starts_on: today,
+    ends_on: endsOn,
+  });
+
+  if (couponInsert.error) {
+    redirect(
+      getCampanhasRedirect({
+        campaignError:
+          "Campanha criada, mas o cupom automatico nao foi salvo. Tente novamente.",
+      }),
+    );
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "campaign_low_occupancy_coupon_created",
+    entityType: "marketing_campaign",
+    entityId: campaignInsert.data.id,
+    entityLabel: campaignTitle,
+    description:
+      "Campanha com cupom automatico criada por leitura de ocupacao baixa.",
+    metadata: {
+      couponCode,
+      discountAmount,
+      minOrder,
+      activeTables,
+      openChecks,
+      activeReservations,
+      occupancyScore,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    getCampanhasRedirect({
+      campaignNotice: `Cupom ${couponCode} criado automaticamente para baixa ocupacao.`,
+    }),
+  );
+}
+
+export async function setOperationalChecklistItemAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+  const shift = String(formData.get("shift") ?? "").trim().toLowerCase();
+  const itemKey = String(formData.get("itemKey") ?? "").trim();
+  const itemLabel = String(formData.get("itemLabel") ?? "").trim();
+  const checkedRaw = String(formData.get("checked") ?? "").trim().toLowerCase();
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (
+    !["opening", "closing"].includes(shift) ||
+    !itemKey ||
+    !itemLabel ||
+    (checkedRaw !== "true" && checkedRaw !== "false")
+  ) {
+    redirect(
+      getChecklistsRedirect({
+        checklistError: "Nao foi possivel atualizar esse item do checklist.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getChecklistsRedirect({
+        checklistError:
+          "Nao foi possivel conectar ao banco para atualizar o checklist.",
+      }),
+    );
+  }
+
+  const checked = checkedRaw === "true";
+  const today = getTodayInBrazilDate();
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "checklist_item_set",
+    entityType: "operation_checklist",
+    entityId: `${today}-${shift}-${itemKey}`,
+    entityLabel: itemLabel,
+    description: checked
+      ? "Item de checklist marcado como concluido."
+      : "Item de checklist reaberto para revisao.",
+    metadata: {
+      shift,
+      itemKey,
+      itemLabel,
+      checked,
+      note: note || null,
+      checklistDate: today,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    getChecklistsRedirect({
+      checklistNotice: checked
+        ? "Checklist atualizado: item concluido."
+        : "Checklist atualizado: item reaberto.",
+    }),
+  );
+}
+
+export async function reportOperationalIncidentAction(formData) {
+  const session = await requireRole(["waiter", "manager", "owner"]);
+  const category = String(formData.get("category") ?? "").trim().toLowerCase();
+  const severity = String(formData.get("severity") ?? "").trim().toLowerCase();
+  const title = String(formData.get("title") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const location = String(formData.get("location") ?? "").trim();
+
+  if (!title || !description || !category || !severity) {
+    redirect(
+      getIncidentesRedirect({
+        incidentError:
+          "Informe categoria, severidade, titulo e descricao para registrar o incidente.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getIncidentesRedirect({
+        incidentError:
+          "Nao foi possivel conectar ao banco para registrar o incidente.",
+      }),
+    );
+  }
+
+  const incidentId = `INC-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "incident_reported",
+    entityType: "incident",
+    entityId: incidentId,
+    entityLabel: title,
+    description: "Incidente operacional aberto para acompanhamento da equipe.",
+    metadata: {
+      category,
+      severity,
+      title,
+      description,
+      location: location || null,
+      status: "open",
+      reportedByRole: session.role,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    getIncidentesRedirect({
+      incidentNotice: `Incidente ${incidentId} registrado com sucesso.`,
+    }),
+  );
+}
+
+export async function resolveOperationalIncidentAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+  const incidentId = String(formData.get("incidentId") ?? "").trim();
+  const incidentTitle = String(formData.get("incidentTitle") ?? "").trim();
+  const resolutionNote = String(formData.get("resolutionNote") ?? "").trim();
+
+  if (!incidentId) {
+    redirect(
+      getIncidentesRedirect({
+        incidentError: "Nao foi possivel identificar o incidente para resolver.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getIncidentesRedirect({
+        incidentError:
+          "Nao foi possivel conectar ao banco para concluir o incidente.",
+      }),
+    );
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "incident_resolved",
+    entityType: "incident",
+    entityId: incidentId,
+    entityLabel: incidentTitle || incidentId,
+    description: "Incidente operacional resolvido e arquivado.",
+    metadata: {
+      resolutionNote: resolutionNote || null,
+      status: "resolved",
+      resolvedByRole: session.role,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    getIncidentesRedirect({
+      incidentNotice: `Incidente ${incidentId} resolvido.`,
     }),
   );
 }

@@ -91,6 +91,28 @@ export default async function OperacaoPrevisaoPage() {
                 </article>
               ))}
             </div>
+
+            <div className="mt-8 grid gap-3 md:grid-cols-3">
+              {board.shiftForecast.map((shift) => (
+                <article
+                  key={shift.key}
+                  className="rounded-[1.3rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-3"
+                >
+                  <p className="text-xs uppercase tracking-[0.2em] text-[rgba(217,185,122,0.92)]">
+                    {shift.title}
+                  </p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.14em] text-[rgba(255,247,232,0.62)]">
+                    {shift.timeRange}
+                  </p>
+                  <p className="mt-3 text-sm text-[rgba(255,247,232,0.78)]">
+                    Reservas: {shift.reservations} | Pedidos: {shift.orders}
+                  </p>
+                  <p className="mt-1 text-sm text-[rgba(255,247,232,0.78)]">
+                    Receita: {formatCurrency(shift.revenue)}
+                  </p>
+                </article>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -129,6 +151,47 @@ export default async function OperacaoPrevisaoPage() {
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
                   Assim que o historico aumentar, o ranking por dia aparece automaticamente.
+                </p>
+              </article>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="pt-14">
+        <div className="luxury-card rounded-[2.2rem] p-6">
+          <SectionHeading
+            eyebrow="Picos por horario"
+            title="Horarios com maior concentracao de demanda"
+            description="Combina reservas, pedidos e fechamentos para orientar cobertura da equipe."
+            compact
+          />
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {board.hourlyPeaks.length ? (
+              board.hourlyPeaks.map((peak) => (
+                <article
+                  key={peak.hour}
+                  className="rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
+                >
+                  <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+                    Horario
+                  </p>
+                  <p className="mt-3 text-3xl font-semibold text-[var(--forest)]">
+                    {peak.hour}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                    {peak.count} registro(s) no historico recente.
+                  </p>
+                </article>
+              ))
+            ) : (
+              <article className="rounded-[1.5rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.52)] p-5 md:col-span-2 xl:col-span-4">
+                <p className="text-lg font-semibold text-[var(--forest)]">
+                  Sem picos de horario identificados
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                  O mapa de horarios aparece automaticamente conforme o historico cresce.
                 </p>
               </article>
             )}

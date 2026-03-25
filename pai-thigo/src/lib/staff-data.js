@@ -2,6 +2,7 @@ import "server-only";
 
 import { getMenuCategories } from "@/lib/site-data";
 import { sortStaffDirectory } from "@/lib/staff-modules";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const reservationStatusMeta = {
@@ -239,6 +240,12 @@ function buildFallbackReservationBoard() {
       urgent: 0,
       averageEtaMinutes: 0,
     },
+    noShow: {
+      total30d: 0,
+      total7d: 0,
+      today: 0,
+      recent: [],
+    },
     usingSupabase: false,
   };
 }
@@ -413,6 +420,76 @@ function buildReservationWaitlist(reservations, options = {}) {
   return queue;
 }
 
+function getTodayInBrazilRange() {
+  const today = getTodayInBrazil();
+
+  return {
+    startIso: `${today}T00:00:00-03:00`,
+    endIso: `${today}T23:59:59-03:00`,
+    today,
+  };
+}
+
+async function getNoShowSnapshot() {
+  const adminClient = getSupabaseAdminClient();
+
+  if (!adminClient) {
+    return {
+      total30d: 0,
+      total7d: 0,
+      today: 0,
+      recent: [],
+    };
+  }
+
+  const todayRange = getTodayInBrazilRange();
+  const sevenDaysAgo = new Date(`${todayRange.today}T00:00:00-03:00`);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const thirtyDaysAgo = new Date(`${todayRange.today}T00:00:00-03:00`);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const logsResult = await adminClient
+    .from("operation_audit_logs")
+    .select("id, entity_id, entity_label, metadata, created_at")
+    .eq("event_type", "reservation_marked_no_show")
+    .gte("created_at", thirtyDaysAgo.toISOString())
+    .order("created_at", { ascending: false })
+    .limit(120);
+
+  if (logsResult.error) {
+    return {
+      total30d: 0,
+      total7d: 0,
+      today: 0,
+      recent: [],
+    };
+  }
+
+  const rows = logsResult.data ?? [];
+  const total7d = rows.filter((row) => {
+    const parsed = new Date(row.created_at).getTime();
+    return Number.isFinite(parsed) && parsed >= sevenDaysAgo.getTime();
+  }).length;
+  const today = rows.filter((row) => {
+    return row.created_at >= todayRange.startIso && row.created_at <= todayRange.endIso;
+  }).length;
+  const recent = rows.slice(0, 5).map((row) => ({
+    id: row.id,
+    reservationId: row.entity_id,
+    guestName: String(row.entity_label ?? "").trim() || "Reserva",
+    time: row.created_at,
+    reservationDate: String(row.metadata?.reservationDate ?? "").trim(),
+    reservationTime: String(row.metadata?.reservationTime ?? "").trim(),
+  }));
+
+  return {
+    total30d: rows.length,
+    total7d,
+    today,
+    recent,
+  };
+}
+
 function buildFallbackStaffDirectory() {
   return {
     staff: [],
@@ -557,6 +634,7 @@ export async function getReservationsBoard() {
   }
 
   const waitlist = buildReservationWaitlist(reservationsResult.data ?? []);
+  const noShow = await getNoShowSnapshot();
   const waitlistSummary = {
     total: waitlist.length,
     urgent: waitlist.filter((item) => item.priority === "Urgente").length,
@@ -589,6 +667,7 @@ export async function getReservationsBoard() {
     reservations: (reservationsResult.data ?? []).map(mapReservation),
     waitlist,
     waitlistSummary,
+    noShow,
     usingSupabase: true,
   };
 }

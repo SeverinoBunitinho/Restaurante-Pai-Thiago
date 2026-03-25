@@ -1,6 +1,9 @@
 import Link from "next/link";
 
-import { updateReservationStatusAction } from "@/app/operacao/actions";
+import {
+  markReservationNoShowAction,
+  updateReservationStatusAction,
+} from "@/app/operacao/actions";
 import { SectionHeading } from "@/components/section-heading";
 import { requireRole } from "@/lib/auth";
 import { getReservationsBoard, reservationStatusMeta } from "@/lib/staff-data";
@@ -199,6 +202,33 @@ export default async function OperacaoReservasPage({ searchParams }) {
             )}
           </div>
 
+          <div className="mt-6 grid gap-3 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-4 md:grid-cols-3">
+            <article className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                No-show hoje
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                {board.noShow?.today ?? 0}
+              </p>
+            </article>
+            <article className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                No-show (7 dias)
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                {board.noShow?.total7d ?? 0}
+              </p>
+            </article>
+            <article className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                No-show (30 dias)
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                {board.noShow?.total30d ?? 0}
+              </p>
+            </article>
+          </div>
+
           <div className="mt-8 space-y-4">
             {filteredReservations.length ? (
               filteredReservations.map((reservation) => {
@@ -282,6 +312,28 @@ export default async function OperacaoReservasPage({ searchParams }) {
                             </button>
                           </form>
                         ))}
+                        {["pending", "confirmed", "seated"].includes(
+                          reservation.status,
+                        ) ? (
+                          <form action={markReservationNoShowAction} className="max-w-full">
+                            <input
+                              type="hidden"
+                              name="reservationId"
+                              value={reservation.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="statusFilter"
+                              value={activeStatus === "all" ? "" : activeStatus}
+                            />
+                            <button
+                              type="submit"
+                              className="pill-wrap-safe rounded-full border border-[rgba(138,93,59,0.24)] bg-[rgba(138,93,59,0.08)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--clay)] transition hover:-translate-y-0.5"
+                            >
+                              No-show
+                            </button>
+                          </form>
+                        ) : null}
                       </div>
                     </div>
                   </article>

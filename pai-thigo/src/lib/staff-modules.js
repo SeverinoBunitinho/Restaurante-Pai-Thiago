@@ -94,6 +94,24 @@ const allModules = [
     roles: ["manager", "owner"],
   },
   {
+    key: "checklists",
+    href: "/operacao/checklists",
+    title: "Checklist do turno",
+    description:
+      "Controlar abertura e fechamento com rastreio por responsavel e horario.",
+    icon: ClipboardList,
+    roles: ["manager", "owner"],
+  },
+  {
+    key: "incidentes",
+    href: "/operacao/incidentes",
+    title: "Centro de incidentes",
+    description:
+      "Abrir, acompanhar e resolver ocorrencias operacionais em uma fila unica.",
+    icon: ShieldCheck,
+    roles: ["waiter", "manager", "owner"],
+  },
+  {
     key: "relatorios",
     href: "/operacao/relatorios",
     title: "Relatorios e comissoes",
@@ -155,7 +173,14 @@ const rolePanels = {
     description:
       "O garcom recebe o cliente, abre a conta da mesa, lanca pedidos e acompanha o fechamento.",
     quickKeys: ["comandas", "cozinha", "mesas"],
-    focusKeys: ["comandas", "cozinha", "mesas", "reservas", "painel"],
+    focusKeys: [
+      "comandas",
+      "cozinha",
+      "mesas",
+      "reservas",
+      "incidentes",
+      "painel",
+    ],
     highlights: [
       {
         icon: BellRing,
@@ -177,6 +202,8 @@ const rolePanels = {
     focusKeys: [
       "equipe",
       "escala",
+      "checklists",
+      "incidentes",
       "cozinha",
       "comandas",
       "relatorios",
@@ -209,6 +236,8 @@ const rolePanels = {
     focusKeys: [
       "executivo",
       "auditoria",
+      "checklists",
+      "incidentes",
       "relatorios",
       "previsao",
       "campanhas",

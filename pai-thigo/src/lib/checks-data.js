@@ -66,6 +66,20 @@ function getPeriodLabel(period, customStartDate = "", customEndDate = "") {
   );
 }
 
+function getBrazilDayKey(value) {
+  const parsed = new Date(value ?? "");
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(parsed);
+}
+
 function isDateOnlyValid(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ""));
 }
@@ -284,6 +298,7 @@ function buildFallbackReportsBoard(period, customStartDate = "", customEndDate =
     ],
     waiterCommissions: [],
     tableOccupancy: [],
+    financialTimeline: [],
     liveOpenTablesCount: 0,
     usingSupabase: false,
   };
@@ -564,6 +579,29 @@ export async function getServiceReportsBoard(period = "30d", options = {}) {
     (accumulator, waiter) => accumulator + waiter.commissionAmount,
     0,
   );
+  const financialTimelineMap = new Map();
+
+  for (const check of closedChecks) {
+    const dayKey = getBrazilDayKey(check.closed_at);
+    if (!dayKey) {
+      continue;
+    }
+
+    const current = financialTimelineMap.get(dayKey) ?? {
+      date: dayKey,
+      revenue: 0,
+      closedChecks: 0,
+    };
+
+    current.revenue += Number(check.total ?? 0);
+    current.closedChecks += 1;
+    financialTimelineMap.set(dayKey, current);
+  }
+
+  const financialTimeline = Array.from(financialTimelineMap.values()).sort((left, right) =>
+    String(left.date).localeCompare(String(right.date), "pt-BR"),
+  );
+  const averageTicket = closedChecks.length ? totalGrossSales / closedChecks.length : 0;
 
   return {
     period: range.period,
@@ -592,9 +630,15 @@ export async function getServiceReportsBoard(period = "30d", options = {}) {
         value: String(totalCommission),
         description: `Calculo usando a regra atual de ${commissionRate}% para garcons.`,
       },
+      {
+        label: "Ticket medio",
+        value: String(averageTicket),
+        description: "Media por conta fechada para leitura comercial do periodo.",
+      },
     ],
     waiterCommissions,
     tableOccupancy,
+    financialTimeline,
     liveOpenTablesCount: liveOpenTableIds.size,
     usingSupabase: true,
   };

@@ -27,6 +27,7 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
     board.period === "custom" && board.startDate && board.endDate
       ? `/api/operacao/relatorios/export?period=custom&start=${board.startDate}&end=${board.endDate}`
       : `/api/operacao/relatorios/export?period=${board.period}`;
+  const exportJsonHref = `${exportHref}&format=json`;
 
   return (
     <>
@@ -83,19 +84,29 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
               </button>
             </form>
 
-            <a
-              href={exportHref}
-              className="button-primary mt-5 inline-flex w-full items-center justify-center gap-2 sm:w-auto"
-            >
-              <Download size={16} />
-              Exportar CSV
-            </a>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <a
+                href={exportHref}
+                className="button-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+              >
+                <Download size={16} />
+                Exportar CSV
+              </a>
+              <a
+                href={exportJsonHref}
+                className="button-secondary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+              >
+                <Download size={16} />
+                Exportar JSON
+              </a>
+            </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-2">
               {board.summary.map((item) => {
                 const numericValue = Number(item.value);
                 const formattedValue = item.label.includes("Faturamento") ||
-                  item.label.includes("Comissao")
+                  item.label.includes("Comissao") ||
+                  item.label.includes("Ticket")
                   ? formatCurrency(numericValue)
                   : item.value;
 
@@ -164,6 +175,47 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                 </article>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pt-14">
+        <div className="luxury-card rounded-[2.2rem] p-6">
+          <SectionHeading
+            eyebrow="Financeiro diario"
+            title="Linha de faturamento por dia"
+            description="Visao de fechamento para apoiar decisoes de escala, compras e campanhas."
+            compact
+          />
+
+          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {board.financialTimeline.length ? (
+              board.financialTimeline.slice(-8).map((entry) => (
+                <article
+                  key={entry.date}
+                  className="rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
+                >
+                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                    {entry.date}
+                  </p>
+                  <p className="mt-3 text-2xl font-semibold text-[var(--forest)]">
+                    {formatCurrency(entry.revenue)}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                    {entry.closedChecks} conta(s) fechada(s).
+                  </p>
+                </article>
+              ))
+            ) : (
+              <article className="rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.52)] p-5 md:col-span-2 xl:col-span-4">
+                <p className="text-lg font-semibold text-[var(--forest)]">
+                  Sem linha financeira para este periodo
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                  O grafico diario aparece conforme as contas forem fechadas no periodo filtrado.
+                </p>
+              </article>
+            )}
           </div>
         </div>
       </section>

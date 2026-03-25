@@ -535,6 +535,23 @@ function buildFallbackCustomerDashboard() {
     reservations: [],
     orders: [],
     orderGroups: [],
+    vip: {
+      level: "Conta ativa",
+      description:
+        "Seus beneficios VIP aparecem aqui assim que o historico for sincronizado.",
+      benefits: [
+        "Atendimento priorizado para reservas com antecedencia.",
+        "Historico de preferencias para agilizar cada visita.",
+      ],
+      nextGoal: "Sem leitura de pontos no momento.",
+      lifetime: {
+        orders: 0,
+        reservations: 0,
+        spent: 0,
+        avgTicket: 0,
+      },
+      favoriteItem: "",
+    },
     notice:
       "Sua area continua disponivel, mas os dados pessoais estao aguardando sincronizacao com o banco neste momento.",
     usingSupabase: false,
@@ -688,6 +705,9 @@ export async function getCustomerDashboard(userId) {
     { data: profile },
     { data: reservations, error: reservationsError },
     { data: orders, error: ordersError },
+    reservationsCountResult,
+    ordersCountResult,
+    orderHistoryResult,
   ] =
     await Promise.all([
       supabase
@@ -712,9 +732,31 @@ export async function getCustomerDashboard(userId) {
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(8),
+      supabase
+        .from("reservations")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId),
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId),
+      supabase
+        .from("orders")
+        .select(
+          "checkout_reference, item_name, quantity, total_price, delivery_fee, status, created_at",
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(220),
     ]);
 
-  if (reservationsError || ordersError) {
+  if (
+    reservationsError ||
+    ordersError ||
+    reservationsCountResult.error ||
+    ordersCountResult.error ||
+    orderHistoryResult.error
+  ) {
     return buildFallbackCustomerDashboard();
   }
 
@@ -724,6 +766,90 @@ export async function getCustomerDashboard(userId) {
   const openOrdersCount = orderGroups.filter(
     (order) => !["delivered", "cancelled"].includes(order.status),
   );
+  const lifetimeReservations = Number(reservationsCountResult.count ?? 0);
+  const lifetimeOrders = Number(ordersCountResult.count ?? 0);
+  const orderHistory = orderHistoryResult.data ?? [];
+  const checkoutTotalsMap = new Map();
+  const itemDemandMap = new Map();
+
+  for (const order of orderHistory) {
+    const checkoutKey = order.checkout_reference || `single-${order.created_at}`;
+    const currentCheckout = checkoutTotalsMap.get(checkoutKey) ?? {
+      total: 0,
+      deliveryFee: 0,
+      status: order.status ?? "",
+    };
+
+    currentCheckout.total += Number(order.total_price ?? 0);
+    currentCheckout.deliveryFee = Math.max(
+      currentCheckout.deliveryFee,
+      Number(order.delivery_fee ?? 0),
+    );
+    currentCheckout.status = order.status ?? currentCheckout.status;
+    checkoutTotalsMap.set(checkoutKey, currentCheckout);
+
+    const itemName = String(order.item_name ?? "").trim();
+    if (itemName && order.status !== "cancelled") {
+      itemDemandMap.set(
+        itemName,
+        (itemDemandMap.get(itemName) ?? 0) + Number(order.quantity ?? 0),
+      );
+    }
+  }
+
+  const completedCheckouts = Array.from(checkoutTotalsMap.values()).filter(
+    (checkout) => checkout.status === "delivered",
+  );
+  const lifetimeSpent = completedCheckouts.reduce(
+    (total, checkout) => total + checkout.total + checkout.deliveryFee,
+    0,
+  );
+  const averageTicket = completedCheckouts.length
+    ? lifetimeSpent / completedCheckouts.length
+    : 0;
+  const favoriteItem = Array.from(itemDemandMap.entries())
+    .sort((left, right) => right[1] - left[1])[0]?.[0] ?? "";
+
+  const loyaltyPoints = Number(profile?.loyalty_points ?? 0);
+  let vipLevel = "Conta ativa";
+  let vipDescription =
+    "Conta preparada para organizar pedidos, reservas e relacionamento com a casa.";
+  let vipBenefits = [
+    "Historico da conta unificado com reservas e pedidos.",
+    "Atendimento mais agil com preferencias salvas.",
+  ];
+  let nextGoal = "Chegue a 40 pontos para liberar vantagens do nivel recorrente.";
+
+  if (loyaltyPoints >= 180 || lifetimeSpent >= 2200) {
+    vipLevel = "Colecionador da casa";
+    vipDescription =
+      "Cliente com relacionamento premium, historico consistente e prioridade em datas especiais.";
+    vipBenefits = [
+      "Janela antecipada para reservas em datas de alta procura.",
+      "Curadoria de menu com recomendacoes por preferencia.",
+      "Atendimento prioritario na confirmacao de experiencias especiais.",
+    ];
+    nextGoal = "Nivel maximo ativo. Continue acumulando historico premium.";
+  } else if (loyaltyPoints >= 90 || lifetimeSpent >= 1000) {
+    vipLevel = "Cliente ouro";
+    vipDescription =
+      "Perfil recorrente com alto indice de retorno e preferencia consolidada.";
+    vipBenefits = [
+      "Sugestoes personalizadas por historico de consumo.",
+      "Prioridade na fila de acomodacao para reservas confirmadas.",
+      "Acesso antecipado a campanhas especiais da casa.",
+    ];
+    nextGoal = "Atingindo 180 pontos, seu perfil vira Colecionador da casa.";
+  } else if (loyaltyPoints >= 40 || completedCheckouts.length >= 10) {
+    vipLevel = "Cliente recorrente";
+    vipDescription =
+      "Conta com boa frequencia e preferencia consistente para acelerar atendimento.";
+    vipBenefits = [
+      "Registro de preferencias para reduzir tempo de atendimento.",
+      "Acompanhamento mais rapido de pedidos e reservas.",
+    ];
+    nextGoal = "Atingindo 90 pontos, seu perfil avanca para Cliente ouro.";
+  }
 
   return {
     profile: {
@@ -736,7 +862,7 @@ export async function getCustomerDashboard(userId) {
     metrics: [
       {
         label: "Reservas realizadas",
-        value: String(mappedReservations.length),
+        value: String(lifetimeReservations),
         description: "Historico centralizado na sua conta.",
       },
       {
@@ -748,13 +874,26 @@ export async function getCustomerDashboard(userId) {
       },
       {
         label: "Pontos da casa",
-        value: String(profile?.loyalty_points ?? 0),
+        value: String(loyaltyPoints),
         description: "Relacionamento ativo com o restaurante.",
       },
     ],
     reservations: mappedReservations,
     orders: mappedOrders,
     orderGroups,
+    vip: {
+      level: vipLevel,
+      description: vipDescription,
+      benefits: vipBenefits,
+      nextGoal,
+      lifetime: {
+        orders: lifetimeOrders,
+        reservations: lifetimeReservations,
+        spent: lifetimeSpent,
+        avgTicket: averageTicket,
+      },
+      favoriteItem,
+    },
     usingSupabase: true,
   };
 }
