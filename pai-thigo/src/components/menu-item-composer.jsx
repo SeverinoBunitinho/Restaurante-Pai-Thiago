@@ -23,7 +23,7 @@ export function MenuItemComposer({ categories = [] }) {
   }
 
   return (
-    <form action={formAction} className="grid gap-5">
+    <form action={formAction} encType="multipart/form-data" className="grid gap-5">
       <div className="grid gap-4 md:grid-cols-2">
         <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Categoria
@@ -70,6 +70,19 @@ export function MenuItemComposer({ categories = [] }) {
           placeholder="https://... ou /images/seu-prato.jpg"
           className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
         />
+      </label>
+
+      <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
+        Imagem do prato (arquivo do computador)
+        <input
+          name="imageFile"
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/avif"
+          className="w-full min-w-0 cursor-pointer rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] file:mr-3 file:rounded-full file:border-0 file:bg-[rgba(20,35,29,0.9)] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:uppercase file:tracking-[0.12em] file:text-[var(--cream)]"
+        />
+        <span className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+          Formatos: JPG, PNG, WEBP ou AVIF (maximo de 5 MB). Se enviar arquivo e URL, o arquivo sera usado.
+        </span>
       </label>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">

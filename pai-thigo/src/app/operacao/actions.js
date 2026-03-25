@@ -33,6 +33,14 @@ const campaignStatuses = ["draft", "active", "paused", "finished"];
 const campaignChannels = ["site", "whatsapp", "instagram", "email", "interno"];
 const couponTypes = ["percentage", "fixed_amount"];
 const paymentMethods = new Set(paymentMethodOptions.map((option) => option.value));
+const MENU_IMAGES_BUCKET = "menu-images";
+const MENU_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const MENU_IMAGE_ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+];
 
 function normalizeLines(value) {
   return String(value ?? "")
@@ -79,6 +87,150 @@ function normalizeMenuImageUrl(value) {
   } catch {}
 
   return null;
+}
+
+function isMenuImageFileCandidate(value) {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    typeof value.arrayBuffer === "function" &&
+    Number(value.size ?? 0) > 0
+  );
+}
+
+function normalizeFileSlug(value) {
+  return String(value ?? "")
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function getImageExtensionFromMimeType(mimeType) {
+  const extensionByMimeType = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/avif": "avif",
+  };
+
+  return extensionByMimeType[mimeType] ?? "";
+}
+
+function getImageExtensionFromFileName(fileName) {
+  const normalized = String(fileName ?? "").trim().toLowerCase();
+  const dotIndex = normalized.lastIndexOf(".");
+
+  if (dotIndex === -1) {
+    return "";
+  }
+
+  const extension = normalized.slice(dotIndex + 1);
+  const allowed = new Set(["jpg", "jpeg", "png", "webp", "avif"]);
+
+  if (!allowed.has(extension)) {
+    return "";
+  }
+
+  return extension === "jpeg" ? "jpg" : extension;
+}
+
+async function uploadMenuImageFile(adminClient, file, dishName) {
+  const mimeType = String(file.type ?? "").trim().toLowerCase();
+
+  if (!MENU_IMAGE_ALLOWED_MIME_TYPES.includes(mimeType)) {
+    return {
+      ok: false,
+      message:
+        "Formato de imagem invalido. Use JPG, PNG, WEBP ou AVIF para o cardapio.",
+    };
+  }
+
+  const fileSize = Number(file.size ?? 0);
+
+  if (!Number.isFinite(fileSize) || fileSize <= 0 || fileSize > MENU_IMAGE_MAX_BYTES) {
+    return {
+      ok: false,
+      message: "A imagem precisa ter no maximo 5 MB.",
+    };
+  }
+
+  const extension =
+    getImageExtensionFromMimeType(mimeType) ||
+    getImageExtensionFromFileName(file.name) ||
+    "jpg";
+  const slug = normalizeFileSlug(dishName) || "prato";
+  const filePath = `menu-items/${Date.now()}-${crypto.randomUUID()}-${slug}.${extension}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const uploadOptions = {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: mimeType,
+  };
+
+  let uploadResult = await adminClient.storage
+    .from(MENU_IMAGES_BUCKET)
+    .upload(filePath, bytes, uploadOptions);
+
+  if (uploadResult.error) {
+    const uploadMessage = String(uploadResult.error.message ?? "").toLowerCase();
+    const shouldCreateBucket =
+      uploadMessage.includes("bucket") &&
+      (uploadMessage.includes("not found") || uploadMessage.includes("does not exist"));
+
+    if (shouldCreateBucket) {
+      const createBucketResult = await adminClient.storage.createBucket(
+        MENU_IMAGES_BUCKET,
+        {
+          public: true,
+          fileSizeLimit: MENU_IMAGE_MAX_BYTES,
+          allowedMimeTypes: MENU_IMAGE_ALLOWED_MIME_TYPES,
+        },
+      );
+      const createMessage = String(createBucketResult.error?.message ?? "").toLowerCase();
+
+      if (
+        createBucketResult.error &&
+        !createMessage.includes("already") &&
+        !createMessage.includes("duplicate")
+      ) {
+        return {
+          ok: false,
+          message: "Nao foi possivel preparar o bucket de imagens do cardapio.",
+        };
+      }
+
+      uploadResult = await adminClient.storage
+        .from(MENU_IMAGES_BUCKET)
+        .upload(filePath, bytes, uploadOptions);
+    }
+  }
+
+  if (uploadResult.error) {
+    return {
+      ok: false,
+      message: "Nao foi possivel enviar a imagem agora. Tente novamente.",
+    };
+  }
+
+  const { data: publicUrlData } = adminClient.storage
+    .from(MENU_IMAGES_BUCKET)
+    .getPublicUrl(filePath);
+
+  if (!publicUrlData?.publicUrl) {
+    return {
+      ok: false,
+      message: "A imagem foi enviada, mas nao foi possivel gerar o link publico.",
+    };
+  }
+
+  return {
+    ok: true,
+    publicUrl: publicUrlData.publicUrl,
+    path: filePath,
+  };
 }
 
 function isDateOnly(value) {
@@ -989,7 +1141,9 @@ export async function createMenuItemAction(_previousState, formData) {
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const rawImageUrl = String(formData.get("imageUrl") ?? "").trim();
-  const imageUrl = normalizeMenuImageUrl(rawImageUrl);
+  const urlImage = normalizeMenuImageUrl(rawImageUrl);
+  const uploadedImageFile = formData.get("imageFile");
+  const hasUploadedImageFile = isMenuImageFileCandidate(uploadedImageFile);
   const prepTime = String(formData.get("prepTime") ?? "").trim();
   const spiceLevel = String(formData.get("spiceLevel") ?? "").trim();
   const tags = String(formData.get("tags") ?? "")
@@ -1026,7 +1180,7 @@ export async function createMenuItemAction(_previousState, formData) {
     };
   }
 
-  if (imageUrl === null) {
+  if (urlImage === null) {
     return {
       status: "error",
       message:
@@ -1056,11 +1210,41 @@ export async function createMenuItemAction(_previousState, formData) {
     };
   }
 
+  let resolvedImageUrl = urlImage || "";
+  let uploadedImagePath = "";
+  const adminClient = getSupabaseAdminClient();
+
+  if (hasUploadedImageFile) {
+    if (!adminClient) {
+      return {
+        status: "error",
+        message:
+          "Upload por arquivo indisponivel agora. Configure a SUPABASE_SERVICE_ROLE_KEY para liberar imagens locais.",
+      };
+    }
+
+    const uploadResult = await uploadMenuImageFile(
+      adminClient,
+      uploadedImageFile,
+      name,
+    );
+
+    if (!uploadResult.ok) {
+      return {
+        status: "error",
+        message: uploadResult.message,
+      };
+    }
+
+    resolvedImageUrl = uploadResult.publicUrl;
+    uploadedImagePath = uploadResult.path;
+  }
+
   const insertPayload = {
     category_id: categoryId,
     name,
     description,
-    image_url: imageUrl || null,
+    image_url: resolvedImageUrl || null,
     price,
     prep_time: prepTime || null,
     spice_level: spiceLevel || null,
@@ -1074,7 +1258,7 @@ export async function createMenuItemAction(_previousState, formData) {
   let imageColumnMissing = false;
   let { error } = await supabase.from("menu_items").insert(insertPayload);
 
-  if (error && (imageUrl || rawImageUrl)) {
+  if (error && (resolvedImageUrl || rawImageUrl || hasUploadedImageFile)) {
     const errorMessage = String(error.message ?? "").toLowerCase();
     const missingImageColumn =
       error.code === "PGRST204" ||
@@ -1087,6 +1271,10 @@ export async function createMenuItemAction(_previousState, formData) {
       delete payloadWithoutImage.image_url;
       const retryResult = await supabase.from("menu_items").insert(payloadWithoutImage);
       error = retryResult.error;
+
+      if (!error && uploadedImagePath && adminClient) {
+        await adminClient.storage.from(MENU_IMAGES_BUCKET).remove([uploadedImagePath]);
+      }
     }
   }
 
