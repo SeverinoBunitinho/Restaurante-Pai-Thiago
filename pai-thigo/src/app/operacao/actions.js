@@ -15,6 +15,8 @@ const reservationStatuses = [
   "completed",
   "cancelled",
 ];
+const activeReservationStatuses = ["pending", "confirmed", "seated"];
+const reservationSlotMinutes = 120;
 
 const orderStatuses = [
   "received",
@@ -63,6 +65,135 @@ function isDateOnly(value) {
 
 function isTimeOnly(value) {
   return /^\d{2}:\d{2}$/.test(String(value ?? ""));
+}
+
+function normalizeReservationArea(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeReservationTime(value) {
+  const normalizedTime = String(value ?? "").trim().slice(0, 5);
+
+  if (!isTimeOnly(normalizedTime)) {
+    return null;
+  }
+
+  return normalizedTime;
+}
+
+function convertReservationTimeToMinutes(value) {
+  const normalizedTime = normalizeReservationTime(value);
+
+  if (!normalizedTime) {
+    return null;
+  }
+
+  const [hours, minutes] = normalizedTime.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function hasReservationSlotOverlap(sourceMinutes, comparisonMinutes) {
+  if (
+    sourceMinutes == null ||
+    comparisonMinutes == null ||
+    !Number.isFinite(sourceMinutes) ||
+    !Number.isFinite(comparisonMinutes)
+  ) {
+    return false;
+  }
+
+  const sourceEnd = sourceMinutes + reservationSlotMinutes;
+  const comparisonEnd = comparisonMinutes + reservationSlotMinutes;
+
+  return sourceMinutes < comparisonEnd && comparisonMinutes < sourceEnd;
+}
+
+function sortTablesForReservation(tables, areaPreference) {
+  const normalizedPreference = normalizeReservationArea(areaPreference);
+
+  return [...tables].sort((left, right) => {
+    const leftArea = normalizeReservationArea(left.area);
+    const rightArea = normalizeReservationArea(right.area);
+    const leftAreaScore =
+      normalizedPreference && leftArea !== normalizedPreference ? 1 : 0;
+    const rightAreaScore =
+      normalizedPreference && rightArea !== normalizedPreference ? 1 : 0;
+
+    if (leftAreaScore !== rightAreaScore) {
+      return leftAreaScore - rightAreaScore;
+    }
+
+    const leftCapacity = Number(left.capacity ?? 0);
+    const rightCapacity = Number(right.capacity ?? 0);
+
+    if (leftCapacity !== rightCapacity) {
+      return leftCapacity - rightCapacity;
+    }
+
+    return String(left.name ?? "").localeCompare(
+      String(right.name ?? ""),
+      "pt-BR",
+    );
+  });
+}
+
+async function resolveAvailableTableForReservation(supabase, reservation) {
+  if (!reservation?.reservation_date) {
+    return null;
+  }
+
+  const guests = Number(reservation.guests ?? 0);
+  const requestedMinutes = convertReservationTimeToMinutes(
+    reservation.reservation_time,
+  );
+
+  if (!Number.isFinite(guests) || guests < 1 || requestedMinutes == null) {
+    return null;
+  }
+
+  const [tablesResult, occupiedReservationsResult] = await Promise.all([
+    supabase
+      .from("restaurant_tables")
+      .select("id, name, area, capacity, is_active")
+      .eq("is_active", true),
+    supabase
+      .from("reservations")
+      .select("assigned_table_id, reservation_time")
+      .eq("reservation_date", reservation.reservation_date)
+      .in("status", activeReservationStatuses)
+      .not("assigned_table_id", "is", null)
+      .neq("id", reservation.id),
+  ]);
+
+  if (tablesResult.error || occupiedReservationsResult.error) {
+    return null;
+  }
+
+  const busyTableIds = new Set(
+    (occupiedReservationsResult.data ?? [])
+      .filter((item) =>
+        hasReservationSlotOverlap(
+          requestedMinutes,
+          convertReservationTimeToMinutes(item.reservation_time),
+        ),
+      )
+      .map((item) => item.assigned_table_id),
+  );
+
+  const compatibleTables = (tablesResult.data ?? []).filter(
+    (table) =>
+      Number(table.capacity ?? 0) >= guests && !busyTableIds.has(table.id),
+  );
+
+  return sortTablesForReservation(
+    compatibleTables,
+    reservation.area_preference,
+  )[0] ?? null;
 }
 
 function buildRouteWithParams(pathname, params = {}) {
@@ -1107,9 +1238,41 @@ export async function updateReservationStatusAction(formData) {
     return;
   }
 
+  const reservationResult = await supabase
+    .from("reservations")
+    .select(
+      "id, reservation_date, reservation_time, guests, area_preference, assigned_table_id, status",
+    )
+    .eq("id", reservationId)
+    .maybeSingle();
+
+  if (reservationResult.error || !reservationResult.data) {
+    return;
+  }
+
+  const reservation = reservationResult.data;
+  const updatePayload = {
+    status: nextStatus,
+  };
+  let autoAssignedTableId = null;
+
+  if (nextStatus === "seated" && !reservation.assigned_table_id) {
+    const resolvedTable = await resolveAvailableTableForReservation(
+      supabase,
+      reservation,
+    );
+
+    if (!resolvedTable) {
+      return;
+    }
+
+    updatePayload.assigned_table_id = resolvedTable.id;
+    autoAssignedTableId = resolvedTable.id;
+  }
+
   const { error } = await supabase
     .from("reservations")
-    .update({ status: nextStatus })
+    .update(updatePayload)
     .eq("id", reservationId);
 
   if (!error) {
@@ -1121,6 +1284,7 @@ export async function updateReservationStatusAction(formData) {
       description: "Status da reserva atualizado na fila operacional.",
       metadata: {
         nextStatus,
+        autoAssignedTableId,
       },
     });
   }
@@ -1144,9 +1308,73 @@ export async function assignReservationTableAction(formData) {
     return;
   }
 
+  const reservationResult = await supabase
+    .from("reservations")
+    .select(
+      "id, reservation_date, reservation_time, guests, status, assigned_table_id",
+    )
+    .eq("id", reservationId)
+    .maybeSingle();
+
+  if (reservationResult.error || !reservationResult.data) {
+    return;
+  }
+
+  const reservation = reservationResult.data;
+
+  if (tableId) {
+    const tableResult = await supabase
+      .from("restaurant_tables")
+      .select("id, capacity, is_active")
+      .eq("id", tableId)
+      .maybeSingle();
+
+    if (tableResult.error || !tableResult.data || !tableResult.data.is_active) {
+      return;
+    }
+
+    if (Number(tableResult.data.capacity ?? 0) < Number(reservation.guests ?? 0)) {
+      return;
+    }
+
+    const tableReservationsResult = await supabase
+      .from("reservations")
+      .select("reservation_time")
+      .eq("reservation_date", reservation.reservation_date)
+      .eq("assigned_table_id", tableId)
+      .in("status", activeReservationStatuses)
+      .neq("id", reservationId);
+
+    if (tableReservationsResult.error) {
+      return;
+    }
+
+    const requestedMinutes = convertReservationTimeToMinutes(
+      reservation.reservation_time,
+    );
+    const hasConflict = (tableReservationsResult.data ?? []).some((item) =>
+      hasReservationSlotOverlap(
+        requestedMinutes,
+        convertReservationTimeToMinutes(item.reservation_time),
+      ),
+    );
+
+    if (hasConflict) {
+      return;
+    }
+  }
+
+  const updatePayload = {
+    assigned_table_id: tableId || null,
+  };
+
+  if (!tableId && reservation.status === "seated") {
+    updatePayload.status = "confirmed";
+  }
+
   const { error } = await supabase
     .from("reservations")
-    .update({ assigned_table_id: tableId || null })
+    .update(updatePayload)
     .eq("id", reservationId);
 
   if (!error) {
@@ -1160,6 +1388,8 @@ export async function assignReservationTableAction(formData) {
         : "Mesa desvinculada da reserva no modulo de acomodacao.",
       metadata: {
         tableId: tableId || null,
+        downgradedStatus:
+          !tableId && reservation.status === "seated" ? "confirmed" : null,
       },
     });
   }
