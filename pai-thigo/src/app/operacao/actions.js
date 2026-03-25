@@ -26,6 +26,9 @@ const orderStatuses = [
   "delivered",
   "cancelled",
 ];
+const closedOrderStatuses = ["delivered", "cancelled"];
+const closedReservationStatuses = ["completed", "cancelled"];
+const emergencyCleanupConfirmationText = "LIMPEZA EXTREMA";
 
 const staffRoles = ["waiter", "manager"];
 const shiftStatuses = ["planned", "confirmed", "completed", "absent"];
@@ -1515,6 +1518,132 @@ export async function closeOrderCheckoutAction(formData) {
       pedido: checkoutReference,
       via: resolvedPrintCopy,
     }),
+  );
+}
+
+export async function runEmergencyCleanupAction(formData) {
+  const session = await requireRole(["owner"]);
+  const confirmationText = String(formData.get("confirmationText") ?? "")
+    .trim()
+    .toUpperCase();
+  const retentionDaysRaw = String(formData.get("retentionDays") ?? "").trim();
+  const parsedRetentionDays = Number.parseInt(retentionDaysRaw, 10);
+  const retentionDays = Number.isInteger(parsedRetentionDays)
+    ? Math.min(Math.max(parsedRetentionDays, 1), 3650)
+    : 30;
+  const redirectWithError = (purgeError) =>
+    redirect(
+      buildRouteWithParams("/operacao/comandas", {
+        purgeError,
+      }),
+    );
+  const redirectWithNotice = (purgeNotice) =>
+    redirect(
+      buildRouteWithParams("/operacao/comandas", {
+        purgeNotice,
+      }),
+    );
+
+  if (confirmationText !== emergencyCleanupConfirmationText) {
+    redirectWithError(
+      `Digite exatamente "${emergencyCleanupConfirmationText}" para confirmar a limpeza emergencial.`,
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirectWithError(
+      "Nao foi possivel conectar ao Supabase para executar a limpeza emergencial.",
+    );
+  }
+
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+  const cutoffIso = cutoffDate.toISOString();
+
+  const [ordersResult, reservationsResult] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id", { count: "exact" })
+      .in("status", closedOrderStatuses)
+      .lt("updated_at", cutoffIso),
+    supabase
+      .from("reservations")
+      .select("id", { count: "exact" })
+      .in("status", closedReservationStatuses)
+      .lt("updated_at", cutoffIso),
+  ]);
+
+  if (ordersResult.error || reservationsResult.error) {
+    redirectWithError(
+      "Nao foi possivel listar os registros para limpeza. Tente novamente em instantes.",
+    );
+  }
+
+  const orderIds = (ordersResult.data ?? []).map((item) => item.id);
+  const reservationIds = (reservationsResult.data ?? []).map((item) => item.id);
+  let removedOrders = 0;
+  let removedReservations = 0;
+
+  if (orderIds.length) {
+    const removeOrdersResult = await supabase
+      .from("orders")
+      .delete()
+      .in("id", orderIds)
+      .select("id");
+
+    if (removeOrdersResult.error) {
+      redirectWithError(
+        "A limpeza foi interrompida ao remover pedidos encerrados.",
+      );
+    }
+
+    removedOrders = removeOrdersResult.data?.length ?? orderIds.length;
+  }
+
+  if (reservationIds.length) {
+    const removeReservationsResult = await supabase
+      .from("reservations")
+      .delete()
+      .in("id", reservationIds)
+      .select("id");
+
+    if (removeReservationsResult.error) {
+      redirectWithError(
+        "A limpeza foi interrompida ao remover reservas encerradas.",
+      );
+    }
+
+    removedReservations =
+      removeReservationsResult.data?.length ?? reservationIds.length;
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "emergency_cleanup_executed",
+    entityType: "operations_cleanup",
+    entityId: null,
+    entityLabel: "Limpeza emergencial",
+    description:
+      "Rotina extrema executada para remover historico encerrado de pedidos e reservas.",
+    metadata: {
+      retentionDays,
+      cutoffIso,
+      removedOrders,
+      removedReservations,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  if (!removedOrders && !removedReservations) {
+    redirectWithNotice(
+      `Nenhum registro encerrado com mais de ${retentionDays} dia(s) foi encontrado para limpeza.`,
+    );
+  }
+
+  redirectWithNotice(
+    `Limpeza emergencial concluida: ${removedOrders} pedido(s) e ${removedReservations} reserva(s) encerrados removidos.`,
   );
 }
 
