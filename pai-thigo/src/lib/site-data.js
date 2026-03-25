@@ -628,7 +628,7 @@ export async function getMenuCategories(options = {}) {
   const { data, error } = await supabase
     .from("menu_categories")
     .select(
-      "id, name, slug, description, highlight_color, sort_order, menu_items(id, name, description, price, prep_time, spice_level, tags, allergens, is_signature, is_available, sort_order)",
+      "id, name, slug, description, highlight_color, sort_order, menu_items(id, name, description, image_url, price, prep_time, spice_level, tags, allergens, is_signature, is_available, sort_order)",
     )
     .order("sort_order", { ascending: true });
 

@@ -59,6 +59,28 @@ function parseCurrencyValue(value) {
   return Number.isFinite(amount) ? amount : NaN;
 }
 
+function normalizeMenuImageUrl(value) {
+  const rawValue = String(value ?? "").trim();
+
+  if (!rawValue) {
+    return "";
+  }
+
+  if (rawValue.startsWith("/")) {
+    return rawValue;
+  }
+
+  try {
+    const parsed = new URL(rawValue);
+
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+  } catch {}
+
+  return null;
+}
+
 function isDateOnly(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(value ?? ""));
 }
@@ -966,6 +988,8 @@ export async function createMenuItemAction(_previousState, formData) {
   const categoryId = String(formData.get("categoryId") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const rawImageUrl = String(formData.get("imageUrl") ?? "").trim();
+  const imageUrl = normalizeMenuImageUrl(rawImageUrl);
   const prepTime = String(formData.get("prepTime") ?? "").trim();
   const spiceLevel = String(formData.get("spiceLevel") ?? "").trim();
   const tags = String(formData.get("tags") ?? "")
@@ -1002,6 +1026,14 @@ export async function createMenuItemAction(_previousState, formData) {
     };
   }
 
+  if (imageUrl === null) {
+    return {
+      status: "error",
+      message:
+        "A imagem precisa estar em URL valida (http/https) ou caminho local iniciando com /images/.",
+    };
+  }
+
   const supabase = await getSupabaseServerClient();
 
   if (!supabase) {
@@ -1024,10 +1056,11 @@ export async function createMenuItemAction(_previousState, formData) {
     };
   }
 
-  const { error } = await supabase.from("menu_items").insert({
+  const insertPayload = {
     category_id: categoryId,
     name,
     description,
+    image_url: imageUrl || null,
     price,
     prep_time: prepTime || null,
     spice_level: spiceLevel || null,
@@ -1036,7 +1069,26 @@ export async function createMenuItemAction(_previousState, formData) {
     is_signature: isSignature,
     is_available: isAvailable,
     sort_order: sortOrder,
-  });
+  };
+
+  let imageColumnMissing = false;
+  let { error } = await supabase.from("menu_items").insert(insertPayload);
+
+  if (error && (imageUrl || rawImageUrl)) {
+    const errorMessage = String(error.message ?? "").toLowerCase();
+    const missingImageColumn =
+      error.code === "PGRST204" ||
+      errorMessage.includes("image_url") ||
+      errorMessage.includes("column");
+
+    if (missingImageColumn) {
+      imageColumnMissing = true;
+      const payloadWithoutImage = { ...insertPayload };
+      delete payloadWithoutImage.image_url;
+      const retryResult = await supabase.from("menu_items").insert(payloadWithoutImage);
+      error = retryResult.error;
+    }
+  }
 
   if (error) {
     return {
@@ -1052,7 +1104,9 @@ export async function createMenuItemAction(_previousState, formData) {
 
   return {
     status: "success",
-    message: "Prato cadastrado com sucesso. O cardapio ja foi atualizado.",
+    message: imageColumnMissing
+      ? "Prato cadastrado. A imagem nao foi salva porque a coluna image_url ainda nao existe no banco."
+      : "Prato cadastrado com sucesso. O cardapio ja foi atualizado.",
   };
 }
 

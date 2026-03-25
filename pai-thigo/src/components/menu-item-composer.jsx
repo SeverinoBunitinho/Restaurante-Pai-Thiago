@@ -25,13 +25,13 @@ export function MenuItemComposer({ categories = [] }) {
   return (
     <form action={formAction} className="grid gap-5">
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Categoria
           <select
             name="categoryId"
             required
             defaultValue={categories[0]?.id ?? ""}
-            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           >
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
@@ -41,30 +41,39 @@ export function MenuItemComposer({ categories = [] }) {
           </select>
         </label>
 
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Nome do prato
           <input
             name="name"
             required
             placeholder="Ex.: Ravioli de cordeiro"
-            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
       </div>
 
-      <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+      <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
         Descricao
         <textarea
           name="description"
           rows={4}
           required
           placeholder="Descreva composicao, tecnica e acabamento do prato."
-          className="rounded-[1.6rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          className="w-full min-w-0 rounded-[1.6rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
         />
       </label>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+      <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
+        Imagem do prato (URL)
+        <input
+          name="imageUrl"
+          placeholder="https://... ou /images/seu-prato.jpg"
+          className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+        />
+      </label>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
           Preco
           <input
             name="price"
@@ -73,55 +82,55 @@ export function MenuItemComposer({ categories = [] }) {
             step="0.01"
             required
             placeholder="79.90"
-            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
 
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
           Tempo de preparo
           <input
             name="prepTime"
             placeholder="18 min"
-            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
 
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
           Intensidade
           <input
             name="spiceLevel"
             placeholder="suave"
-            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
 
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
           Ordem
           <input
             name="sortOrder"
             type="number"
             min="0"
             defaultValue="0"
-            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
       </div>
 
-      <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+      <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
         Tags
         <input
           name="tags"
           placeholder="brasa, assinatura, compartilhar"
-          className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
         />
       </label>
 
-      <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+      <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
         Alergenicos
         <input
           name="allergens"
           placeholder="gluten, lacteos, crustaceos"
-          className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
         />
       </label>
 

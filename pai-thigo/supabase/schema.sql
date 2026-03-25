@@ -45,6 +45,7 @@ create table if not exists public.menu_items (
   category_id uuid not null references public.menu_categories(id) on delete cascade,
   name text not null,
   description text not null,
+  image_url text,
   price numeric(10, 2) not null check (price >= 0),
   prep_time text,
   spice_level text,
@@ -59,6 +60,9 @@ create table if not exists public.menu_items (
 
 alter table public.menu_items
 add column if not exists allergens text[] not null default '{}';
+
+alter table public.menu_items
+add column if not exists image_url text;
 
 create table if not exists public.restaurant_settings (
   id text primary key default 'main',
