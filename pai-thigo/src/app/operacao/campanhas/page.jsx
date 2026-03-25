@@ -260,12 +260,12 @@ export default async function OperacaoCampanhasPage({ searchParams }) {
             />
 
             <form action={createCouponAction} className="mt-8 grid gap-4">
-              <label className="grid gap-2">
+              <label className="grid min-w-0 gap-2">
                 <span className="text-sm font-semibold text-[var(--forest)]">Campanha vinculada</span>
                 <select
                   name="campaignId"
                   defaultValue=""
-                  className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
+                  className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
                 >
                   <option value="">Sem vinculo</option>
                   {board.campaigns.map((campaign) => (
@@ -276,25 +276,25 @@ export default async function OperacaoCampanhasPage({ searchParams }) {
                 </select>
               </label>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="grid gap-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="grid min-w-0 gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Codigo</span>
                   <input
                     name="code"
                     type="text"
                     required
                     maxLength={24}
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 uppercase outline-none"
+                    className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 uppercase outline-none"
                     placeholder="EX.: JANTAR10"
                   />
                 </label>
 
-                <label className="grid gap-2">
+                <label className="grid min-w-0 gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Tipo</span>
                   <select
                     name="couponType"
                     defaultValue="percentage"
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
+                    className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
                   >
                     {couponTypeOptions.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -305,8 +305,8 @@ export default async function OperacaoCampanhasPage({ searchParams }) {
                 </label>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
-                <label className="grid gap-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <label className="grid min-w-0 gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Valor</span>
                   <input
                     name="amount"
@@ -314,11 +314,11 @@ export default async function OperacaoCampanhasPage({ searchParams }) {
                     step="0.01"
                     min="0"
                     required
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
+                    className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
                     placeholder="10"
                   />
                 </label>
-                <label className="grid gap-2">
+                <label className="grid min-w-0 gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Pedido minimo</span>
                   <input
                     name="minOrder"
@@ -327,38 +327,38 @@ export default async function OperacaoCampanhasPage({ searchParams }) {
                     min="0"
                     defaultValue="0"
                     required
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
+                    className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
                   />
                 </label>
-                <label className="grid gap-2">
+                <label className="grid min-w-0 gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Limite de uso</span>
                   <input
                     name="usageLimit"
                     type="number"
                     min="1"
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
+                    className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
                     placeholder="Opcional"
                   />
                 </label>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="grid gap-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="grid min-w-0 gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Inicio</span>
                   <input
                     name="startsOn"
                     type="date"
                     required
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
+                    className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
                   />
                 </label>
-                <label className="grid gap-2">
+                <label className="grid min-w-0 gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Fim</span>
                   <input
                     name="endsOn"
                     type="date"
                     required
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
+                    className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
                   />
                 </label>
               </div>
