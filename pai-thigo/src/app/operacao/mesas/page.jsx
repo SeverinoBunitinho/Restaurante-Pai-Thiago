@@ -51,10 +51,48 @@ function formatUpdatedAt(value) {
     .replace(",", "");
 }
 
-export default async function OperacaoMesasPage() {
+function getAreaHealth(area) {
+  const total = Number(area.total ?? 0);
+  const occupied = Number(area.ocupada ?? 0);
+  const occupancyRate = total > 0 ? occupied / total : 0;
+
+  if (occupancyRate >= 0.75) {
+    return {
+      label: "Alta ocupacao",
+      badgeClass:
+        "border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] text-[var(--clay)]",
+      barClass: "from-[rgba(138,93,59,0.85)] to-[rgba(166,118,82,0.92)]",
+    };
+  }
+
+  if (occupancyRate >= 0.45) {
+    return {
+      label: "Fluxo moderado",
+      badgeClass:
+        "border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.08)] text-[var(--gold)]",
+      barClass: "from-[rgba(182,135,66,0.82)] to-[rgba(217,185,122,0.9)]",
+    };
+  }
+
+  return {
+    label: "Setor livre",
+    badgeClass:
+      "border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.08)] text-[var(--sage)]",
+    barClass: "from-[rgba(95,123,109,0.82)] to-[rgba(126,156,142,0.9)]",
+  };
+}
+
+export default async function OperacaoMesasPage({ searchParams }) {
   const session = await requireRole(["waiter", "manager", "owner"]);
   const board = await getSeatingBoard();
   const canManageTables = session.role === "manager" || session.role === "owner";
+  const resolvedSearchParams = await searchParams;
+  const mesaNotice = Array.isArray(resolvedSearchParams?.mesaNotice)
+    ? resolvedSearchParams.mesaNotice[0]
+    : resolvedSearchParams?.mesaNotice;
+  const mesaError = Array.isArray(resolvedSearchParams?.mesaError)
+    ? resolvedSearchParams.mesaError[0]
+    : resolvedSearchParams?.mesaError;
 
   return (
     <>
@@ -102,10 +140,28 @@ export default async function OperacaoMesasPage() {
               description="Equipe enxerga rapidamente o salao antes de acomodar reservas ou abrir novas comandas."
               compact
             />
-            <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.8)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(21,35,29,0.64)]">
-              Atualizado {formatUpdatedAt(board.updatedAt)}
-            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.08)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--sage)]">
+                <span className="h-2 w-2 rounded-full bg-[var(--sage)]" />
+                Tempo real ativo
+              </span>
+              <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.8)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(21,35,29,0.64)]">
+                Atualizado {formatUpdatedAt(board.updatedAt)}
+              </span>
+            </div>
           </div>
+
+          {mesaNotice ? (
+            <div className="mt-5 rounded-[1.4rem] border border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.08)] px-4 py-3 text-sm leading-6 text-[var(--forest)]">
+              {mesaNotice}
+            </div>
+          ) : null}
+
+          {mesaError ? (
+            <div className="mt-5 rounded-[1.4rem] border border-[rgba(138,93,59,0.22)] bg-[rgba(138,93,59,0.08)] px-4 py-3 text-sm leading-6 text-[var(--clay)]">
+              {mesaError}
+            </div>
+          ) : null}
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {tableStatusResumeCards.map((card) => (
@@ -124,17 +180,40 @@ export default async function OperacaoMesasPage() {
           </div>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {(board.areaStatus ?? []).map((area) => (
-              <article
-                key={area.area}
-                className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.78)] px-4 py-4"
-              >
-                <p className="text-sm font-semibold text-[var(--forest)]">{area.area}</p>
-                <p className="mt-2 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
-                  {area.livre} livre(s) - {area.reservada} reservada(s) - {area.ocupada} ocupada(s)
-                </p>
-              </article>
-            ))}
+            {(board.areaStatus ?? []).map((area) => {
+              const health = getAreaHealth(area);
+              const occupiedPercent = area.total
+                ? Math.round((area.ocupada / area.total) * 100)
+                : 0;
+
+              return (
+                <article
+                  key={area.area}
+                  className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.78)] px-4 py-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-[var(--forest)]">{area.area}</p>
+                    <span
+                      className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${health.badgeClass}`}
+                    >
+                      {health.label}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+                    {area.livre} livre(s) - {area.reservada} reservada(s) - {area.ocupada} ocupada(s)
+                  </p>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[rgba(20,35,29,0.08)]">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${health.barClass}`}
+                      style={{ width: `${Math.min(Math.max(occupiedPercent, 0), 100)}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(21,35,29,0.58)]">
+                    {occupiedPercent}% ocupado
+                  </p>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -148,6 +227,50 @@ export default async function OperacaoMesasPage() {
               description="Agora esta pagina cuida da distribuicao do salao. A equipe pode escolher a mesa ideal direto daqui."
               compact
             />
+
+            <div className="mt-6 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.64)] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
+                  Fila inteligente de espera
+                </p>
+                <span className="rounded-full border border-[rgba(20,35,29,0.12)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(21,35,29,0.66)]">
+                  {board.waitlist?.length ?? 0} aguardando mesa
+                </span>
+              </div>
+
+              {board.waitlist?.length ? (
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  {board.waitlist.slice(0, 6).map((item) => (
+                    <article
+                      key={item.id}
+                      className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.86)] px-4 py-3"
+                    >
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--sage)]">
+                        Posicao {item.position}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
+                        {item.guestName}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-[rgba(21,35,29,0.68)]">
+                        {item.time} | {item.guests} pessoas | {item.areaPreference}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="rounded-full border border-[rgba(20,35,29,0.12)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(21,35,29,0.66)]">
+                          ETA {item.etaMinutes} min
+                        </span>
+                        <span className="rounded-full border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.1)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">
+                          Prioridade {item.priority}
+                        </span>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                  Sem espera agora. Quando nao houver mesa compativel, a fila entra automaticamente nesta area.
+                </p>
+              )}
+            </div>
 
             <div className="mt-8 space-y-4">
               {board.opportunities.length ? (

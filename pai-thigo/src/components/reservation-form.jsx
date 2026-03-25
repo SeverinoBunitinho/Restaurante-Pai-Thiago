@@ -692,6 +692,61 @@ export function ReservationForm({
           {state.message}
         </div>
       ) : null}
+
+      {state.status === "success" && state.receipt ? (
+        <div className="rounded-[1.6rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.86)] p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
+            Comprovante da reserva
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-[rgba(20,35,29,0.08)] bg-white/90 px-3 py-3">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[rgba(21,35,29,0.62)]">
+                Codigo
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
+                {state.receipt.confirmationCode}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[rgba(20,35,29,0.08)] bg-white/90 px-3 py-3">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[rgba(21,35,29,0.62)]">
+                Data e horario
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
+                {state.receipt.reservationDate} as {state.receipt.reservationTime}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[rgba(20,35,29,0.08)] bg-white/90 px-3 py-3">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[rgba(21,35,29,0.62)]">
+                Mesa
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
+                {state.receipt.tableName} ({state.receipt.areaName})
+              </p>
+            </div>
+            <div className="rounded-2xl border border-[rgba(20,35,29,0.08)] bg-white/90 px-3 py-3">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[rgba(21,35,29,0.62)]">
+                Cliente
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
+                {state.receipt.guestName} - {state.receipt.guests} pessoa(s)
+              </p>
+            </div>
+          </div>
+
+          {state.receipt.whatsappUrl ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <a
+                href={state.receipt.whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="button-primary"
+              >
+                Enviar comprovante no WhatsApp
+              </a>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </form>
   );
 }

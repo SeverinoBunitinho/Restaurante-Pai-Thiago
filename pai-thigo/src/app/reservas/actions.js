@@ -38,6 +38,7 @@ export async function submitReservationAction(_previousState, formData) {
     return {
       status: "error",
       message: "Preencha nome, telefone, data e horario para enviar a reserva.",
+      receipt: null,
     };
   }
 
@@ -45,6 +46,7 @@ export async function submitReservationAction(_previousState, formData) {
     return {
       status: "error",
       message: "O nome do cliente precisa ter no maximo 100 caracteres.",
+      receipt: null,
     };
   }
 
@@ -52,6 +54,7 @@ export async function submitReservationAction(_previousState, formData) {
     return {
       status: "error",
       message: "O telefone informado esta maior do que o permitido.",
+      receipt: null,
     };
   }
 
@@ -59,6 +62,7 @@ export async function submitReservationAction(_previousState, formData) {
     return {
       status: "error",
       message: "O e-mail informado esta maior do que o permitido.",
+      receipt: null,
     };
   }
 
@@ -66,6 +70,7 @@ export async function submitReservationAction(_previousState, formData) {
     return {
       status: "error",
       message: "A ocasiao precisa ter no maximo 120 caracteres.",
+      receipt: null,
     };
   }
 
@@ -73,6 +78,7 @@ export async function submitReservationAction(_previousState, formData) {
     return {
       status: "error",
       message: "As observacoes precisam ter no maximo 500 caracteres.",
+      receipt: null,
     };
   }
 
@@ -80,6 +86,7 @@ export async function submitReservationAction(_previousState, formData) {
     return {
       status: "error",
       message: "Informe uma quantidade de pessoas entre 1 e 20.",
+      receipt: null,
     };
   }
 
@@ -90,6 +97,7 @@ export async function submitReservationAction(_previousState, formData) {
     return {
       status: "error",
       message: "Data ou horario invalidos para a reserva.",
+      receipt: null,
     };
   }
 
@@ -97,6 +105,7 @@ export async function submitReservationAction(_previousState, formData) {
     return {
       status: "error",
       message: "A reserva precisa ser registrada para um horario futuro.",
+      receipt: null,
     };
   }
 
@@ -117,6 +126,7 @@ export async function submitReservationAction(_previousState, formData) {
     return {
       status: "error",
       message: result.message,
+      receipt: null,
     };
   }
 
@@ -130,11 +140,28 @@ export async function submitReservationAction(_previousState, formData) {
     result.areaAdjusted
       ? "Nao havia vaga na area preferida nesse horario, entao ajustamos para a melhor opcao disponivel."
       : "",
+    result.reservation?.confirmationCode
+      ? `Comprovante gerado: ${result.reservation.confirmationCode}.`
+      : "",
   ].filter(Boolean);
+
+  const receipt = result.reservation
+    ? {
+        confirmationCode: result.reservation.confirmationCode,
+        guestName: result.reservation.guestName,
+        reservationDate: formatDateForMessage(result.reservation.reservationDate),
+        reservationTime: result.reservation.reservationTime,
+        guests: result.reservation.guests,
+        tableName: result.reservation.tableName,
+        areaName: result.reservation.areaName,
+        whatsappUrl: result.reservation.whatsappUrl,
+      }
+    : null;
 
   return {
     status: "success",
     mode: "supabase",
     message: messageParts.join(" "),
+    receipt,
   };
 }

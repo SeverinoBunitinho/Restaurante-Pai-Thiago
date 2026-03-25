@@ -32,6 +32,7 @@ const ANY_AREA_PREFERENCE_VALUES = new Set([
 ]);
 
 const DEFAULT_MENU_ITEM_IMAGE = "/images/menu-placeholder.svg";
+const RESERVATION_CONFIRMATION_PREFIX = "RSV";
 
 function sanitizeMenuItemImageUrl(value) {
   const rawValue = String(value ?? "").trim();
@@ -99,6 +100,60 @@ function normalizeReservationArea(value) {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function normalizeWhatsappNumber(value) {
+  const digitsOnly = String(value ?? "").replace(/\D/g, "");
+
+  if (!digitsOnly) {
+    return "";
+  }
+
+  if (digitsOnly.startsWith("55")) {
+    return digitsOnly;
+  }
+
+  if (digitsOnly.length === 10 || digitsOnly.length === 11) {
+    return `55${digitsOnly}`;
+  }
+
+  return digitsOnly;
+}
+
+function buildReservationConfirmationCode(reservationId) {
+  return `${RESERVATION_CONFIRMATION_PREFIX}-${String(reservationId ?? "")
+    .slice(0, 8)
+    .toUpperCase()}`;
+}
+
+function buildReservationWhatsappUrl({
+  restaurantWhatsapp,
+  guestName,
+  confirmationCode,
+  reservationDate,
+  reservationTime,
+  tableName,
+  areaName,
+}) {
+  const normalizedNumber = normalizeWhatsappNumber(restaurantWhatsapp);
+
+  if (!normalizedNumber) {
+    return "";
+  }
+
+  const messageLines = [
+    "Ola, equipe Pai Thiago.",
+    `Confirmacao de reserva: ${confirmationCode}.`,
+    `Cliente: ${guestName}.`,
+    `Data e horario: ${reservationDate} as ${reservationTime}.`,
+    `Mesa: ${tableName}.`,
+    `Area: ${areaName}.`,
+    "Estou enviando meu comprovante para acompanhamento.",
+  ];
+
+  return `https://wa.me/${normalizedNumber}?text=${encodeURIComponent(
+    messageLines.join("\n"),
+  )}`;
 }
 
 function isAnyAreaPreference(value) {
@@ -1157,9 +1212,13 @@ export async function createReservation(input) {
     source: isStaff ? "staff" : "customer",
   };
 
-  const { error } = await supabase.from("reservations").insert(payload);
+  const insertResult = await supabase
+    .from("reservations")
+    .insert(payload)
+    .select("id, reservation_date, reservation_time, guest_name")
+    .maybeSingle();
 
-  if (error) {
+  if (insertResult.error || !insertResult.data) {
     return {
       ok: false,
       message:
@@ -1167,9 +1226,36 @@ export async function createReservation(input) {
     };
   }
 
+  const confirmationCode = buildReservationConfirmationCode(insertResult.data.id);
+  const reservationDate = String(insertResult.data.reservation_date ?? parsedInput.reservationDate);
+  const reservationTime = String(
+    insertResult.data.reservation_time ?? parsedInput.reservationTime,
+  ).slice(0, 5);
+  const restaurantProfile = await getRestaurantProfile();
+  const whatsappUrl = buildReservationWhatsappUrl({
+    restaurantWhatsapp: restaurantProfile.whatsapp,
+    guestName: guestName || insertResult.data.guest_name || "Cliente",
+    confirmationCode,
+    reservationDate,
+    reservationTime,
+    tableName: resolvedTable.name,
+    areaName: resolvedTable.area,
+  });
+
   return {
     ok: true,
     mode: "supabase",
+    reservation: {
+      id: insertResult.data.id,
+      confirmationCode,
+      guestName: guestName || insertResult.data.guest_name || "Cliente",
+      reservationDate,
+      reservationTime,
+      guests: parsedInput.guests,
+      tableName: resolvedTable.name,
+      areaName: resolvedTable.area,
+      whatsappUrl,
+    },
     assignedTable: {
       name: resolvedTable.name,
       area: resolvedTable.area,

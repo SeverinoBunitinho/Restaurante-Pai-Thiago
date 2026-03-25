@@ -212,6 +212,30 @@ function buildRouteWithParams(pathname, params = {}) {
   return search ? `${pathname}?${search}` : pathname;
 }
 
+function normalizeReservationStatusFilter(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return reservationStatuses.includes(normalized) ? normalized : "";
+}
+
+function buildReservationsRedirectPath({
+  statusFilter,
+  reservationNotice,
+  reservationError,
+}) {
+  return buildRouteWithParams("/operacao/reservas", {
+    status: normalizeReservationStatusFilter(statusFilter) || undefined,
+    reservationNotice,
+    reservationError,
+  });
+}
+
+function buildMesasRedirectPath({ mesaNotice, mesaError }) {
+  return buildRouteWithParams("/operacao/mesas", {
+    mesaNotice,
+    mesaError,
+  });
+}
+
 function normalizeEmail(value) {
   return String(value ?? "").trim().toLowerCase();
 }
@@ -1227,15 +1251,32 @@ export async function updateReservationStatusAction(formData) {
 
   const reservationId = String(formData.get("reservationId") ?? "").trim();
   const nextStatus = String(formData.get("nextStatus") ?? "").trim();
+  const statusFilter = String(formData.get("statusFilter") ?? "").trim();
+  const redirectWithError = (reservationError) =>
+    redirect(
+      buildReservationsRedirectPath({
+        statusFilter,
+        reservationError,
+      }),
+    );
+  const redirectWithNotice = (reservationNotice) =>
+    redirect(
+      buildReservationsRedirectPath({
+        statusFilter,
+        reservationNotice,
+      }),
+    );
 
   if (!reservationId || !reservationStatuses.includes(nextStatus)) {
-    return;
+    redirectWithError("Nao foi possivel atualizar essa reserva.");
   }
 
   const supabase = await getSupabaseServerClient();
 
   if (!supabase) {
-    return;
+    redirectWithError(
+      "Nao foi possivel conectar ao Supabase para atualizar o status.",
+    );
   }
 
   const reservationResult = await supabase
@@ -1247,7 +1288,7 @@ export async function updateReservationStatusAction(formData) {
     .maybeSingle();
 
   if (reservationResult.error || !reservationResult.data) {
-    return;
+    redirectWithError("Reserva nao encontrada na fila.");
   }
 
   const reservation = reservationResult.data;
@@ -1255,6 +1296,7 @@ export async function updateReservationStatusAction(formData) {
     status: nextStatus,
   };
   let autoAssignedTableId = null;
+  let autoAssignedTable = null;
 
   if (nextStatus === "seated" && !reservation.assigned_table_id) {
     const resolvedTable = await resolveAvailableTableForReservation(
@@ -1263,11 +1305,14 @@ export async function updateReservationStatusAction(formData) {
     );
 
     if (!resolvedTable) {
-      return;
+      redirectWithError(
+        "Sem mesa livre compativel neste momento. A reserva segue na fila inteligente de espera.",
+      );
     }
 
     updatePayload.assigned_table_id = resolvedTable.id;
     autoAssignedTableId = resolvedTable.id;
+    autoAssignedTable = resolvedTable;
   }
 
   const { error } = await supabase
@@ -1275,21 +1320,36 @@ export async function updateReservationStatusAction(formData) {
     .update(updatePayload)
     .eq("id", reservationId);
 
-  if (!error) {
-    await writeOperationAuditLog(supabase, session, {
-      eventType: "reservation_status_updated",
-      entityType: "reservation",
-      entityId: reservationId,
-      entityLabel: reservationId,
-      description: "Status da reserva atualizado na fila operacional.",
-      metadata: {
-        nextStatus,
-        autoAssignedTableId,
-      },
-    });
+  if (error) {
+    redirectWithError("Nao foi possivel atualizar o status dessa reserva agora.");
   }
 
+  const statusLabels = {
+    pending: "Pendente",
+    confirmed: "Confirmada",
+    seated: "No salao",
+    completed: "Finalizada",
+    cancelled: "Cancelada",
+  };
+  const reservationNotice =
+    nextStatus === "seated" && autoAssignedTable
+      ? `Reserva acomodada automaticamente na ${autoAssignedTable.name} (${autoAssignedTable.area}).`
+      : `Status atualizado para ${statusLabels[nextStatus] ?? nextStatus}.`;
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "reservation_status_updated",
+    entityType: "reservation",
+    entityId: reservationId,
+    entityLabel: reservationId,
+    description: "Status da reserva atualizado na fila operacional.",
+    metadata: {
+      nextStatus,
+      autoAssignedTableId,
+    },
+  });
+
   revalidateStaffPaths();
+  redirectWithNotice(reservationNotice);
 }
 
 export async function assignReservationTableAction(formData) {
@@ -1297,15 +1357,27 @@ export async function assignReservationTableAction(formData) {
 
   const reservationId = String(formData.get("reservationId") ?? "").trim();
   const tableId = String(formData.get("tableId") ?? "").trim();
+  const redirectWithError = (mesaError) =>
+    redirect(
+      buildMesasRedirectPath({
+        mesaError,
+      }),
+    );
+  const redirectWithNotice = (mesaNotice) =>
+    redirect(
+      buildMesasRedirectPath({
+        mesaNotice,
+      }),
+    );
 
   if (!reservationId) {
-    return;
+    redirectWithError("Nao foi possivel identificar a reserva selecionada.");
   }
 
   const supabase = await getSupabaseServerClient();
 
   if (!supabase) {
-    return;
+    redirectWithError("Nao foi possivel conectar ao Supabase para atualizar a mesa.");
   }
 
   const reservationResult = await supabase
@@ -1317,24 +1389,27 @@ export async function assignReservationTableAction(formData) {
     .maybeSingle();
 
   if (reservationResult.error || !reservationResult.data) {
-    return;
+    redirectWithError("A reserva selecionada nao foi encontrada.");
   }
 
   const reservation = reservationResult.data;
+  let selectedTableName = "";
 
   if (tableId) {
     const tableResult = await supabase
       .from("restaurant_tables")
-      .select("id, capacity, is_active")
+      .select("id, name, area, capacity, is_active")
       .eq("id", tableId)
       .maybeSingle();
 
     if (tableResult.error || !tableResult.data || !tableResult.data.is_active) {
-      return;
+      redirectWithError("A mesa escolhida nao esta ativa para uso agora.");
     }
 
     if (Number(tableResult.data.capacity ?? 0) < Number(reservation.guests ?? 0)) {
-      return;
+      redirectWithError(
+        "A mesa escolhida nao comporta a quantidade de pessoas desta reserva.",
+      );
     }
 
     const tableReservationsResult = await supabase
@@ -1346,7 +1421,7 @@ export async function assignReservationTableAction(formData) {
       .neq("id", reservationId);
 
     if (tableReservationsResult.error) {
-      return;
+      redirectWithError("Nao foi possivel validar conflito de horario da mesa.");
     }
 
     const requestedMinutes = convertReservationTimeToMinutes(
@@ -1360,8 +1435,12 @@ export async function assignReservationTableAction(formData) {
     );
 
     if (hasConflict) {
-      return;
+      redirectWithError(
+        "Essa mesa ja esta comprometida no mesmo horario. Escolha outra opcao.",
+      );
     }
+
+    selectedTableName = `${tableResult.data.name} (${tableResult.data.area})`;
   }
 
   const updatePayload = {
@@ -1377,24 +1456,34 @@ export async function assignReservationTableAction(formData) {
     .update(updatePayload)
     .eq("id", reservationId);
 
-  if (!error) {
-    await writeOperationAuditLog(supabase, session, {
-      eventType: "reservation_table_assigned",
-      entityType: "reservation",
-      entityId: reservationId,
-      entityLabel: reservationId,
-      description: tableId
-        ? "Mesa vinculada a reserva no modulo de acomodacao."
-        : "Mesa desvinculada da reserva no modulo de acomodacao.",
-      metadata: {
-        tableId: tableId || null,
-        downgradedStatus:
-          !tableId && reservation.status === "seated" ? "confirmed" : null,
-      },
-    });
+  if (error) {
+    redirectWithError("Nao foi possivel atualizar o vinculo da mesa agora.");
   }
 
+  const downgradedStatus =
+    !tableId && reservation.status === "seated" ? "confirmed" : null;
+  const successMessage = tableId
+    ? `Mesa vinculada com sucesso: ${selectedTableName}.`
+    : downgradedStatus
+      ? "Mesa removida e reserva voltou para Confirmada."
+      : "Mesa desvinculada da reserva com sucesso.";
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "reservation_table_assigned",
+    entityType: "reservation",
+    entityId: reservationId,
+    entityLabel: reservationId,
+    description: tableId
+      ? "Mesa vinculada a reserva no modulo de acomodacao."
+      : "Mesa desvinculada da reserva no modulo de acomodacao.",
+    metadata: {
+      tableId: tableId || null,
+      downgradedStatus,
+    },
+  });
+
   revalidateStaffPaths();
+  redirectWithNotice(successMessage);
 }
 
 export async function toggleRestaurantTableActiveAction(formData) {

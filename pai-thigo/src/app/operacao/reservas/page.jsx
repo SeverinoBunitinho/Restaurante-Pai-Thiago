@@ -44,6 +44,12 @@ export default async function OperacaoReservasPage({ searchParams }) {
   )
     ? statusFilter
     : "all";
+  const reservationNotice = Array.isArray(resolvedSearchParams?.reservationNotice)
+    ? resolvedSearchParams.reservationNotice[0]
+    : resolvedSearchParams?.reservationNotice;
+  const reservationError = Array.isArray(resolvedSearchParams?.reservationError)
+    ? resolvedSearchParams.reservationError[0]
+    : resolvedSearchParams?.reservationError;
   const filteredReservations =
     activeStatus === "all"
       ? board.reservations
@@ -132,6 +138,67 @@ export default async function OperacaoReservasPage({ searchParams }) {
             })}
           </div>
 
+          {reservationNotice ? (
+            <div className="mt-5 rounded-[1.4rem] border border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.08)] px-4 py-3 text-sm leading-6 text-[var(--forest)]">
+              {reservationNotice}
+            </div>
+          ) : null}
+
+          {reservationError ? (
+            <div className="mt-5 rounded-[1.4rem] border border-[rgba(138,93,59,0.22)] bg-[rgba(138,93,59,0.08)] px-4 py-3 text-sm leading-6 text-[var(--clay)]">
+              {reservationError}
+            </div>
+          ) : null}
+
+          <div className="mt-6 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
+                Fila inteligente de espera
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-[rgba(20,35,29,0.12)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[rgba(21,35,29,0.66)]">
+                  {board.waitlistSummary?.total ?? 0} na fila
+                </span>
+                <span className="rounded-full border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--clay)]">
+                  {board.waitlistSummary?.urgent ?? 0} urgente(s)
+                </span>
+              </div>
+            </div>
+
+            {board.waitlist?.length ? (
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {board.waitlist.map((item) => (
+                  <article
+                    key={item.id}
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.82)] px-4 py-3"
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--sage)]">
+                      Posicao {item.position}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
+                      {item.guestName}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[rgba(21,35,29,0.68)]">
+                      {item.time} | {item.guests} pessoas | {item.areaPreference}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-[rgba(20,35,29,0.12)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgba(21,35,29,0.66)]">
+                        ETA {item.etaMinutes} min
+                      </span>
+                      <span className="rounded-full border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.1)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">
+                        Prioridade {item.priority}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                Sem fila de espera no momento. As acomodacoes estao fluindo com mesas disponiveis.
+              </p>
+            )}
+          </div>
+
           <div className="mt-8 space-y-4">
             {filteredReservations.length ? (
               filteredReservations.map((reservation) => {
@@ -200,6 +267,11 @@ export default async function OperacaoReservasPage({ searchParams }) {
                               type="hidden"
                               name="nextStatus"
                               value={status.value}
+                            />
+                            <input
+                              type="hidden"
+                              name="statusFilter"
+                              value={activeStatus === "all" ? "" : activeStatus}
                             />
                             <button
                               type="submit"

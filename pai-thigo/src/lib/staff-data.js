@@ -63,6 +63,45 @@ function getTodayInBrazil() {
   }).format(new Date());
 }
 
+function getCurrentMomentInBrazil() {
+  const dateFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const timeFormatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  const currentDate = dateFormatter.format(new Date());
+  const [hours, minutes] = timeFormatter
+    .format(new Date())
+    .split(":")
+    .map((value) => Number(value ?? 0));
+
+  return {
+    date: currentDate,
+    minutes: Number.isFinite(hours) && Number.isFinite(minutes)
+      ? hours * 60 + minutes
+      : 0,
+  };
+}
+
+function toMinutesFromTime(value) {
+  const normalized = String(value ?? "").slice(0, 5);
+
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(normalized)) {
+    return null;
+  }
+
+  const [hours, minutes] = normalized.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
 function mapReservation(reservation) {
   const assignedTable = reservation.assigned_table;
   const area =
@@ -194,6 +233,12 @@ function buildFallbackReservationBoard() {
       },
     ],
     reservations: [],
+    waitlist: [],
+    waitlistSummary: {
+      total: 0,
+      urgent: 0,
+      averageEtaMinutes: 0,
+    },
     usingSupabase: false,
   };
 }
@@ -286,6 +331,7 @@ function buildFallbackSeatingBoard() {
       },
     ],
     opportunities: [],
+    waitlist: [],
     assignments: [],
     tables: [],
     statusCounters: {
@@ -298,6 +344,73 @@ function buildFallbackSeatingBoard() {
     updatedAt: new Date().toISOString(),
     usingSupabase: false,
   };
+}
+
+function buildReservationWaitlist(reservations, options = {}) {
+  const maxItems = Number(options.maxItems ?? 8);
+  const now = getCurrentMomentInBrazil();
+
+  const queue = (reservations ?? [])
+    .filter(
+      (reservation) =>
+        !reservation.assigned_table &&
+        (reservation.status === "pending" || reservation.status === "confirmed"),
+    )
+    .sort((left, right) => {
+      if (left.reservation_date !== right.reservation_date) {
+        return String(left.reservation_date).localeCompare(
+          String(right.reservation_date),
+          "pt-BR",
+        );
+      }
+
+      const leftTime = String(left.reservation_time ?? "");
+      const rightTime = String(right.reservation_time ?? "");
+
+      if (leftTime !== rightTime) {
+        return leftTime.localeCompare(rightTime, "pt-BR");
+      }
+
+      return String(left.created_at ?? "").localeCompare(
+        String(right.created_at ?? ""),
+        "pt-BR",
+      );
+    })
+    .slice(0, Number.isFinite(maxItems) && maxItems > 0 ? maxItems : 8)
+    .map((reservation, index) => {
+      const reservationMinutes = toMinutesFromTime(reservation.reservation_time);
+      const isToday = String(reservation.reservation_date) === now.date;
+      const minutesUntil = isToday && reservationMinutes != null
+        ? reservationMinutes - now.minutes
+        : null;
+      let priority = "Normal";
+
+      if (minutesUntil != null && minutesUntil <= 0) {
+        priority = "Urgente";
+      } else if (minutesUntil != null && minutesUntil <= 30) {
+        priority = "Alta";
+      } else if (index < 2) {
+        priority = "Media";
+      }
+
+      const etaMinutes = Math.max(8, (index + 1) * 18);
+
+      return {
+        id: reservation.id,
+        guestName: reservation.guest_name,
+        date: reservation.reservation_date,
+        time: String(reservation.reservation_time).slice(0, 5),
+        guests: reservation.guests,
+        status: reservation.status,
+        areaPreference: reservation.area_preference ?? "Sem preferencia",
+        occasion: reservation.occasion ?? "Visita na casa",
+        position: index + 1,
+        etaMinutes,
+        priority,
+      };
+    });
+
+  return queue;
 }
 
 function buildFallbackStaffDirectory() {
@@ -427,7 +540,7 @@ export async function getReservationsBoard() {
     supabase
       .from("reservations")
       .select(
-        "id, guest_name, reservation_date, reservation_time, guests, occasion, status, notes, area_preference, assigned_table:restaurant_tables(name, area)",
+        "id, guest_name, reservation_date, reservation_time, guests, occasion, status, notes, area_preference, created_at, assigned_table:restaurant_tables(name, area)",
       )
       .order("reservation_date", { ascending: true })
       .order("reservation_time", { ascending: true })
@@ -442,6 +555,18 @@ export async function getReservationsBoard() {
   ) {
     return buildFallbackReservationBoard();
   }
+
+  const waitlist = buildReservationWaitlist(reservationsResult.data ?? []);
+  const waitlistSummary = {
+    total: waitlist.length,
+    urgent: waitlist.filter((item) => item.priority === "Urgente").length,
+    averageEtaMinutes: waitlist.length
+      ? Math.round(
+          waitlist.reduce((total, item) => total + item.etaMinutes, 0) /
+            waitlist.length,
+        )
+      : 0,
+  };
 
   return {
     summary: [
@@ -462,6 +587,8 @@ export async function getReservationsBoard() {
       },
     ],
     reservations: (reservationsResult.data ?? []).map(mapReservation),
+    waitlist,
+    waitlistSummary,
     usingSupabase: true,
   };
 }
@@ -585,7 +712,7 @@ export async function getSeatingBoard() {
     supabase
       .from("reservations")
       .select(
-        "id, assigned_table_id, guest_name, reservation_date, reservation_time, guests, occasion, status, notes, area_preference, assigned_table:restaurant_tables(id, name, area, capacity)",
+        "id, assigned_table_id, guest_name, reservation_date, reservation_time, guests, occasion, status, notes, area_preference, created_at, assigned_table:restaurant_tables(id, name, area, capacity)",
       )
       .eq("reservation_date", today)
       .in("status", ["pending", "confirmed", "seated"])
@@ -671,6 +798,19 @@ export async function getSeatingBoard() {
       };
     });
 
+  const opportunityLookup = new Map(
+    opportunities.map((opportunity) => [opportunity.id, opportunity]),
+  );
+  const waitlistSource = reservations.filter((reservation) => {
+    if (reservation.assigned_table_id) {
+      return false;
+    }
+
+    const opportunity = opportunityLookup.get(reservation.id);
+    return !opportunity || !opportunity.suggestedTables.length;
+  });
+  const waitlist = buildReservationWaitlist(waitlistSource, { maxItems: 12 });
+
   const assignments = reservations
     .filter((reservation) => reservation.assigned_table)
     .map((reservation) => ({
@@ -738,6 +878,7 @@ export async function getSeatingBoard() {
       },
     ],
     opportunities,
+    waitlist,
     assignments,
     tables: mappedTables,
     statusCounters,
