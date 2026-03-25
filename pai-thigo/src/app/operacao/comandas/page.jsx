@@ -327,7 +327,10 @@ export default async function OperacaoComandasPage({ searchParams }) {
                   </div>
                 ) : null}
 
-                <form action={runEmergencyCleanupAction} className="mt-4 grid gap-3 sm:grid-cols-[7.5rem_minmax(0,1fr)] xl:grid-cols-[7.5rem_minmax(0,1fr)_auto]">
+                <form
+                  action={runEmergencyCleanupAction}
+                  className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-3"
+                >
                   <label className="grid gap-2">
                     <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(217,185,122,0.88)]">
                       Dias
@@ -357,7 +360,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
 
                   <button
                     type="submit"
-                    className="button-secondary w-full justify-center self-end sm:col-span-2 sm:w-auto sm:justify-self-end xl:col-span-1"
+                    className="button-secondary col-span-full w-full justify-center self-end"
                   >
                     Executar limpeza
                   </button>
