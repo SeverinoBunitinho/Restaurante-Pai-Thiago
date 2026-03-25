@@ -188,7 +188,7 @@ export default async function OperacaoEscalaPage({ searchParams }) {
             </h2>
             <p className="mt-4 text-sm leading-7 text-[rgba(255,247,232,0.76)]">
               O cadastro de usuarios continua em Equipe e a distribuicao de turnos acontece aqui.
-              Assim voce evita telas repetidas e ganha fluxo mais profissional.
+              Assim voce mantém a operacao organizada e o fluxo mais profissional.
             </p>
           </div>
         </div>

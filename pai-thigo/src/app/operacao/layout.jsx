@@ -32,7 +32,7 @@ export default async function OperacaoLayout({ children }) {
                     </h1>
                     <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(255,247,232,0.74)]">
                       A equipe agora entra em uma base mais organizada, com rotas
-                      separadas por frente de trabalho e menos repeticao entre telas.
+                      separadas por frente de trabalho e fluxo mais claro entre modulos.
                     </p>
                   </div>
 

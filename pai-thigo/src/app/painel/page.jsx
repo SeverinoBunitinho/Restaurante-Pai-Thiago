@@ -338,7 +338,7 @@ export default async function PainelPage() {
                 <SectionHeading
                   eyebrow="Cardapio"
                   title="Leitura de disponibilidade da cozinha"
-                  description="Resumo do menu para apoiar decisoes rapidas sem repetir a pagina principal do cardapio."
+                  description="Resumo do menu para apoiar decisoes rapidas durante o turno."
                   compact
                 />
                 <div className="mt-8 space-y-4">

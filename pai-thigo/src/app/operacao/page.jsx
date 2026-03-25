@@ -225,10 +225,10 @@ export default async function OperacaoOverviewPage() {
             ) : (
               <article className="mt-8 rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.56)] p-5">
                 <p className="text-lg font-semibold text-[var(--forest)]">
-                  Sem repeticao: as trilhas acima ja cobrem todos os modulos deste cargo.
+                  Fluxo completo para este cargo
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                  Use os blocos do mapa operacional para entrar em cada frente.
+                  As trilhas acima ja cobrem os modulos essenciais do turno.
                 </p>
               </article>
             )}
@@ -238,7 +238,7 @@ export default async function OperacaoOverviewPage() {
             <SectionHeading
               eyebrow="Acesso rapido"
               title="Rotas de entrada recomendadas para o seu cargo"
-              description="Atalhos diretos para iniciar o turno sem navegar em paginas repetidas."
+              description="Atalhos diretos para iniciar o turno com navegacao simples."
               compact
             />
 
@@ -263,7 +263,7 @@ export default async function OperacaoOverviewPage() {
             ) : (
               <div className="mt-8 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5">
                 <p className="text-lg font-semibold text-[var(--forest)]">
-                  Turno alinhado sem atalhos repetidos
+                  Turno alinhado
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
                   Se precisar de uma visao geral da operacao, use o painel do turno.

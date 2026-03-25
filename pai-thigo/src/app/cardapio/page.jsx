@@ -109,7 +109,7 @@ export default async function CardapioPage() {
 
             {categories.length ? (
               <p className="mt-8 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
-                As categorias ficam no bloco de navegacao rapida logo abaixo, evitando repeticao visual nesta etapa.
+                As categorias ficam no bloco de navegacao rapida logo abaixo para manter a leitura limpa e objetiva.
               </p>
             ) : null}
           </div>
