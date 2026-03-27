@@ -1195,7 +1195,9 @@ export async function createMenuItemAction(_previousState, formData) {
     };
   }
 
-  const supabase = await getSupabaseServerClient();
+  const supabaseAdmin = getSupabaseAdminClient();
+  const supabaseServer = await getSupabaseServerClient();
+  const supabase = supabaseAdmin ?? supabaseServer;
 
   if (!supabase) {
     return {

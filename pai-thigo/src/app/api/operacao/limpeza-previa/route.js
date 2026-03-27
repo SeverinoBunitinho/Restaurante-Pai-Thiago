@@ -7,6 +7,7 @@ import {
   closedReservationStatuses,
   normalizeEmergencyCleanupRetentionDays,
 } from "@/lib/emergency-cleanup";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 function formatReservationSlot(item) {
@@ -53,7 +54,9 @@ export async function GET(request) {
     );
   }
 
-  const supabase = await getSupabaseServerClient();
+  const supabaseAdmin = getSupabaseAdminClient();
+  const supabaseServer = await getSupabaseServerClient();
+  const supabase = supabaseAdmin ?? supabaseServer;
 
   if (!supabase) {
     return NextResponse.json(
