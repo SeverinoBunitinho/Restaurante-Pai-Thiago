@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   BellDot,
   BookUser,
@@ -38,6 +39,45 @@ function formatSlugLabel(value) {
   }
 
   return normalized.replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function normalizeRoleKey(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+
+  if (normalized.includes("owner") || normalized.includes("dono")) {
+    return "owner";
+  }
+
+  if (normalized.includes("manager") || normalized.includes("gerente")) {
+    return "manager";
+  }
+
+  if (normalized.includes("waiter") || normalized.includes("garcom")) {
+    return "waiter";
+  }
+
+  return "other";
+}
+
+function getRoleTabLabel(roleKey) {
+  const labels = {
+    all: "Todos",
+    owner: "Dono",
+    manager: "Gerente",
+    waiter: "Garcom",
+    other: "Outros",
+  };
+
+  return labels[roleKey] ?? "Todos";
+}
+
+function toActorTabKey(name) {
+  return `actor-${String(name ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")}`;
 }
 
 function getAuditEventVisual(eventType) {
@@ -98,19 +138,54 @@ function getAuditEventVisual(eventType) {
   };
 }
 
-export default async function OperacaoAuditoriaPage() {
+export default async function OperacaoAuditoriaPage({ searchParams }) {
   await requireRole("owner");
   const board = await getAuditBoard();
-  const visibleEvents = board.events.slice(0, 6);
-  const hiddenEvents = board.events.slice(6);
-  const eventsLast24hValue = board.summary.find(
-    (item) => item.label === "Ultimas 24h",
-  )?.value;
-  const eventsWithMetadata = board.events.filter(
+  const resolvedSearchParams = (await searchParams) ?? {};
+  const requestedTab = String(resolvedSearchParams.tab ?? "all");
+  const actorCounts = Object.entries(
+    board.events.reduce((accumulator, event) => {
+      const actorName = String(event.actorName ?? "").trim() || "Equipe";
+      accumulator[actorName] = (accumulator[actorName] ?? 0) + 1;
+      return accumulator;
+    }, {}),
+  )
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 4);
+  const roleTabs = ["all", "owner", "manager", "waiter", "other"].map((roleKey) => ({
+    key: roleKey,
+    label: getRoleTabLabel(roleKey),
+    type: "role",
+  }));
+  const actorTabs = actorCounts.map(([actorName]) => ({
+    key: toActorTabKey(actorName),
+    label: actorName,
+    type: "actor",
+    actorName,
+  }));
+  const availableTabs = [...roleTabs, ...actorTabs];
+  const activeTab =
+    availableTabs.find((tab) => tab.key === requestedTab)?.key ?? "all";
+  const filteredEvents = board.events.filter((event) => {
+    if (activeTab === "all") {
+      return true;
+    }
+
+    if (activeTab.startsWith("actor-")) {
+      const eventActorTab = toActorTabKey(event.actorName || "Equipe");
+      return eventActorTab === activeTab;
+    }
+
+    return normalizeRoleKey(event.actorRole) === activeTab;
+  });
+  const visibleEvents = filteredEvents.slice(0, 6);
+  const hiddenEvents = filteredEvents.slice(6);
+  const eventsInSelectedTab = String(filteredEvents.length);
+  const eventsWithMetadata = filteredEvents.filter(
     (event) => event.metadata && Object.keys(event.metadata).length,
   ).length;
   const eventTypeSummary = Object.entries(
-    board.events.reduce((accumulator, event) => {
+    filteredEvents.reduce((accumulator, event) => {
       const key = event.eventType || "evento";
       accumulator[key] = (accumulator[key] ?? 0) + 1;
       return accumulator;
@@ -148,6 +223,25 @@ export default async function OperacaoAuditoriaPage() {
             compact
           />
 
+          <div className="mt-5">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--gold)]">
+              Abas por responsavel
+            </p>
+            <div className="module-switch mt-3">
+              {availableTabs.map((tab) => (
+                <Link
+                  key={tab.key}
+                  href={`/operacao/auditoria?tab=${encodeURIComponent(tab.key)}`}
+                  className={`module-tab ${
+                    activeTab === tab.key ? "module-tab-active" : ""
+                  }`}
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
           <div className="mt-6 grid gap-4 xl:grid-cols-[0.34fr_0.66fr]">
             <aside className="rounded-[1.5rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-4">
               <p className="text-xs uppercase tracking-[0.2em] text-[var(--gold)]">
@@ -162,10 +256,10 @@ export default async function OperacaoAuditoriaPage() {
               <div className="mt-4 grid gap-2">
                 <div className="rounded-[1rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.8)] px-3 py-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                    Eventos nas ultimas 24h
+                    Eventos nesta aba
                   </p>
                   <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
-                    {eventsLast24hValue ?? "0"}
+                    {eventsInSelectedTab}
                   </p>
                 </div>
                 <div className="rounded-[1rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.8)] px-3 py-2">
@@ -206,7 +300,7 @@ export default async function OperacaoAuditoriaPage() {
             </aside>
 
             <div className="space-y-3">
-              {board.events.length ? (
+              {filteredEvents.length ? (
                 <>
                   <div className="rounded-[1rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.56)] px-3 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--gold)]">
