@@ -1445,7 +1445,9 @@ export async function closeOrderCheckoutAction(formData) {
     );
   }
 
-  const supabase = await getSupabaseServerClient();
+  const supabaseAdmin = getSupabaseAdminClient();
+  const supabaseServer = await getSupabaseServerClient();
+  const supabase = supabaseAdmin ?? supabaseServer;
 
   if (!supabase) {
     redirect(
@@ -1552,7 +1554,10 @@ export async function runEmergencyCleanupAction(_previousState, formData) {
     );
   }
 
-  const supabase = await getSupabaseServerClient();
+  const supabaseAdmin = getSupabaseAdminClient();
+  const isUsingAdminClient = Boolean(supabaseAdmin);
+  const supabaseServer = await getSupabaseServerClient();
+  const supabase = supabaseAdmin ?? supabaseServer;
 
   if (!supabase) {
     return buildErrorResponse(
@@ -1652,8 +1657,36 @@ export async function runEmergencyCleanupAction(_previousState, formData) {
   revalidateStaffPaths();
 
   if (!removedOrders && !removedReservations) {
-    return buildErrorResponse(
-      "A previa mostrou registros elegiveis, mas nenhum item foi removido. Confira as permissoes RLS/Delete no Supabase.",
+    const [remainingOrdersResult, remainingReservationsResult] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("*", { head: true, count: "exact" })
+        .in("status", closedOrderStatuses)
+        .lt("updated_at", cutoffIso),
+      supabase
+        .from("reservations")
+        .select("*", { head: true, count: "exact" })
+        .in("status", closedReservationStatuses)
+        .lt("updated_at", cutoffIso),
+    ]);
+    const remainingOrders = Number(remainingOrdersResult.count ?? 0);
+    const remainingReservations = Number(remainingReservationsResult.count ?? 0);
+    const remainingTotal = remainingOrders + remainingReservations;
+
+    if (remainingTotal > 0 && !isUsingAdminClient) {
+      return buildErrorResponse(
+        "A limpeza foi bloqueada por RLS em producao. Configure SUPABASE_SERVICE_ROLE_KEY na Vercel e rode novo deploy.",
+      );
+    }
+
+    if (remainingTotal > 0) {
+      return buildErrorResponse(
+        "Existem registros elegiveis, mas o banco nao permitiu a remocao. Revise relacionamentos/politicas no Supabase.",
+      );
+    }
+
+    return buildSuccessResponse(
+      `Nenhum registro encerrado com mais de ${retentionDays} dia(s) foi encontrado para limpeza.`,
     );
   }
 
