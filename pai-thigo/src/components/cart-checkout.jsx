@@ -333,7 +333,15 @@ export function CartCheckout({ customerName, restaurantInfo }) {
 
                   <button
                     type="button"
-                    onClick={() => removeItem(item.lineId)}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Tem certeza que deseja remover ${item.name} do carrinho?`,
+                        )
+                      ) {
+                        removeItem(item.lineId);
+                      }
+                    }}
                     className="inline-flex items-center gap-2 rounded-full border border-[rgba(138,93,59,0.18)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--clay)] transition hover:-translate-y-0.5"
                   >
                     <Trash2 size={14} />

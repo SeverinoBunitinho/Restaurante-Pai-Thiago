@@ -1379,12 +1379,21 @@ export default async function OperacaoComandasPage({ searchParams }) {
                                       value={JSON.stringify(orderGroup.orderIds)}
                                     />
                                     <input type="hidden" name="nextStatus" value={action.value} />
-                                    <button
-                                      type="submit"
-                                      className={action.primary ? "button-primary" : "button-secondary"}
-                                    >
-                                      {action.label}
-                                    </button>
+                                    {action.value === "cancelled" ? (
+                                      <ConfirmSubmitButton
+                                        message="Tem certeza que deseja cancelar este pedido? Essa acao encerra o fluxo operacional dele."
+                                        className={action.primary ? "button-primary" : "button-secondary"}
+                                      >
+                                        {action.label}
+                                      </ConfirmSubmitButton>
+                                    ) : (
+                                      <button
+                                        type="submit"
+                                        className={action.primary ? "button-primary" : "button-secondary"}
+                                      >
+                                        {action.label}
+                                      </button>
+                                    )}
                                   </form>
                                 ))}
                               </div>

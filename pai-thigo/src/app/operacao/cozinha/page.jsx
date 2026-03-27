@@ -1,6 +1,7 @@
 import { ChefHat, Timer } from "lucide-react";
 
 import { updateOrderCheckoutStatusAction } from "@/app/operacao/actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { SectionHeading } from "@/components/section-heading";
 import { requireRole } from "@/lib/auth";
 import { getKitchenBoard } from "@/lib/operations-advanced-data";
@@ -143,12 +144,21 @@ export default async function OperacaoCozinhaPage() {
                                 name="nextStatus"
                                 value={action.value}
                               />
-                              <button
-                                type="submit"
-                                className={action.primary ? "button-primary" : "button-secondary"}
-                              >
-                                {action.label}
-                              </button>
+                              {action.value === "cancelled" ? (
+                                <ConfirmSubmitButton
+                                  message="Tem certeza que deseja cancelar este pedido? Essa acao pode impactar o atendimento."
+                                  className={action.primary ? "button-primary" : "button-secondary"}
+                                >
+                                  {action.label}
+                                </ConfirmSubmitButton>
+                              ) : (
+                                <button
+                                  type="submit"
+                                  className={action.primary ? "button-primary" : "button-secondary"}
+                                >
+                                  {action.label}
+                                </button>
+                              )}
                             </form>
                           ))}
                         </div>
