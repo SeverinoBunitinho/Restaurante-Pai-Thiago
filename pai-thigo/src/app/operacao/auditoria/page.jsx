@@ -6,6 +6,7 @@ import {
   Megaphone,
   ShieldCheck,
   Table2,
+  Ticket,
   UtensilsCrossed,
 } from "lucide-react";
 
@@ -100,8 +101,14 @@ function getAuditEventVisual(eventType) {
 export default async function OperacaoAuditoriaPage() {
   await requireRole("owner");
   const board = await getAuditBoard();
-  const visibleEvents = board.events.slice(0, 8);
-  const hiddenEvents = board.events.slice(8);
+  const visibleEvents = board.events.slice(0, 6);
+  const hiddenEvents = board.events.slice(6);
+  const eventsLast24hValue = board.summary.find(
+    (item) => item.label === "Ultimas 24h",
+  )?.value;
+  const eventsWithMetadata = board.events.filter(
+    (event) => event.metadata && Object.keys(event.metadata).length,
+  ).length;
   const eventTypeSummary = Object.entries(
     board.events.reduce((accumulator, event) => {
       const key = event.eventType || "evento";
@@ -152,6 +159,25 @@ export default async function OperacaoAuditoriaPage() {
                 <p>3. Abra detalhes tecnicos apenas quando necessario.</p>
               </div>
 
+              <div className="mt-4 grid gap-2">
+                <div className="rounded-[1rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.8)] px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                    Eventos nas ultimas 24h
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
+                    {eventsLast24hValue ?? "0"}
+                  </p>
+                </div>
+                <div className="rounded-[1rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.8)] px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                    Eventos com detalhes
+                  </p>
+                  <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
+                    {eventsWithMetadata}
+                  </p>
+                </div>
+              </div>
+
               {eventTypeSummary.length ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {eventTypeSummary.map(([eventType, count]) => (
@@ -181,62 +207,70 @@ export default async function OperacaoAuditoriaPage() {
 
             <div className="space-y-3">
               {board.events.length ? (
-                visibleEvents.map((event) => {
-                  const visual = getAuditEventVisual(event.eventType);
+                <>
+                  <div className="rounded-[1rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.56)] px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--gold)]">
+                      Eventos recentes
+                    </p>
+                  </div>
 
-                  return (
-                    <article
-                      key={event.id}
-                      className="rounded-[1.4rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.68)] px-4 py-3"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[rgba(182,135,66,0.26)] bg-[rgba(255,255,255,0.74)] text-[var(--gold)]">
-                              <visual.Icon size={14} />
-                            </span>
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--sage)]">
-                              {visual.label}
+                  {visibleEvents.map((event) => {
+                    const visual = getAuditEventVisual(event.eventType);
+
+                    return (
+                      <article
+                        key={event.id}
+                        className="rounded-[1.4rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.68)] px-4 py-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[rgba(182,135,66,0.26)] bg-[rgba(255,255,255,0.74)] text-[var(--gold)]">
+                                <visual.Icon size={14} />
+                              </span>
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--sage)]">
+                                {visual.label}
+                              </p>
+                            </div>
+                            <h3 className="mt-2 text-base font-semibold text-[var(--forest)]">
+                              {event.description || "Evento registrado"}
+                            </h3>
+                            <p className="mt-1 text-xs text-[rgba(21,35,29,0.72)]">
+                              {formatSlugLabel(event.eventType)} | {event.entityType}{" "}
+                              {event.entityLabel ? `| ${event.entityLabel}` : ""}
                             </p>
                           </div>
-                          <h3 className="mt-2 text-base font-semibold text-[var(--forest)]">
-                            {event.description || "Evento registrado"}
-                          </h3>
-                          <p className="mt-1 text-xs text-[rgba(21,35,29,0.72)]">
-                            {formatSlugLabel(event.eventType)} | {event.entityType}{" "}
-                            {event.entityLabel ? `| ${event.entityLabel}` : ""}
-                          </p>
+                          <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--forest)]">
+                            {formatAuditMoment(event.createdAt)}
+                          </span>
                         </div>
-                        <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--forest)]">
-                          {formatAuditMoment(event.createdAt)}
-                        </span>
-                      </div>
 
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-[rgba(21,35,29,0.72)]">
-                        <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1">
-                          <strong className="text-[var(--forest)]">Ator:</strong> {event.actorName}
-                        </span>
-                        <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1">
-                          <strong className="text-[var(--forest)]">Perfil:</strong> {formatSlugLabel(event.actorRole)}
-                        </span>
-                        <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1">
-                          <strong className="text-[var(--forest)]">Registro:</strong> {event.entityId || "-"}
-                        </span>
-                      </div>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs text-[rgba(21,35,29,0.72)]">
+                          <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1">
+                            <strong className="text-[var(--forest)]">Ator:</strong> {event.actorName}
+                          </span>
+                          <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1">
+                            <strong className="text-[var(--forest)]">Perfil:</strong> {formatSlugLabel(event.actorRole)}
+                          </span>
+                          <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-2.5 py-1">
+                            <strong className="text-[var(--forest)]">Registro:</strong> {event.entityId || "-"}
+                          </span>
+                        </div>
 
-                      {event.metadata && Object.keys(event.metadata).length ? (
-                        <details className="mt-3 rounded-[1rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.74)] px-3 py-2">
-                          <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-[0.17em] text-[var(--gold)]">
-                            Ver detalhes tecnicos
-                          </summary>
-                          <pre className="mt-2 overflow-auto text-[11px] leading-5 text-[rgba(21,35,29,0.72)]">
-                            {JSON.stringify(event.metadata, null, 2)}
-                          </pre>
-                        </details>
-                      ) : null}
-                    </article>
-                  );
-                })
+                        {event.metadata && Object.keys(event.metadata).length ? (
+                          <details className="mt-3 rounded-[1rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.74)] px-3 py-2">
+                            <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-[0.17em] text-[var(--gold)]">
+                              Ver detalhes tecnicos
+                            </summary>
+                            <pre className="mt-2 overflow-auto text-[11px] leading-5 text-[rgba(21,35,29,0.72)]">
+                              {JSON.stringify(event.metadata, null, 2)}
+                            </pre>
+                          </details>
+                        ) : null}
+                      </article>
+                    );
+                  })}
+                </>
               ) : (
                 <article className="rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
                   <p className="text-lg font-semibold text-[var(--forest)]">
@@ -251,7 +285,7 @@ export default async function OperacaoAuditoriaPage() {
               {hiddenEvents.length ? (
                 <details className="rounded-[1.3rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
                   <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--gold)]">
-                    Ver historico completo ({hiddenEvents.length} evento(s))
+                    Historico completo ({hiddenEvents.length} evento(s))
                   </summary>
                   <div className="mt-3 space-y-2">
                     {hiddenEvents.map((event) => (
