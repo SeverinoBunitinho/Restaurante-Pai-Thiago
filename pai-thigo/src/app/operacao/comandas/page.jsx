@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  Clock3,
   CreditCard,
   Printer,
   ReceiptText,
@@ -116,7 +117,7 @@ function getOrderActions(status, fulfillmentType = "pickup") {
   return [];
 }
 
-function buildComandasHref({ mesa, status, comanda, busca }) {
+function buildComandasHref({ mesa, status, comanda, busca, nome, categoria }) {
   const params = new URLSearchParams();
 
   if (mesa) {
@@ -133,6 +134,14 @@ function buildComandasHref({ mesa, status, comanda, busca }) {
 
   if (busca) {
     params.set("busca", busca);
+  }
+
+  if (nome) {
+    params.set("nome", nome);
+  }
+
+  if (categoria) {
+    params.set("categoria", categoria);
   }
 
   const query = params.toString();
@@ -200,6 +209,143 @@ function doesOrderGroupMatchSearch(orderGroup, searchTerm) {
     .some((field) => field.includes(normalizedTerm));
 }
 
+function doesOrderGroupMatchCategory(orderGroup, categoryTerm) {
+  const normalizedCategoryTerm = normalizeOrderSearchTerm(categoryTerm);
+
+  if (!normalizedCategoryTerm) {
+    return true;
+  }
+
+  return (orderGroup.items ?? [])
+    .map((item) => normalizeOrderSearchTerm(item.categoryName))
+    .some((itemCategory) => itemCategory.includes(normalizedCategoryTerm));
+}
+
+function getOrderCategoryOptions(orderGroups) {
+  const optionsByKey = new Map();
+
+  for (const orderGroup of orderGroups) {
+    for (const item of orderGroup.items ?? []) {
+      const label = String(item.categoryName ?? "").trim();
+
+      if (!label) {
+        continue;
+      }
+
+      const normalizedLabel = normalizeOrderSearchTerm(label);
+
+      if (!normalizedLabel || optionsByKey.has(normalizedLabel)) {
+        continue;
+      }
+
+      optionsByKey.set(normalizedLabel, label);
+    }
+  }
+
+  return Array.from(optionsByKey.entries())
+    .map(([value, label]) => ({ value, label }))
+    .sort((left, right) => left.label.localeCompare(right.label, "pt-BR"));
+}
+
+function getElapsedMinutesFromDate(value) {
+  const timestamp = Date.parse(String(value ?? ""));
+
+  if (!Number.isFinite(timestamp)) {
+    return null;
+  }
+
+  return Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
+}
+
+function getOrderTimingControl(orderGroup) {
+  const elapsedMinutes = getElapsedMinutesFromDate(orderGroup.createdAt);
+  const rawEta = Number(orderGroup.deliveryEtaMinutes ?? 0);
+  const etaMinutes = Number.isFinite(rawEta) && rawEta > 0 ? Math.round(rawEta) : null;
+  const isClosed =
+    orderGroup.status === "delivered" || orderGroup.status === "cancelled";
+
+  if (elapsedMinutes == null) {
+    return {
+      label: "Tempo indisponivel",
+      detail: "Nao foi possivel calcular o tempo do pedido.",
+      tone: "neutral",
+      elapsedMinutes: null,
+      etaMinutes: null,
+      deltaMinutes: null,
+    };
+  }
+
+  if (orderGroup.fulfillmentType !== "delivery") {
+    return {
+      label: "Retirada na casa",
+      detail: `Fluxo em andamento ha ${elapsedMinutes} min.`,
+      tone: "neutral",
+      elapsedMinutes,
+      etaMinutes: null,
+      deltaMinutes: null,
+    };
+  }
+
+  if (!etaMinutes) {
+    return {
+      label: "Delivery sem meta configurada",
+      detail: `Fluxo em andamento ha ${elapsedMinutes} min.`,
+      tone: "neutral",
+      elapsedMinutes,
+      etaMinutes: null,
+      deltaMinutes: null,
+    };
+  }
+
+  const deltaMinutes = etaMinutes - elapsedMinutes;
+
+  if (isClosed) {
+    return {
+      label:
+        orderGroup.status === "delivered"
+          ? "Entrega concluida"
+          : "Entrega cancelada",
+      detail: `Decorrido total: ${elapsedMinutes} min (meta ${etaMinutes} min).`,
+      tone: orderGroup.status === "delivered" ? "good" : "neutral",
+      elapsedMinutes,
+      etaMinutes,
+      deltaMinutes,
+    };
+  }
+
+  if (deltaMinutes >= 0) {
+    return {
+      label: "Dentro do prazo",
+      detail: `Faltam ${deltaMinutes} min para a meta de entrega.`,
+      tone: "good",
+      elapsedMinutes,
+      etaMinutes,
+      deltaMinutes,
+    };
+  }
+
+  return {
+    label: "Fora do prazo",
+    detail: `Atraso atual de ${Math.abs(deltaMinutes)} min na entrega.`,
+    tone: "late",
+    elapsedMinutes,
+    etaMinutes,
+    deltaMinutes,
+  };
+}
+
+function getTimingToneClasses(tone) {
+  if (tone === "good") {
+    return "border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.1)] text-[var(--sage)]";
+  }
+
+  if (tone === "late") {
+    return "border-[rgba(138,93,59,0.24)] bg-[rgba(138,93,59,0.1)] text-[var(--clay)]";
+  }
+
+  return "border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] text-[rgba(21,35,29,0.72)]";
+}
+
 export default async function OperacaoComandasPage({ searchParams }) {
   const session = await requireRole(["waiter", "manager", "owner"]);
   const canRunEmergencyCleanup = session.role === "owner";
@@ -214,9 +360,15 @@ export default async function OperacaoComandasPage({ searchParams }) {
   const checkoutQuery = Array.isArray(resolvedSearchParams?.comanda)
     ? resolvedSearchParams.comanda[0]
     : resolvedSearchParams?.comanda;
-  const orderSearchQuery = Array.isArray(resolvedSearchParams?.busca)
+  const legacyOrderSearchQuery = Array.isArray(resolvedSearchParams?.busca)
     ? resolvedSearchParams.busca[0]
     : resolvedSearchParams?.busca;
+  const orderNameQuery = Array.isArray(resolvedSearchParams?.nome)
+    ? resolvedSearchParams.nome[0]
+    : resolvedSearchParams?.nome ?? legacyOrderSearchQuery;
+  const orderCategoryQuery = Array.isArray(resolvedSearchParams?.categoria)
+    ? resolvedSearchParams.categoria[0]
+    : resolvedSearchParams?.categoria;
   const commandaNotice = Array.isArray(resolvedSearchParams?.comandaNotice)
     ? resolvedSearchParams.comandaNotice[0]
     : resolvedSearchParams?.comandaNotice;
@@ -239,9 +391,12 @@ export default async function OperacaoComandasPage({ searchParams }) {
     ? statusFilter
     : "all";
   const allGroupedOrders = ordersBoard.groupedOrders ?? [];
-  const groupedOrders = allGroupedOrders.filter((orderGroup) =>
-    doesOrderGroupMatchSearch(orderGroup, orderSearchQuery ?? ""),
+  const groupedOrders = allGroupedOrders.filter(
+    (orderGroup) =>
+      doesOrderGroupMatchSearch(orderGroup, orderNameQuery ?? "") &&
+      doesOrderGroupMatchCategory(orderGroup, orderCategoryQuery ?? ""),
   );
+  const orderCategoryOptions = getOrderCategoryOptions(allGroupedOrders);
   const orderGroupsByStatus = orderSections.reduce((accumulator, section) => {
     accumulator[section.key] = groupedOrders.filter(
       (orderGroup) => orderGroup.status === section.key,
@@ -263,7 +418,9 @@ export default async function OperacaoComandasPage({ searchParams }) {
       ? "Nenhum pedido foi localizado com essa comanda."
       : "");
   const orderSearchMessage =
-    !checkoutQuery && orderSearchQuery && !groupedOrders.length
+    !checkoutQuery &&
+    (orderNameQuery || orderCategoryQuery) &&
+    !groupedOrders.length
       ? "Nenhum pedido corresponde ao termo pesquisado."
       : "";
   const availableTables = checksBoard.tables.filter(
@@ -842,14 +999,31 @@ export default async function OperacaoComandasPage({ searchParams }) {
               </label>
               <label className="grid gap-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
-                  Buscar por nome ou categoria
+                  Buscar por nome
                 </span>
                 <input
-                  name="busca"
-                  defaultValue={orderSearchQuery ?? ""}
-                  placeholder="Ex.: Ravioli, sobremesa, delivery..."
+                  name="nome"
+                  defaultValue={orderNameQuery ?? ""}
+                  placeholder="Ex.: Maria, Ravioli..."
                   className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none placeholder:text-[rgba(21,35,29,0.46)]"
                 />
+              </label>
+              <label className="grid gap-2 lg:col-span-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
+                  Categoria do item
+                </span>
+                <select
+                  name="categoria"
+                  defaultValue={normalizeOrderSearchTerm(orderCategoryQuery ?? "")}
+                  className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
+                >
+                  <option value="">Todas as categorias</option>
+                  {orderCategoryOptions.map((categoryOption) => (
+                    <option key={categoryOption.value} value={categoryOption.value}>
+                      {categoryOption.label}
+                    </option>
+                  ))}
+                </select>
               </label>
               <button
                 type="submit"
@@ -974,7 +1148,8 @@ export default async function OperacaoComandasPage({ searchParams }) {
                   mesa: tableQuery ?? "",
                   status: filter.value,
                   comanda: checkoutQuery ?? "",
-                  busca: orderSearchQuery ?? "",
+                  nome: orderNameQuery ?? "",
+                  categoria: orderCategoryQuery ?? "",
                 })}
                 className={`filter-chip ${activeStatus === filter.value ? "filter-chip-active" : ""}`}
               >
@@ -1039,6 +1214,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
                           orderGroup.status,
                           orderGroup.fulfillmentType,
                         );
+                        const timingControl = getOrderTimingControl(orderGroup);
 
                         return (
                           <div
@@ -1129,6 +1305,33 @@ export default async function OperacaoComandasPage({ searchParams }) {
                                       {formatCurrency(orderGroup.totalPrice)}
                                     </p>
                                   </div>
+                                </div>
+
+                                <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] p-4 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                                  <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+                                    Controle de tempo
+                                  </p>
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    <span
+                                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] ${getTimingToneClasses(timingControl.tone)}`}
+                                    >
+                                      {timingControl.label}
+                                    </span>
+                                    {timingControl.elapsedMinutes != null ? (
+                                      <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--forest)]">
+                                        Decorrido {timingControl.elapsedMinutes} min
+                                      </span>
+                                    ) : null}
+                                    {timingControl.etaMinutes != null ? (
+                                      <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--forest)]">
+                                        Meta {timingControl.etaMinutes} min
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                                    <Clock3 size={14} className="mr-2 inline-block text-[var(--gold)]" />
+                                    {timingControl.detail}
+                                  </p>
                                 </div>
 
                                 {orderGroup.fulfillmentType === "delivery" ? (
