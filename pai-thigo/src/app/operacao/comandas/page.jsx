@@ -81,6 +81,30 @@ function formatDateTime(value) {
   }).format(new Date(value));
 }
 
+function formatDateParts(value) {
+  const parsedDate = new Date(value ?? "");
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return {
+      date: "--/--/----",
+      time: "--:--",
+    };
+  }
+
+  return {
+    date: new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }).format(parsedDate),
+    time: new Intl.DateTimeFormat("pt-BR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(parsedDate),
+  };
+}
+
 function getStatusView(status) {
   return (
     serviceCheckStatusMeta[status] ?? {
@@ -430,6 +454,9 @@ export default async function OperacaoComandasPage({ searchParams }) {
   );
   const selectedCheck = checksBoard.selectedCheck;
   const selectedTable = checksBoard.selectedTable;
+  const selectedCheckOpenedAt = selectedCheck
+    ? formatDateParts(selectedCheck.openedAt)
+    : { date: "--/--/----", time: "--:--" };
   const defaultTableId =
     (!selectedCheck && selectedTable?.isActive ? selectedTable.id : "") ||
     availableTables[0]?.id ||
@@ -578,8 +605,12 @@ export default async function OperacaoComandasPage({ searchParams }) {
                   <div className="mt-5 grid gap-3 md:grid-cols-2">
                     <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
                       <p>
-                        <span className="font-semibold text-[var(--forest)]">Abertura:</span>{" "}
-                        {formatDateTime(selectedCheck.openedAt)}
+                        <span className="font-semibold text-[var(--forest)]">Data da abertura:</span>{" "}
+                        {selectedCheckOpenedAt.date}
+                      </p>
+                      <p>
+                        <span className="font-semibold text-[var(--forest)]">Horario da abertura:</span>{" "}
+                        {selectedCheckOpenedAt.time}
                       </p>
                       <p>
                         <span className="font-semibold text-[var(--forest)]">Referencia:</span>{" "}
@@ -619,6 +650,11 @@ export default async function OperacaoComandasPage({ searchParams }) {
                   <div className="mt-5 rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
                       Lista de pedidos
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                      Se o cliente desistir de algum item, use o botao{" "}
+                      <span className="font-semibold text-[var(--forest)]">Remover item</span>{" "}
+                      na linha correspondente.
                     </p>
                     <div className="mt-4 space-y-3">
                       {selectedCheck.items.length ? (
@@ -688,18 +724,24 @@ export default async function OperacaoComandasPage({ searchParams }) {
                           </option>
                         ))}
                       </select>
-                      <button type="submit" className="button-primary mt-2">
+                      <ConfirmSubmitButton
+                        message="Confirmar fechamento desta conta e abrir impressao?"
+                        className="button-primary mt-2"
+                      >
                         <Printer size={16} />
-                        Fechar conta
-                      </button>
+                        Fechar conta e imprimir
+                      </ConfirmSubmitButton>
                     </form>
 
                     <form action={cancelServiceCheckAction} className="self-end">
                       <input type="hidden" name="checkId" value={selectedCheck.id} />
                       <input type="hidden" name="tableName" value={selectedCheck.table?.name ?? ""} />
-                      <button type="submit" className="button-secondary">
+                      <ConfirmSubmitButton
+                        message="Tem certeza que deseja cancelar esta conta da mesa?"
+                        className="button-secondary"
+                      >
                         Cancelar conta
-                      </button>
+                      </ConfirmSubmitButton>
                     </form>
 
                     <Link
