@@ -139,6 +139,18 @@ export default async function OperacaoEquipePage({ searchParams }) {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-[var(--forest)]">RG</span>
+                  <input
+                    name="rg"
+                    type="text"
+                    required
+                    maxLength={20}
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                    placeholder="Somente numeros e digito"
+                  />
+                </label>
+
+                <label className="grid gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">CPF</span>
                   <input
                     name="cpf"
@@ -183,7 +195,7 @@ export default async function OperacaoEquipePage({ searchParams }) {
                     type="text"
                     maxLength={40}
                     className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
-                    placeholder="Ex.: marina.gestao"
+                    placeholder="Ex.: marina.gestao (obrigatorio para gerente)"
                   />
                 </label>
 

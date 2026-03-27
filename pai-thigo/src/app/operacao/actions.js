@@ -754,6 +754,12 @@ export async function createStaffAccountAction(formData) {
   }
 
   if (requiresManagerFullProfile) {
+    if (!phone || !address || !cpf || !rg) {
+      redirectWithStaffError(
+        "Para cadastrar gerente, preencha nome completo, endereco, telefone, e-mail, RG, CPF, login, senha e confirmacao de senha.",
+      );
+    }
+
     if (!login) {
       redirectWithStaffError(
         "Para cadastrar gerente, informe o login interno para controle operacional.",
