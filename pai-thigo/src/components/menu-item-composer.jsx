@@ -34,7 +34,9 @@ export function MenuItemComposer({ categories = [] }) {
 
           {isCategoryComposerOpen ? (
             <div className="mt-4 rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.66)] p-4">
-              <MenuCategoryComposer />
+              <MenuCategoryComposer
+                onSuccess={() => setIsCategoryComposerOpen(false)}
+              />
             </div>
           ) : null}
         </div>
@@ -60,7 +62,9 @@ export function MenuItemComposer({ categories = [] }) {
 
         {isCategoryComposerOpen ? (
           <div className="mt-4 rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.66)] p-4">
-            <MenuCategoryComposer />
+            <MenuCategoryComposer
+              onSuccess={() => setIsCategoryComposerOpen(false)}
+            />
           </div>
         ) : null}
       </div>

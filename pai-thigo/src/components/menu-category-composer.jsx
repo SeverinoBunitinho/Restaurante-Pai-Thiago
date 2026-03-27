@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import { createMenuCategoryAction } from "@/app/operacao/actions";
 import { SubmitButton } from "@/components/submit-button";
@@ -18,11 +19,27 @@ const accentOptions = [
   { value: "cream", label: "Creme" },
 ];
 
-export function MenuCategoryComposer() {
+export function MenuCategoryComposer({ onSuccess }) {
   const [state, formAction] = useActionState(
     createMenuCategoryAction,
     initialCategoryState,
   );
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.status !== "success") {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      if (typeof onSuccess === "function") {
+        onSuccess();
+      }
+      router.refresh();
+    }, 280);
+
+    return () => clearTimeout(timer);
+  }, [onSuccess, router, state.status]);
 
   return (
     <form action={formAction} className="grid gap-4">
@@ -91,4 +108,3 @@ export function MenuCategoryComposer() {
     </form>
   );
 }
-
