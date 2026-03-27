@@ -5,7 +5,6 @@ import {
   toggleMenuItemAvailabilityAction,
 } from "@/app/operacao/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
-import { MenuCategoryComposer } from "@/components/menu-category-composer";
 import { MenuItemComposer } from "@/components/menu-item-composer";
 import { SectionHeading } from "@/components/section-heading";
 import { requireRole } from "@/lib/auth";
@@ -143,19 +142,6 @@ export default async function OperacaoMenuPage({ searchParams }) {
           </div>
 
           <div className="grid gap-5">
-            <div className="luxury-card rounded-[2.2rem] p-6">
-              <SectionHeading
-                eyebrow="Nova categoria"
-                title="Adicionar categoria e organizar o cardapio"
-                description="Crie categorias novas para deixar o cardapio interno mais claro e com acesso rapido."
-                compact
-              />
-
-              <div className="mt-8">
-                <MenuCategoryComposer />
-              </div>
-            </div>
-
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
                 eyebrow="Novo prato"
