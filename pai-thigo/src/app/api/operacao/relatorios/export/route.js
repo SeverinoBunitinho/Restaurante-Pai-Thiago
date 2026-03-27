@@ -76,7 +76,7 @@ export async function GET(request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const period = searchParams.get("period") || "30d";
+  const period = searchParams.get("period") || "month";
   const startDate = searchParams.get("start") || "";
   const endDate = searchParams.get("end") || "";
   const format = searchParams.get("format") === "json" ? "json" : "csv";

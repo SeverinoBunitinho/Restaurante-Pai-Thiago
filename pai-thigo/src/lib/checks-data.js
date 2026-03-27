@@ -19,12 +19,18 @@ export const serviceCheckStatusMeta = {
 };
 
 export const reportPeriodOptions = [
-  { value: "today", label: "Hoje" },
-  { value: "7d", label: "Ultimos 7 dias" },
-  { value: "30d", label: "Ultimos 30 dias" },
-  { value: "90d", label: "Ultimos 90 dias" },
+  { value: "day", label: "Dia" },
+  { value: "week", label: "Semana" },
+  { value: "month", label: "Mes" },
+  { value: "year", label: "Ano" },
   { value: "custom", label: "Periodo customizado" },
 ];
+
+const reportPeriodAliases = {
+  today: "day",
+  "7d": "week",
+  "30d": "month",
+};
 
 function getBrazilDateString() {
   return new Intl.DateTimeFormat("en-CA", {
@@ -38,13 +44,14 @@ function getBrazilDateString() {
 function getStartIsoForPeriod(period) {
   const now = new Date();
 
-  if (period === "today") {
+  if (period === "day") {
     return `${getBrazilDateString()}T00:00:00-03:00`;
   }
 
   const days = {
-    "7d": 7,
-    "30d": 30,
+    week: 7,
+    month: 30,
+    year: 365,
     "90d": 90,
   }[period] ?? 30;
 
@@ -60,9 +67,17 @@ function getPeriodLabel(period, customStartDate = "", customEndDate = "") {
     return `${customStartDate} ate ${customEndDate}`;
   }
 
+  const legacyPeriodLabelByValue = {
+    "90d": "Ultimos 90 dias",
+  };
+
+  if (legacyPeriodLabelByValue[period]) {
+    return legacyPeriodLabelByValue[period];
+  }
+
   return (
     reportPeriodOptions.find((option) => option.value === period)?.label ??
-    "Ultimos 30 dias"
+    "Mes"
   );
 }
 
@@ -85,11 +100,14 @@ function isDateOnlyValid(value) {
 }
 
 function resolveReportRange(period, customStartDate = "", customEndDate = "") {
+  const resolvedPeriod = reportPeriodAliases[period] ?? period;
   const normalizedPeriod = reportPeriodOptions.some(
-    (option) => option.value === period,
+    (option) => option.value === resolvedPeriod,
   )
-    ? period
-    : "30d";
+    ? resolvedPeriod
+    : resolvedPeriod === "90d"
+      ? "90d"
+      : "month";
 
   if (
     normalizedPeriod === "custom" &&
@@ -108,12 +126,12 @@ function resolveReportRange(period, customStartDate = "", customEndDate = "") {
   }
 
   return {
-    period: normalizedPeriod === "custom" ? "30d" : normalizedPeriod,
-    startIso: getStartIsoForPeriod(normalizedPeriod === "custom" ? "30d" : normalizedPeriod),
+    period: normalizedPeriod === "custom" ? "month" : normalizedPeriod,
+    startIso: getStartIsoForPeriod(normalizedPeriod === "custom" ? "month" : normalizedPeriod),
     endIso: "",
     startDate: "",
     endDate: "",
-    periodLabel: getPeriodLabel(normalizedPeriod === "custom" ? "30d" : normalizedPeriod),
+    periodLabel: getPeriodLabel(normalizedPeriod === "custom" ? "month" : normalizedPeriod),
   };
 }
 
@@ -416,7 +434,7 @@ export async function getServiceChecksBoard(searchQuery = "") {
   };
 }
 
-export async function getServiceReportsBoard(period = "30d", options = {}) {
+export async function getServiceReportsBoard(period = "month", options = {}) {
   const supabase = await getSupabaseServerClient();
   const customStartDate = options.startDate ?? "";
   const customEndDate = options.endDate ?? "";
