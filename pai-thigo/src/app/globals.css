@@ -386,24 +386,84 @@ textarea {
 }
 
 .page-hero-title {
-  font-size: clamp(2.85rem, 8.2vw, 5.4rem);
-  line-height: 0.96;
+  font-size: clamp(2.45rem, 7.1vw, 4.65rem);
+  line-height: 0.97;
 }
 
 .page-section-title {
-  font-size: clamp(2.25rem, 6.5vw, 4rem);
-  line-height: 0.98;
+  font-size: clamp(1.95rem, 5.7vw, 3.45rem);
+  line-height: 1;
 }
 
 .page-panel-title {
-  font-size: clamp(1.9rem, 5vw, 3rem);
-  line-height: 1;
+  font-size: clamp(1.65rem, 4.5vw, 2.55rem);
+  line-height: 1.02;
 }
 
 .page-lead {
   font-size: clamp(1rem, 2.8vw, 1.15rem);
-  line-height: 1.84;
+  line-height: 1.72;
   letter-spacing: -0.003em;
+}
+
+/* Compactacao visual global para reduzir scroll excessivo sem mexer na logica */
+#main-content main.pb-16 {
+  padding-bottom: clamp(2.2rem, 5vw, 3rem) !important;
+}
+
+#main-content main section.pt-20 {
+  padding-top: clamp(1.95rem, 4.8vw, 2.95rem) !important;
+}
+
+#main-content main section.pt-16 {
+  padding-top: clamp(1.7rem, 4.2vw, 2.55rem) !important;
+}
+
+#main-content main section.pt-14 {
+  padding-top: clamp(1.55rem, 3.8vw, 2.3rem) !important;
+}
+
+#main-content main section.pt-12 {
+  padding-top: clamp(1.35rem, 3.2vw, 2.05rem) !important;
+}
+
+#main-content main section.pt-10 {
+  padding-top: clamp(1.2rem, 2.9vw, 1.8rem) !important;
+}
+
+#main-content main section.pt-8 {
+  padding-top: clamp(1rem, 2.4vw, 1.5rem) !important;
+}
+
+#main-content main section.pb-24 {
+  padding-bottom: clamp(2rem, 4.5vw, 3rem) !important;
+}
+
+#main-content .section-heading-description {
+  line-height: 1.68;
+  max-width: 62ch;
+}
+
+#main-content .operations-main-stack {
+  gap: 1.15rem;
+}
+
+#main-content .operations-module-grid {
+  gap: 0.8rem;
+}
+
+#main-content .operations-module-tile {
+  padding: 1.05rem;
+  border-radius: 1.35rem;
+}
+
+#main-content .staff-side-stack {
+  gap: 1rem;
+}
+
+#main-content .staff-side-link {
+  padding: 0.86rem;
+  border-radius: 1.25rem;
 }
 
 .scene-card {
@@ -649,8 +709,13 @@ textarea {
   overflow: visible;
 }
 
+.site-header-card {
+  padding-top: 0.55rem !important;
+  padding-bottom: 0.55rem !important;
+}
+
 .site-header-offset {
-  height: 10.25rem;
+  height: 9.45rem;
 }
 
 .site-header-actions {
@@ -2327,7 +2392,7 @@ textarea {
   }
 
   .site-header-offset {
-    height: 12.6rem;
+    height: 11.75rem;
   }
 }
 
@@ -2347,12 +2412,12 @@ textarea {
   }
 
   .page-section-title {
-    font-size: clamp(1.9rem, 10vw, 2.85rem);
-    line-height: 1;
+    font-size: clamp(1.7rem, 8.9vw, 2.55rem);
+    line-height: 1.02;
   }
 
   .page-hero-title {
-    font-size: clamp(2.35rem, 12vw, 3.8rem);
+    font-size: clamp(2.02rem, 10.5vw, 3.25rem);
     line-height: 1.02;
   }
 
@@ -2592,7 +2657,7 @@ textarea {
   }
 
   .site-header-offset {
-    height: 13.05rem;
+    height: 12.05rem;
   }
 
   .mobile-bottom-nav {
@@ -2678,7 +2743,7 @@ textarea {
   }
 
   .site-header-offset {
-    height: 12.7rem;
+    height: 11.75rem;
   }
 }
 
@@ -2713,7 +2778,7 @@ textarea {
   }
 
   .site-header-offset {
-    height: 9.75rem;
+    height: 9.1rem;
   }
 }
 
