@@ -8,12 +8,14 @@ import { getStaffRoleLabel, requireRole } from "@/lib/auth";
 import {
   getExecutiveBoard,
   getMenuManagementBoard,
+  getOrdersBoard,
   getReservationsBoard,
   getStaffDirectoryBoard,
   getTablesBoard,
+  orderStatusMeta,
   reservationStatusMeta,
 } from "@/lib/staff-data";
-import { formatReservationMoment } from "@/lib/utils";
+import { formatCurrency, formatReservationMoment } from "@/lib/utils";
 
 function getStatusView(status) {
   return (
@@ -24,62 +26,126 @@ function getStatusView(status) {
   );
 }
 
+function getOrderStatusView(status) {
+  return (
+    orderStatusMeta[status] ?? {
+      label: "Pedido",
+      badge: "bg-[rgba(20,35,29,0.08)] text-[var(--forest)]",
+    }
+  );
+}
+
+function formatOrderMoment(value) {
+  const parsedDate = new Date(value ?? "");
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Atualizado agora";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsedDate);
+}
+
+function toMetricValue(value) {
+  const parsedValue = Number.parseInt(String(value ?? "0"), 10);
+  return Number.isFinite(parsedValue) ? parsedValue : 0;
+}
+
 export default async function PainelPage() {
   const session = await requireRole(["waiter", "manager", "owner"]);
 
-  const [reservationsBoard, tablesBoard, staffBoard, menuBoard, executiveBoard] =
+  const [reservationsBoard, tablesBoard, ordersBoard, staffBoard, menuBoard, executiveBoard] =
     await Promise.all([
       getReservationsBoard(),
       getTablesBoard(),
+      getOrdersBoard(),
       session.role === "waiter"
         ? Promise.resolve({ staff: [] })
         : getStaffDirectoryBoard(),
       session.role === "waiter"
-        ? Promise.resolve({ summary: [], categories: [] })
+        ? Promise.resolve({ summary: [], categories: [], stockAlerts: [] })
         : getMenuManagementBoard(),
       session.role === "owner"
         ? getExecutiveBoard()
         : Promise.resolve({ metrics: [], insights: [] }),
     ]);
 
+  const groupedOrders = ordersBoard.groupedOrders ?? [];
+  const openOrders = groupedOrders.filter(
+    (order) => !["delivered", "cancelled"].includes(order.status),
+  );
   const occupiedTables = tablesBoard.tables.filter(
     (table) => table.state === "ocupada",
   ).length;
   const reservedTables = tablesBoard.tables.filter(
     (table) => table.state === "reservada",
   ).length;
+  const freeTables = tablesBoard.tables.filter((table) => table.state === "livre").length;
   const activeTeam = staffBoard.staff?.filter((member) => member.active).length ?? 0;
   const activeMenuItems =
     menuBoard.categories?.flatMap((category) => category.items).filter((item) => item.available)
       .length ?? 0;
+  const pendingReservations = toMetricValue(
+    reservationsBoard.summary.find((item) => item.label === "Pendentes")?.value,
+  );
+  const confirmedReservations = toMetricValue(
+    reservationsBoard.summary.find((item) => item.label === "Confirmadas")?.value,
+  );
+  const preparingOrders = groupedOrders.filter((order) => order.status === "preparing").length;
+  const readyOrders = groupedOrders.filter((order) => order.status === "ready").length;
+  const dispatchingOrders = groupedOrders.filter((order) => order.status === "dispatching").length;
+  const waitlistWithoutTable = reservationsBoard.waitlistSummary?.total ?? 0;
+  const stockAlerts = menuBoard.stockAlerts?.length ?? 0;
+  const inFlowRevenue = openOrders.reduce(
+    (total, order) => total + Number(order.totalPrice ?? 0),
+    0,
+  );
+  const upcomingReservations = reservationsBoard.reservations
+    .filter((reservation) => ["pending", "confirmed", "seated"].includes(reservation.status))
+    .slice(0, 4);
 
-  const commandCards = [
+  const dashboardCards = [
     {
-      label: "Pendencias do turno",
-      value: reservationsBoard.summary[0]?.value ?? "0",
-      description: "Demandas que ainda precisam de retorno da equipe.",
+      label: "Pedidos em fluxo",
+      value: String(openOrders.length),
+      description: `${preparingOrders} em preparo e ${readyOrders} prontos para sair.`,
     },
     {
-      label: "Mesas ocupadas",
-      value: String(occupiedTables),
-      description: "Atendimentos em andamento no salao.",
+      label: "Reservas pendentes",
+      value: String(pendingReservations),
+      description: `${confirmedReservations} confirmadas e ${waitlistWithoutTable} sem mesa.`,
     },
     {
-      label: "Mesas reservadas",
-      value: String(reservedTables),
-      description: "Chegadas previstas nas proximas janelas.",
+      label: "Mesas livres",
+      value: String(freeTables),
+      description: `${occupiedTables} ocupadas e ${reservedTables} reservadas agora.`,
+    },
+    {
+      label: "Delivery em rota",
+      value: String(dispatchingOrders),
+      description: "Pedidos de entrega em deslocamento neste momento.",
+    },
+    {
+      label: "Faturamento em fluxo",
+      value: formatCurrency(inFlowRevenue),
+      description: "Total parcial dos pedidos ainda em andamento.",
     },
     ...(session.role !== "waiter"
       ? [
+          {
+            label: "Estoque critico",
+            value: String(stockAlerts),
+            description: "Itens que precisam de reposicao ou revisao imediata.",
+          },
           {
             label: "Equipe ativa",
             value: String(activeTeam),
             description: "Profissionais liberados para operar a casa.",
           },
-        ]
-      : []),
-    ...(session.role !== "waiter"
-      ? [
           {
             label: "Itens ativos",
             value: String(activeMenuItems),
@@ -185,20 +251,123 @@ export default async function PainelPage() {
         </section>
 
         <section className="shell pt-20">
-          <div className="staff-kpi-strip grid gap-4 rounded-[2.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.46)] px-5 py-5 shadow-[0_20px_60px_rgba(36,29,15,0.06)] sm:grid-cols-2 xl:grid-cols-5 lg:px-8">
-            {commandCards.map((card) => (
-              <div key={card.label} className="staff-kpi-item rounded-[1.5rem] px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.24em] text-[var(--sage)]">
-                  {card.label}
-                </p>
-                <p className="mt-3 text-3xl font-semibold text-[var(--forest)]">
-                  {card.value}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
-                  {card.description}
-                </p>
+          <div className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="luxury-card rounded-[2.2rem] p-6">
+              <SectionHeading
+                eyebrow="Dashboard em tempo real"
+                title="Visao geral do que esta acontecendo agora"
+                description="Leitura consolidada de pedidos, reservas, mesas e operacao para decidir rapido sem trocar de pagina."
+                compact
+              />
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {dashboardCards.map((card) => (
+                  <article
+                    key={card.label}
+                    className="staff-surface-card rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] px-4 py-4"
+                  >
+                    <p className="text-xs uppercase tracking-[0.24em] text-[var(--sage)]">
+                      {card.label}
+                    </p>
+                    <p className="mt-3 text-3xl font-semibold text-[var(--forest)]">
+                      {card.value}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                      {card.description}
+                    </p>
+                  </article>
+                ))}
               </div>
-            ))}
+            </div>
+
+            <div className="luxury-card rounded-[2.2rem] p-6">
+              <SectionHeading
+                eyebrow="Movimento recente"
+                title="Entradas mais novas do sistema"
+                description="Pedidos ativos e reservas proximas para agir no momento certo."
+                compact
+              />
+
+              <div className="mt-8">
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]">
+                  Pedidos do momento
+                </p>
+                <div className="mt-3 space-y-3">
+                  {openOrders.length ? (
+                    openOrders.slice(0, 4).map((order) => {
+                      const statusView = getOrderStatusView(order.status);
+
+                      return (
+                        <article
+                          key={order.id}
+                          className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-4"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="max-w-[16rem] break-words text-sm font-semibold text-[var(--forest)]">
+                              {order.checkoutReference}
+                            </p>
+                            <span
+                              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusView.badge}`}
+                            >
+                              {statusView.label}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm text-[rgba(21,35,29,0.72)]">
+                            {order.guestName || "Cliente"} • {order.totalItems} item(ns)
+                          </p>
+                          <p className="mt-1 text-xs text-[rgba(21,35,29,0.62)]">
+                            {formatOrderMoment(order.createdAt)}
+                          </p>
+                        </article>
+                      );
+                    })
+                  ) : (
+                    <article className="rounded-[1.3rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.56)] p-4 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                      Nenhum pedido ativo no momento.
+                    </article>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <p className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]">
+                  Proximas reservas
+                </p>
+                <div className="mt-3 space-y-3">
+                  {upcomingReservations.length ? (
+                    upcomingReservations.map((reservation) => {
+                      const statusView = getStatusView(reservation.status);
+
+                      return (
+                        <article
+                          key={reservation.id}
+                          className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-4"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="max-w-[16rem] break-words text-sm font-semibold text-[var(--forest)]">
+                              {reservation.guestName}
+                            </p>
+                            <span
+                              className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] ${statusView.badge}`}
+                            >
+                              {statusView.label}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm text-[rgba(21,35,29,0.72)]">
+                            {formatReservationMoment(reservation.date, reservation.time)} •{" "}
+                            {reservation.guests} pessoa(s)
+                          </p>
+                        </article>
+                      );
+                    })
+                  ) : (
+                    <article className="rounded-[1.3rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.56)] p-4 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                      Nenhuma reserva ativa para acompanhar agora.
+                    </article>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
