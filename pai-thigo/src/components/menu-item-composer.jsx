@@ -85,7 +85,7 @@ export function MenuItemComposer({ categories = [] }) {
         </span>
       </label>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
           Preco
           <input
@@ -116,14 +116,63 @@ export function MenuItemComposer({ categories = [] }) {
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+        <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
+          Estoque (opcional)
+          <input
+            name="stockQuantity"
+            type="number"
+            min="0"
+            placeholder="12"
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          />
+        </label>
 
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
-          Ordem
+          Alerta de estoque
           <input
-            name="sortOrder"
+            name="lowStockThreshold"
             type="number"
             min="0"
             defaultValue="0"
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          />
+        </label>
+
+        <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
+          Porcao pequena
+          <input
+            name="portionSmallPrice"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="10.90"
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          />
+        </label>
+
+        <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
+          Porcao media
+          <input
+            name="portionMediumPrice"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Preco base"
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          />
+        </label>
+
+        <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
+          Porcao grande
+          <input
+            name="portionLargePrice"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="15.90"
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>

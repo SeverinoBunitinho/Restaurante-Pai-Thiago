@@ -48,6 +48,12 @@ const MENU_IMAGE_ALLOWED_MIME_TYPES = [
   "image/webp",
   "image/avif",
 ];
+const portionSizeOptions = ["small", "medium", "large"];
+const defaultPortionMultiplierBySize = {
+  small: 0.8,
+  medium: 1,
+  large: 1.35,
+};
 
 function normalizeLines(value) {
   return String(value ?? "")
@@ -72,6 +78,83 @@ function parseCurrencyValue(value) {
   const amount = Number(normalized);
 
   return Number.isFinite(amount) ? amount : NaN;
+}
+
+function parseNonNegativeInteger(value) {
+  const normalized = String(value ?? "").trim();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const parsed = Number.parseInt(normalized, 10);
+
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return parsed;
+}
+
+function normalizeStaffIdentifier(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, "");
+}
+
+function normalizeCpf(value) {
+  return String(value ?? "")
+    .replace(/\D/g, "")
+    .trim();
+}
+
+function normalizeRg(value) {
+  return String(value ?? "")
+    .replace(/[^0-9xX]/g, "")
+    .toUpperCase()
+    .trim();
+}
+
+function normalizePortionSize(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return portionSizeOptions.includes(normalized) ? normalized : "medium";
+}
+
+function getPortionLabel(size) {
+  if (size === "small") {
+    return "Pequena";
+  }
+
+  if (size === "large") {
+    return "Grande";
+  }
+
+  return "Media";
+}
+
+function buildPortionPricing(basePrice, portionPricesInput = {}) {
+  const parsedBasePrice = Number(basePrice ?? 0);
+  const safeBasePrice =
+    Number.isFinite(parsedBasePrice) && parsedBasePrice >= 0 ? parsedBasePrice : 0;
+  const payload = {};
+
+  for (const size of portionSizeOptions) {
+    const inputPrice = Number(portionPricesInput[size] ?? NaN);
+    const fallbackPrice = safeBasePrice * defaultPortionMultiplierBySize[size];
+    const resolvedPrice = Number.isFinite(inputPrice) && inputPrice >= 0
+      ? inputPrice
+      : fallbackPrice;
+
+    payload[size] = Number(resolvedPrice.toFixed(2));
+  }
+
+  return payload;
+}
+
+function resolvePortionUnitPrice(basePrice, portionPrices, portionSize) {
+  const normalizedPortion = normalizePortionSize(portionSize);
+  const pricing = buildPortionPricing(basePrice, portionPrices ?? {});
+  return pricing[normalizedPortion] ?? pricing.medium ?? Number(basePrice ?? 0);
 }
 
 function normalizeMenuImageUrl(value) {
@@ -417,6 +500,13 @@ function buildMesasRedirectPath({ mesaNotice, mesaError }) {
   });
 }
 
+function buildMenuRedirectPath({ menuNotice, menuError }) {
+  return buildRouteWithParams("/operacao/menu", {
+    menuNotice,
+    menuError,
+  });
+}
+
 function normalizeEmail(value) {
   return String(value ?? "").trim().toLowerCase();
 }
@@ -597,61 +687,127 @@ export async function createStaffAccountAction(formData) {
 
   const fullName = String(formData.get("fullName") ?? "").trim();
   const email = normalizeEmail(formData.get("email"));
+  const login = normalizeStaffIdentifier(formData.get("login"));
+  const phone = String(formData.get("phone") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const rg = normalizeRg(formData.get("rg"));
+  const cpf = normalizeCpf(formData.get("cpf"));
   const password = String(formData.get("password") ?? "").trim();
+  const passwordConfirm = String(formData.get("passwordConfirm") ?? "").trim();
   const role = String(formData.get("role") ?? "").trim();
-
-  if (!fullName || !email || !password || !staffRoles.includes(role)) {
+  const redirectWithStaffError = (staffError) =>
     redirect(
       buildRouteWithParams("/operacao/equipe", {
-        staffError: "Preencha nome, e-mail, senha e cargo para salvar a conta interna.",
+        staffError,
       }),
     );
+  const requiresManagerFullProfile = session.role === "owner" && role === "manager";
+
+  if (!fullName || !email || !password || !staffRoles.includes(role)) {
+    redirectWithStaffError(
+      "Preencha nome, e-mail, senha e cargo para salvar a conta interna.",
+    );
+  }
+
+  if (!passwordConfirm || password !== passwordConfirm) {
+    redirectWithStaffError("A confirmacao de senha precisa ser igual a senha informada.");
   }
 
   if (password.length < 6) {
-    redirect(
-      buildRouteWithParams("/operacao/equipe", {
-        staffError: "A senha da equipe precisa ter no minimo 6 caracteres.",
-      }),
-    );
+    redirectWithStaffError("A senha da equipe precisa ter no minimo 6 caracteres.");
   }
 
   if (session.role === "manager" && role !== "waiter") {
-    redirect(
-      buildRouteWithParams("/operacao/equipe", {
-        staffError: "O gerente pode cadastrar apenas garcons.",
-      }),
-    );
+    redirectWithStaffError("O gerente pode cadastrar apenas garcons.");
   }
+
+  if (requiresManagerFullProfile) {
+    if (!address || !phone || !rg || !cpf || !login) {
+      redirectWithStaffError(
+        "Para cadastrar gerente, preencha endereco, telefone, RG, CPF e login interno.",
+      );
+    }
+
+    if (cpf.length !== 11) {
+      redirectWithStaffError("O CPF do gerente precisa ter 11 digitos.");
+    }
+
+    if (rg.length < 7) {
+      redirectWithStaffError("Informe um RG valido para o gerente.");
+    }
+
+    if (login.length < 3) {
+      redirectWithStaffError("O login interno precisa ter no minimo 3 caracteres.");
+    }
+  }
+
+  const userMetadata = {
+    full_name: fullName,
+    phone: phone || undefined,
+    address: address || undefined,
+    rg: rg || undefined,
+    cpf: cpf || undefined,
+    staff_login: login || undefined,
+  };
+  const staffMetadata = {
+    phone: phone || null,
+    address: address || null,
+    rg: rg || null,
+    cpf: cpf || null,
+    login: login || null,
+  };
 
   const supabase = await getSupabaseServerClient();
   const adminClient = getSupabaseAdminClient();
 
   if (!supabase || !adminClient) {
-    redirect(
-      buildRouteWithParams("/operacao/equipe", {
-        staffError:
-          "Nao foi possivel conectar ao Supabase administrativo para criar a conta.",
-      }),
+    redirectWithStaffError(
+      "Nao foi possivel conectar ao Supabase administrativo para criar a conta.",
     );
   }
 
-  const { error: directoryError } = await supabase.from("staff_directory").upsert(
-    {
-      email,
-      full_name: fullName,
-      role,
-      active: true,
-    },
-    { onConflict: "email" },
-  );
+  const staffDirectoryPayload = {
+    email,
+    full_name: fullName,
+    role,
+    active: true,
+    login: login || null,
+    phone: phone || null,
+    address: address || null,
+    rg: rg || null,
+    cpf: cpf || null,
+  };
+  const basicStaffDirectoryPayload = {
+    email,
+    full_name: fullName,
+    role,
+    active: true,
+  };
+  let directoryResult = await supabase
+    .from("staff_directory")
+    .upsert(staffDirectoryPayload, { onConflict: "email" });
 
-  if (directoryError) {
-    redirect(
-      buildRouteWithParams("/operacao/equipe", {
-        staffError: "Nao foi possivel atualizar a base interna da equipe agora.",
-      }),
-    );
+  if (directoryResult.error) {
+    const directoryErrorMessage = String(
+      directoryResult.error.message ?? "",
+    ).toLowerCase();
+    const hasMissingColumn =
+      directoryErrorMessage.includes("column") ||
+      directoryErrorMessage.includes("login") ||
+      directoryErrorMessage.includes("phone") ||
+      directoryErrorMessage.includes("address") ||
+      directoryErrorMessage.includes("rg") ||
+      directoryErrorMessage.includes("cpf");
+
+    if (hasMissingColumn) {
+      directoryResult = await supabase
+        .from("staff_directory")
+        .upsert(basicStaffDirectoryPayload, { onConflict: "email" });
+    }
+  }
+
+  if (directoryResult.error) {
+    redirectWithStaffError("Nao foi possivel atualizar a base interna da equipe agora.");
   }
 
   const {
@@ -663,11 +819,7 @@ export async function createStaffAccountAction(formData) {
   });
 
   if (listUsersError) {
-    redirect(
-      buildRouteWithParams("/operacao/equipe", {
-        staffError: "Nao foi possivel verificar as contas internas existentes.",
-      }),
-    );
+    redirectWithStaffError("Nao foi possivel verificar as contas internas existentes.");
   }
 
   const existingUser = users.find(
@@ -679,16 +831,12 @@ export async function createStaffAccountAction(formData) {
       email,
       password,
       email_confirm: true,
-      user_metadata: {
-        full_name: fullName,
-      },
+      user_metadata: userMetadata,
     });
 
     if (error) {
-      redirect(
-        buildRouteWithParams("/operacao/equipe", {
-          staffError: "A conta interna existe, mas nao foi possivel atualizar a senha.",
-        }),
+      redirectWithStaffError(
+        "A conta interna existe, mas nao foi possivel atualizar a senha.",
       );
     }
   } else {
@@ -696,17 +844,11 @@ export async function createStaffAccountAction(formData) {
       email,
       password,
       email_confirm: true,
-      user_metadata: {
-        full_name: fullName,
-      },
+      user_metadata: userMetadata,
     });
 
     if (error) {
-      redirect(
-        buildRouteWithParams("/operacao/equipe", {
-          staffError: "Nao foi possivel criar a conta interna no Auth agora.",
-        }),
-      );
+      redirectWithStaffError("Nao foi possivel criar a conta interna no Auth agora.");
     }
   }
 
@@ -721,6 +863,7 @@ export async function createStaffAccountAction(formData) {
       email,
       actorRole: session.role,
       mode: existingUser ? "update" : "create",
+      ...staffMetadata,
     },
   });
 
@@ -853,6 +996,7 @@ export async function addServiceCheckItemAction(formData) {
   const menuItemId = String(formData.get("menuItemId") ?? "").trim();
   const quantity = Number(String(formData.get("quantity") ?? "").trim() || "0");
   const notes = String(formData.get("notes") ?? "").trim();
+  const portionSize = normalizePortionSize(formData.get("portionSize"));
 
   if (!checkId || !menuItemId || !Number.isInteger(quantity) || quantity < 1) {
     redirect(
@@ -872,18 +1016,31 @@ export async function addServiceCheckItemAction(formData) {
     );
   }
 
-  const [checkResult, menuItemResult] = await Promise.all([
-    supabase
-      .from("service_checks")
-      .select("id, status")
-      .eq("id", checkId)
-      .maybeSingle(),
-    supabase
-      .from("menu_items")
-      .select("id, name, price, is_available")
-      .eq("id", menuItemId)
-      .maybeSingle(),
-  ]);
+  const checkResult = await supabase
+    .from("service_checks")
+    .select("id, status")
+    .eq("id", checkId)
+    .maybeSingle();
+
+  let menuItemResult = await supabase
+    .from("menu_items")
+    .select("id, name, price, is_available, stock_quantity, portion_prices")
+    .eq("id", menuItemId)
+    .maybeSingle();
+
+  if (menuItemResult.error) {
+    const message = String(menuItemResult.error.message ?? "").toLowerCase();
+    const missingExtendedColumns =
+      message.includes("stock_quantity") || message.includes("portion_prices");
+
+    if (missingExtendedColumns) {
+      menuItemResult = await supabase
+        .from("menu_items")
+        .select("id, name, price, is_available")
+        .eq("id", menuItemId)
+        .maybeSingle();
+    }
+  }
 
   if (checkResult.error || !checkResult.data || checkResult.data.status !== "open") {
     redirect(
@@ -905,17 +1062,41 @@ export async function addServiceCheckItemAction(formData) {
     );
   }
 
-  const unitPrice = Number(menuItemResult.data.price);
+  const menuItem = menuItemResult.data;
+  const stockQuantity = Number(menuItem.stock_quantity ?? NaN);
+  const hasStockControl = Number.isFinite(stockQuantity) && stockQuantity >= 0;
+
+  if (hasStockControl && quantity > stockQuantity) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: `Estoque insuficiente para ${menuItem.name}. Disponivel agora: ${stockQuantity}.`,
+      }),
+    );
+  }
+
+  const portionLabel = getPortionLabel(portionSize);
+  const unitPrice = resolvePortionUnitPrice(
+    Number(menuItem.price),
+    menuItem.portion_prices,
+    portionSize,
+  );
   const totalPrice = unitPrice * quantity;
+  const itemName =
+    portionSize === "medium"
+      ? menuItem.name
+      : `${menuItem.name} (${portionLabel})`;
+  const normalizedNotes = [notes, portionSize !== "medium" ? `Porcao: ${portionLabel}` : ""]
+    .filter(Boolean)
+    .join(" | ");
   const insertResult = await supabase.from("service_check_items").insert({
     check_id: checkId,
-    menu_item_id: menuItemResult.data.id,
+    menu_item_id: menuItem.id,
     created_by_user_id: session.profile.user_id,
-    item_name: menuItemResult.data.name,
+    item_name: itemName,
     quantity,
     unit_price: unitPrice,
     total_price: totalPrice,
-    notes: notes || null,
+    notes: normalizedNotes || null,
   });
 
   if (insertResult.error) {
@@ -924,6 +1105,14 @@ export async function addServiceCheckItemAction(formData) {
         comandaError: "Nao foi possivel associar o produto a conta agora.",
       }),
     );
+  }
+
+  if (hasStockControl) {
+    const nextStock = Math.max(0, stockQuantity - quantity);
+    await supabase
+      .from("menu_items")
+      .update({ stock_quantity: nextStock })
+      .eq("id", menuItem.id);
   }
 
   const totals = await syncServiceCheckTotals(supabase, checkId);
@@ -945,6 +1134,8 @@ export async function addServiceCheckItemAction(formData) {
     metadata: {
       menuItemId,
       quantity,
+      portionSize,
+      unitPrice,
     },
   });
 
@@ -952,7 +1143,139 @@ export async function addServiceCheckItemAction(formData) {
 
   redirect(
     getComandasRedirect(tableName, {
-      comandaNotice: "Produto associado a conta com sucesso.",
+      comandaNotice: `Produto associado a conta com sucesso (${portionLabel.toLowerCase()}).`,
+    }),
+  );
+}
+
+export async function removeServiceCheckItemAction(formData) {
+  const session = await requireRole(["waiter", "manager", "owner"]);
+  const checkId = String(formData.get("checkId") ?? "").trim();
+  const checkItemId = String(formData.get("checkItemId") ?? "").trim();
+  const tableName = String(formData.get("tableName") ?? "").trim();
+
+  if (!checkId || !checkItemId) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel identificar o item para remocao.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel conectar ao Supabase para remover o item.",
+      }),
+    );
+  }
+
+  const [checkResult, checkItemResult] = await Promise.all([
+    supabase
+      .from("service_checks")
+      .select("id, status")
+      .eq("id", checkId)
+      .maybeSingle(),
+    supabase
+      .from("service_check_items")
+      .select("id, check_id, item_name, menu_item_id, quantity")
+      .eq("id", checkItemId)
+      .maybeSingle(),
+  ]);
+
+  if (checkResult.error || !checkResult.data || checkResult.data.status !== "open") {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Somente contas abertas podem remover itens.",
+      }),
+    );
+  }
+
+  if (
+    checkItemResult.error ||
+    !checkItemResult.data ||
+    checkItemResult.data.check_id !== checkId
+  ) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "O item informado nao pertence a conta selecionada.",
+      }),
+    );
+  }
+
+  const checkItem = checkItemResult.data;
+
+  const removeResult = await supabase
+    .from("service_check_items")
+    .delete()
+    .eq("id", checkItemId);
+
+  if (removeResult.error) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel remover o item desta conta agora.",
+      }),
+    );
+  }
+
+  if (checkItem.menu_item_id) {
+    let menuItemResult = await supabase
+      .from("menu_items")
+      .select("id, stock_quantity")
+      .eq("id", checkItem.menu_item_id)
+      .maybeSingle();
+
+    if (menuItemResult.error) {
+      const message = String(menuItemResult.error.message ?? "").toLowerCase();
+      const missingStockColumn = message.includes("stock_quantity");
+
+      if (missingStockColumn) {
+        menuItemResult = { data: null, error: null };
+      }
+    }
+
+    const stockQuantity = Number(menuItemResult.data?.stock_quantity ?? NaN);
+    const hasStockControl = Number.isFinite(stockQuantity) && stockQuantity >= 0;
+
+    if (hasStockControl) {
+      await supabase
+        .from("menu_items")
+        .update({ stock_quantity: stockQuantity + Number(checkItem.quantity ?? 0) })
+        .eq("id", checkItem.menu_item_id);
+    }
+  }
+
+  const totals = await syncServiceCheckTotals(supabase, checkId);
+
+  if (!totals.ok) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError:
+          "O item foi removido, mas o total da conta nao pode ser recalculado agora.",
+      }),
+    );
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "service_check_item_removed",
+    entityType: "service_check",
+    entityId: checkId,
+    entityLabel: tableName || null,
+    description: "Item removido da conta de mesa.",
+    metadata: {
+      checkItemId,
+      itemName: checkItem.item_name,
+      quantity: Number(checkItem.quantity ?? 0),
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    getComandasRedirect(tableName, {
+      comandaNotice: "Item removido da conta com sucesso.",
     }),
   );
 }
@@ -1161,7 +1484,11 @@ export async function createMenuItemAction(_previousState, formData) {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
-  const sortOrder = Number(String(formData.get("sortOrder") ?? "").trim() || "0");
+  const stockQuantity = parseNonNegativeInteger(formData.get("stockQuantity"));
+  const lowStockThreshold = parseNonNegativeInteger(formData.get("lowStockThreshold"));
+  const portionSmallPrice = parseCurrencyValue(formData.get("portionSmallPrice"));
+  const portionMediumPrice = parseCurrencyValue(formData.get("portionMediumPrice"));
+  const portionLargePrice = parseCurrencyValue(formData.get("portionLargePrice"));
   const isSignature = formData.has("isSignature");
   const isAvailable = formData.has("isAvailable");
   const price = parseCurrencyValue(formData.get("price"));
@@ -1180,10 +1507,14 @@ export async function createMenuItemAction(_previousState, formData) {
     };
   }
 
-  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+  if (
+    stockQuantity != null &&
+    lowStockThreshold != null &&
+    lowStockThreshold > stockQuantity
+  ) {
     return {
       status: "error",
-      message: "A ordem de exibicao precisa ser um numero inteiro maior ou igual a zero.",
+      message: "O alerta de estoque nao pode ser maior que o estoque total.",
     };
   }
 
@@ -1219,6 +1550,18 @@ export async function createMenuItemAction(_previousState, formData) {
     };
   }
 
+  const orderResult = await supabase
+    .from("menu_items")
+    .select("sort_order")
+    .eq("category_id", categoryId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextSortOrder =
+    Number.isFinite(Number(orderResult.data?.sort_order))
+      ? Number(orderResult.data.sort_order) + 1
+      : 0;
+
   let resolvedImageUrl = urlImage || "";
   let uploadedImagePath = "";
   const adminClient = getSupabaseAdminClient();
@@ -1249,6 +1592,18 @@ export async function createMenuItemAction(_previousState, formData) {
     uploadedImagePath = uploadResult.path;
   }
 
+  const portionPrices = buildPortionPricing(price, {
+    small: Number.isFinite(portionSmallPrice) && portionSmallPrice >= 0
+      ? portionSmallPrice
+      : undefined,
+    medium: Number.isFinite(portionMediumPrice) && portionMediumPrice >= 0
+      ? portionMediumPrice
+      : undefined,
+    large: Number.isFinite(portionLargePrice) && portionLargePrice >= 0
+      ? portionLargePrice
+      : undefined,
+  });
+
   const insertPayload = {
     category_id: categoryId,
     name,
@@ -1261,30 +1616,57 @@ export async function createMenuItemAction(_previousState, formData) {
     allergens,
     is_signature: isSignature,
     is_available: isAvailable,
-    sort_order: sortOrder,
+    sort_order: nextSortOrder,
+    stock_quantity: stockQuantity,
+    low_stock_threshold: lowStockThreshold ?? 0,
+    portion_prices: portionPrices,
   };
 
+  const payloadWithoutImage = { ...insertPayload };
+  delete payloadWithoutImage.image_url;
+  const compatibilityPayloads = [insertPayload, payloadWithoutImage].flatMap((payload) => [
+    payload,
+    (() => {
+      const withoutStock = { ...payload };
+      delete withoutStock.stock_quantity;
+      delete withoutStock.low_stock_threshold;
+      delete withoutStock.portion_prices;
+      return withoutStock;
+    })(),
+  ]);
+
+  let error = null;
   let imageColumnMissing = false;
-  let { error } = await supabase.from("menu_items").insert(insertPayload);
+  let stockColumnsMissing = false;
 
-  if (error && (resolvedImageUrl || rawImageUrl || hasUploadedImageFile)) {
-    const errorMessage = String(error.message ?? "").toLowerCase();
-    const missingImageColumn =
-      error.code === "PGRST204" ||
-      errorMessage.includes("image_url") ||
-      errorMessage.includes("column");
+  for (const payload of compatibilityPayloads) {
+    const result = await supabase.from("menu_items").insert(payload);
+    error = result.error;
 
-    if (missingImageColumn) {
-      imageColumnMissing = true;
-      const payloadWithoutImage = { ...insertPayload };
-      delete payloadWithoutImage.image_url;
-      const retryResult = await supabase.from("menu_items").insert(payloadWithoutImage);
-      error = retryResult.error;
-
-      if (!error && uploadedImagePath && adminClient) {
-        await adminClient.storage.from(MENU_IMAGES_BUCKET).remove([uploadedImagePath]);
-      }
+    if (!error) {
+      imageColumnMissing = payload.image_url == null;
+      stockColumnsMissing =
+        payload.stock_quantity === undefined ||
+        payload.low_stock_threshold === undefined ||
+        payload.portion_prices === undefined;
+      break;
     }
+
+    const errorMessage = String(error.message ?? "").toLowerCase();
+    const canTryNext =
+      errorMessage.includes("image_url") ||
+      errorMessage.includes("stock_quantity") ||
+      errorMessage.includes("low_stock_threshold") ||
+      errorMessage.includes("portion_prices") ||
+      error.code === "PGRST204";
+
+    if (!canTryNext) {
+      break;
+    }
+  }
+
+  if (!error && imageColumnMissing && uploadedImagePath && adminClient) {
+    await adminClient.storage.from(MENU_IMAGES_BUCKET).remove([uploadedImagePath]);
   }
 
   if (error) {
@@ -1301,10 +1683,180 @@ export async function createMenuItemAction(_previousState, formData) {
 
   return {
     status: "success",
-    message: imageColumnMissing
-      ? "Prato cadastrado. A imagem nao foi salva porque a coluna image_url ainda nao existe no banco."
-      : "Prato cadastrado com sucesso. O cardapio ja foi atualizado.",
+    message:
+      imageColumnMissing && stockColumnsMissing
+        ? "Prato cadastrado. O banco ainda nao tem colunas de imagem/estoque/porcoes, mas o item ja entrou no cardapio."
+        : imageColumnMissing
+          ? "Prato cadastrado. A imagem nao foi salva porque a coluna image_url ainda nao existe no banco."
+          : stockColumnsMissing
+            ? "Prato cadastrado. Os campos de estoque/porcoes nao foram salvos porque o banco ainda nao tem essas colunas."
+            : "Prato cadastrado com sucesso. O cardapio ja foi atualizado.",
   };
+}
+
+export async function createMenuCategoryAction(_previousState, formData) {
+  await requireRole(["manager", "owner"]);
+
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const accent = String(formData.get("accent") ?? "gold")
+    .trim()
+    .toLowerCase();
+  const allowedAccents = new Set(["gold", "sage", "clay", "cream"]);
+
+  if (!name) {
+    return {
+      status: "error",
+      message: "Informe o nome da categoria para salvar.",
+    };
+  }
+
+  if (!allowedAccents.has(accent)) {
+    return {
+      status: "error",
+      message: "Escolha um tom valido para a categoria.",
+    };
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    return {
+      status: "error",
+      message: "Nao foi possivel conectar ao Supabase para criar categoria.",
+    };
+  }
+
+  const slugBase = createSlug(name);
+  const slug = slugBase ? slugBase.slice(0, 64) : `categoria-${Date.now()}`;
+  const orderResult = await supabase
+    .from("menu_categories")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextSortOrder =
+    Number.isFinite(Number(orderResult.data?.sort_order))
+      ? Number(orderResult.data.sort_order) + 1
+      : 0;
+  const { error } = await supabase.from("menu_categories").insert({
+    name,
+    slug,
+    description: description || null,
+    highlight_color: accent,
+    sort_order: nextSortOrder,
+  });
+
+  if (error) {
+    const isDuplicate =
+      error.code === "23505" ||
+      String(error.message ?? "").toLowerCase().includes("duplicate");
+
+    return {
+      status: "error",
+      message: isDuplicate
+        ? "Ja existe uma categoria com esse nome. Tente um nome diferente."
+        : "Nao foi possivel salvar a categoria agora.",
+    };
+  }
+
+  revalidateStaffPaths();
+
+  return {
+    status: "success",
+    message: "Categoria adicionada com sucesso no cardapio interno.",
+  };
+}
+
+export async function createRestaurantTableAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+
+  const name = String(formData.get("tableName") ?? "").trim();
+  const area = String(formData.get("area") ?? "").trim();
+  const capacity = Number.parseInt(
+    String(formData.get("capacity") ?? "").trim(),
+    10,
+  );
+
+  if (!name || !area || !Number.isInteger(capacity) || capacity < 1 || capacity > 20) {
+    redirect(
+      buildMesasRedirectPath({
+        mesaError: "Preencha nome, area e capacidade valida (1 a 20) para adicionar mesa.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      buildMesasRedirectPath({
+        mesaError: "Nao foi possivel conectar ao Supabase para criar a mesa.",
+      }),
+    );
+  }
+
+  const { data: existingTable, error: existingTableError } = await supabase
+    .from("restaurant_tables")
+    .select("id")
+    .ilike("name", name)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingTableError) {
+    redirect(
+      buildMesasRedirectPath({
+        mesaError: "Nao foi possivel validar se a mesa ja existe.",
+      }),
+    );
+  }
+
+  if (existingTable) {
+    redirect(
+      buildMesasRedirectPath({
+        mesaError: "Ja existe uma mesa com esse nome.",
+      }),
+    );
+  }
+
+  const { data: insertedTable, error } = await supabase
+    .from("restaurant_tables")
+    .insert({
+      name,
+      area,
+      capacity,
+      is_active: true,
+    })
+    .select("id, name")
+    .maybeSingle();
+
+  if (error) {
+    redirect(
+      buildMesasRedirectPath({
+        mesaError: "Nao foi possivel adicionar a nova mesa agora.",
+      }),
+    );
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "table_created",
+    entityType: "restaurant_table",
+    entityId: insertedTable?.id ?? name,
+    entityLabel: insertedTable?.name ?? name,
+    description: "Nova mesa adicionada ao salao.",
+    metadata: {
+      area,
+      capacity,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    buildMesasRedirectPath({
+      mesaNotice: `Mesa ${name} adicionada com sucesso.`,
+    }),
+  );
 }
 
 export async function deleteMenuItemAction(formData) {
@@ -1313,18 +1865,40 @@ export async function deleteMenuItemAction(formData) {
   const itemId = String(formData.get("itemId") ?? "").trim();
 
   if (!itemId) {
-    return;
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Nao foi possivel identificar o item para exclusao.",
+      }),
+    );
   }
 
   const supabase = await getSupabaseServerClient();
 
   if (!supabase) {
-    return;
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Nao foi possivel conectar ao Supabase para excluir o item.",
+      }),
+    );
   }
 
-  await supabase.from("menu_items").delete().eq("id", itemId);
+  const { error } = await supabase.from("menu_items").delete().eq("id", itemId);
+
+  if (error) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Nao foi possivel remover o prato agora.",
+      }),
+    );
+  }
 
   revalidateStaffPaths();
+
+  redirect(
+    buildMenuRedirectPath({
+      menuNotice: "Prato removido com sucesso do cardapio interno.",
+    }),
+  );
 }
 
 export async function updateOrderStatusAction(formData) {

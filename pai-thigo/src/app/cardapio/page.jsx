@@ -252,6 +252,7 @@ export default async function CardapioPage() {
                             menuItemId={item.id}
                             name={item.name}
                             price={item.price}
+                            portionPrices={item.portionPrices}
                             prepTime={item.prepTime}
                             signature={item.signature}
                             canOrder={canOrder}

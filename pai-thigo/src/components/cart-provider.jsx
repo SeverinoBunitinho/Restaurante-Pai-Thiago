@@ -9,8 +9,17 @@ import {
   useState,
 } from "react";
 
-const STORAGE_KEY = "paithiago-cart-v1";
+const STORAGE_KEY = "paithiago-cart-v2";
 const CartContext = createContext(null);
+
+function normalizePortionSize(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return ["small", "medium", "large"].includes(normalized) ? normalized : "medium";
+}
+
+function buildCartLineId(menuItemId, portionSize) {
+  return `${menuItemId}::${portionSize}`;
+}
 
 function sanitizeCartItems(value) {
   if (!Array.isArray(value)) {
@@ -24,8 +33,13 @@ function sanitizeCartItems(value) {
       price: Number(item.price ?? 0),
       prepTime: String(item.prepTime ?? "").trim(),
       signature: Boolean(item.signature),
+      portionSize: normalizePortionSize(item.portionSize),
       quantity: Number(item.quantity ?? 1),
       notes: String(item.notes ?? "").trim(),
+    }))
+    .map((item) => ({
+      ...item,
+      lineId: buildCartLineId(item.menuItemId, item.portionSize),
     }))
     .filter(
       (item) =>
@@ -87,7 +101,7 @@ export function CartProvider({ children }) {
         startTransition(() => {
           setItems((currentItems) => {
             const existingItem = currentItems.find(
-              (currentItem) => currentItem.menuItemId === normalizedItem.menuItemId,
+              (currentItem) => currentItem.lineId === normalizedItem.lineId,
             );
 
             if (!existingItem) {
@@ -95,7 +109,7 @@ export function CartProvider({ children }) {
             }
 
             return currentItems.map((currentItem) =>
-              currentItem.menuItemId === normalizedItem.menuItemId
+              currentItem.lineId === normalizedItem.lineId
                 ? {
                     ...currentItem,
                     quantity: Math.min(
@@ -109,14 +123,14 @@ export function CartProvider({ children }) {
           });
         });
       },
-      removeItem(menuItemId) {
+      removeItem(lineId) {
         startTransition(() => {
           setItems((currentItems) =>
-            currentItems.filter((item) => item.menuItemId !== menuItemId),
+            currentItems.filter((item) => item.lineId !== lineId),
           );
         });
       },
-      updateQuantity(menuItemId, quantity) {
+      updateQuantity(lineId, quantity) {
         const nextQuantity = Number(quantity);
 
         if (!Number.isFinite(nextQuantity)) {
@@ -127,7 +141,7 @@ export function CartProvider({ children }) {
           setItems((currentItems) =>
             currentItems
               .map((item) =>
-                item.menuItemId === menuItemId
+                item.lineId === lineId
                   ? {
                       ...item,
                       quantity: Math.max(1, Math.min(nextQuantity, 20)),
@@ -138,11 +152,11 @@ export function CartProvider({ children }) {
           );
         });
       },
-      updateNotes(menuItemId, notes) {
+      updateNotes(lineId, notes) {
         startTransition(() => {
           setItems((currentItems) =>
             currentItems.map((item) =>
-              item.menuItemId === menuItemId
+              item.lineId === lineId
                 ? { ...item, notes: String(notes ?? "").trimStart() }
                 : item,
             ),
@@ -155,7 +169,9 @@ export function CartProvider({ children }) {
         });
       },
       getItemQuantity(menuItemId) {
-        return items.find((item) => item.menuItemId === menuItemId)?.quantity ?? 0;
+        return items
+          .filter((item) => item.menuItemId === menuItemId)
+          .reduce((total, item) => total + item.quantity, 0);
       },
     };
   }, [isHydrated, items]);

@@ -14,8 +14,10 @@ import {
   closeOrderCheckoutAction,
   closeServiceCheckAction,
   openServiceCheckAction,
+  removeServiceCheckItemAction,
   updateOrderCheckoutStatusAction,
 } from "@/app/operacao/actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { EmergencyCleanupPanel } from "@/components/emergency-cleanup-panel";
 import { SectionHeading } from "@/components/section-heading";
 import { requireRole } from "@/lib/auth";
@@ -114,7 +116,7 @@ function getOrderActions(status, fulfillmentType = "pickup") {
   return [];
 }
 
-function buildComandasHref({ mesa, status, comanda }) {
+function buildComandasHref({ mesa, status, comanda, busca }) {
   const params = new URLSearchParams();
 
   if (mesa) {
@@ -127,6 +129,10 @@ function buildComandasHref({ mesa, status, comanda }) {
 
   if (comanda) {
     params.set("comanda", comanda);
+  }
+
+  if (busca) {
+    params.set("busca", busca);
   }
 
   const query = params.toString();
@@ -162,6 +168,38 @@ function findOrderGroupByReference(orderGroups, query) {
   );
 }
 
+function normalizeOrderSearchTerm(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function doesOrderGroupMatchSearch(orderGroup, searchTerm) {
+  const normalizedTerm = normalizeOrderSearchTerm(searchTerm);
+
+  if (!normalizedTerm) {
+    return true;
+  }
+
+  const groupFields = [
+    orderGroup.checkoutReference,
+    orderGroup.guestName,
+    getFulfillmentTypeLabel(orderGroup.fulfillmentType),
+    getPaymentMethodLabel(orderGroup.paymentMethod),
+  ];
+  const itemFields = (orderGroup.items ?? []).flatMap((item) => [
+    item.itemName,
+    item.notes,
+    item.categoryName,
+  ]);
+
+  return [...groupFields, ...itemFields]
+    .map((field) => normalizeOrderSearchTerm(field))
+    .some((field) => field.includes(normalizedTerm));
+}
+
 export default async function OperacaoComandasPage({ searchParams }) {
   const session = await requireRole(["waiter", "manager", "owner"]);
   const canRunEmergencyCleanup = session.role === "owner";
@@ -176,6 +214,9 @@ export default async function OperacaoComandasPage({ searchParams }) {
   const checkoutQuery = Array.isArray(resolvedSearchParams?.comanda)
     ? resolvedSearchParams.comanda[0]
     : resolvedSearchParams?.comanda;
+  const orderSearchQuery = Array.isArray(resolvedSearchParams?.busca)
+    ? resolvedSearchParams.busca[0]
+    : resolvedSearchParams?.busca;
   const commandaNotice = Array.isArray(resolvedSearchParams?.comandaNotice)
     ? resolvedSearchParams.comandaNotice[0]
     : resolvedSearchParams?.comandaNotice;
@@ -197,7 +238,10 @@ export default async function OperacaoComandasPage({ searchParams }) {
   const activeStatus = orderFilters.some((item) => item.value === statusFilter)
     ? statusFilter
     : "all";
-  const groupedOrders = ordersBoard.groupedOrders ?? [];
+  const allGroupedOrders = ordersBoard.groupedOrders ?? [];
+  const groupedOrders = allGroupedOrders.filter((orderGroup) =>
+    doesOrderGroupMatchSearch(orderGroup, orderSearchQuery ?? ""),
+  );
   const orderGroupsByStatus = orderSections.reduce((accumulator, section) => {
     accumulator[section.key] = groupedOrders.filter(
       (orderGroup) => orderGroup.status === section.key,
@@ -206,7 +250,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
     return accumulator;
   }, {});
   const selectedOrderGroup = checkoutQuery
-    ? findOrderGroupByReference(groupedOrders, checkoutQuery)
+    ? findOrderGroupByReference(allGroupedOrders, checkoutQuery)
     : null;
   const visibleSections = selectedOrderGroup
     ? orderSections.filter((section) => section.key === selectedOrderGroup.status)
@@ -218,6 +262,10 @@ export default async function OperacaoComandasPage({ searchParams }) {
     (checkoutQuery && !selectedOrderGroup
       ? "Nenhum pedido foi localizado com essa comanda."
       : "");
+  const orderSearchMessage =
+    !checkoutQuery && orderSearchQuery && !groupedOrders.length
+      ? "Nenhum pedido corresponde ao termo pesquisado."
+      : "";
   const availableTables = checksBoard.tables.filter(
     (table) =>
       table.isActive &&
@@ -435,9 +483,26 @@ export default async function OperacaoComandasPage({ searchParams }) {
                                 </p>
                               ) : null}
                             </div>
-                            <p className="text-sm font-semibold text-[var(--forest)]">
-                              {formatCurrency(item.totalPrice)}
-                            </p>
+                            <div className="grid justify-items-end gap-2">
+                              <p className="text-sm font-semibold text-[var(--forest)]">
+                                {formatCurrency(item.totalPrice)}
+                              </p>
+                              <form action={removeServiceCheckItemAction}>
+                                <input type="hidden" name="checkId" value={selectedCheck.id} />
+                                <input
+                                  type="hidden"
+                                  name="tableName"
+                                  value={selectedCheck.table?.name ?? ""}
+                                />
+                                <input type="hidden" name="checkItemId" value={item.id} />
+                                <ConfirmSubmitButton
+                                  message="Tem certeza que deseja remover este item da conta?"
+                                  className="pill-wrap-safe rounded-full border border-[rgba(138,93,59,0.18)] bg-[rgba(138,93,59,0.06)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--clay)] transition hover:-translate-y-0.5"
+                                >
+                                  Remover item
+                                </ConfirmSubmitButton>
+                              </form>
+                            </div>
                           </div>
                         ))
                       ) : (
@@ -520,6 +585,9 @@ export default async function OperacaoComandasPage({ searchParams }) {
                             {category.items.map((item) => (
                               <option key={item.id} value={item.id}>
                                 {item.name} - {formatCurrency(item.price)}
+                                {item.stockQuantity == null
+                                  ? ""
+                                  : ` | estoque: ${item.stockQuantity}`}
                               </option>
                             ))}
                           </optgroup>
@@ -527,7 +595,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
                       </select>
                     </label>
 
-                    <div className="grid gap-4 md:grid-cols-[10rem_1fr]">
+                    <div className="grid gap-4 md:grid-cols-[10rem_12rem_1fr]">
                       <label className="grid gap-2">
                         <span className="text-sm font-semibold text-[var(--forest)]">Quantidade</span>
                         <input
@@ -542,6 +610,19 @@ export default async function OperacaoComandasPage({ searchParams }) {
                       </label>
 
                       <label className="grid gap-2">
+                        <span className="text-sm font-semibold text-[var(--forest)]">Porcao</span>
+                        <select
+                          name="portionSize"
+                          defaultValue="medium"
+                          className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
+                        >
+                          <option value="small">Pequena</option>
+                          <option value="medium">Media</option>
+                          <option value="large">Grande</option>
+                        </select>
+                      </label>
+
+                      <label className="grid gap-2">
                         <span className="text-sm font-semibold text-[var(--forest)]">Observacao do item</span>
                         <input
                           name="notes"
@@ -552,6 +633,10 @@ export default async function OperacaoComandasPage({ searchParams }) {
                         />
                       </label>
                     </div>
+
+                    <p className="text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                      O preco final respeita a porcao escolhida e o estoque atual do item.
+                    </p>
 
                     <button type="submit" className="button-primary w-full">
                       Associar produto
@@ -740,7 +825,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
               casa ou do cliente.
             </p>
 
-            <form method="get" className="mt-5 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+            <form method="get" className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
               {activeStatus !== "all" ? (
                 <input type="hidden" name="status" value={activeStatus} />
               ) : null}
@@ -755,16 +840,27 @@ export default async function OperacaoComandasPage({ searchParams }) {
                   className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none placeholder:text-[rgba(21,35,29,0.46)]"
                 />
               </label>
+              <label className="grid gap-2">
+                <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
+                  Buscar por nome ou categoria
+                </span>
+                <input
+                  name="busca"
+                  defaultValue={orderSearchQuery ?? ""}
+                  placeholder="Ex.: Ravioli, sobremesa, delivery..."
+                  className="w-full min-w-0 rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none placeholder:text-[rgba(21,35,29,0.46)]"
+                />
+              </label>
               <button
                 type="submit"
-                className="button-primary w-full justify-center self-end md:w-auto"
+                className="button-primary w-full justify-center self-end lg:w-auto"
               >
                 <Search size={16} />
                 Buscar
               </button>
               <Link
                 href={buildComandasHref({ mesa: tableQuery ?? "", status: activeStatus })}
-                className="button-secondary w-full justify-center self-end md:w-auto"
+                className="button-secondary w-full justify-center self-end lg:w-auto"
               >
                 Limpar busca
               </Link>
@@ -773,6 +869,12 @@ export default async function OperacaoComandasPage({ searchParams }) {
             {orderCheckoutSearchMessage ? (
               <div className="mt-4 rounded-[1.4rem] border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-4 py-3 text-sm leading-6 text-[var(--clay)]">
                 {orderCheckoutSearchMessage}
+              </div>
+            ) : null}
+
+            {orderSearchMessage ? (
+              <div className="mt-4 rounded-[1.4rem] border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-4 py-3 text-sm leading-6 text-[var(--clay)]">
+                {orderSearchMessage}
               </div>
             ) : null}
 
@@ -872,6 +974,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
                   mesa: tableQuery ?? "",
                   status: filter.value,
                   comanda: checkoutQuery ?? "",
+                  busca: orderSearchQuery ?? "",
                 })}
                 className={`filter-chip ${activeStatus === filter.value ? "filter-chip-active" : ""}`}
               >
@@ -976,8 +1079,18 @@ export default async function OperacaoComandasPage({ searchParams }) {
                                         <p className="text-sm font-semibold text-[var(--forest)]">
                                           {item.itemName}
                                         </p>
+                                        {item.categoryName ? (
+                                          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[var(--sage)]">
+                                            {item.categoryName}
+                                          </p>
+                                        ) : null}
                                         <p className="mt-1 text-sm text-[rgba(21,35,29,0.72)]">
-                                          {item.quantity} x {formatCurrency(item.totalPrice / item.quantity)}
+                                          {item.quantity} x{" "}
+                                          {formatCurrency(
+                                            item.quantity > 0
+                                              ? item.totalPrice / item.quantity
+                                              : item.totalPrice,
+                                          )}
                                         </p>
                                         {item.notes ? (
                                           <p className="mt-2 text-sm text-[rgba(21,35,29,0.72)]">

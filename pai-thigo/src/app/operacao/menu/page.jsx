@@ -4,15 +4,36 @@ import {
   deleteMenuItemAction,
   toggleMenuItemAvailabilityAction,
 } from "@/app/operacao/actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { MenuCategoryComposer } from "@/components/menu-category-composer";
 import { MenuItemComposer } from "@/components/menu-item-composer";
 import { SectionHeading } from "@/components/section-heading";
 import { requireRole } from "@/lib/auth";
 import { getMenuManagementBoard } from "@/lib/staff-data";
 import { formatCurrency } from "@/lib/utils";
 
-export default async function OperacaoMenuPage() {
+function formatPortionLabel(size) {
+  if (size === "small") {
+    return "P";
+  }
+
+  if (size === "large") {
+    return "G";
+  }
+
+  return "M";
+}
+
+export default async function OperacaoMenuPage({ searchParams }) {
   await requireRole(["manager", "owner"]);
   const board = await getMenuManagementBoard();
+  const resolvedSearchParams = await searchParams;
+  const menuNotice = Array.isArray(resolvedSearchParams?.menuNotice)
+    ? resolvedSearchParams.menuNotice[0]
+    : resolvedSearchParams?.menuNotice;
+  const menuError = Array.isArray(resolvedSearchParams?.menuError)
+    ? resolvedSearchParams.menuError[0]
+    : resolvedSearchParams?.menuError;
   const totalItems = board.categories.reduce(
     (sum, category) => sum + category.items.length,
     0,
@@ -21,7 +42,7 @@ export default async function OperacaoMenuPage() {
   return (
     <>
       <section className="pt-10">
-        <div className="grid gap-4 rounded-[2.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.46)] px-5 py-5 shadow-[0_20px_60px_rgba(36,29,15,0.06)] sm:grid-cols-3 lg:px-8">
+        <div className="grid gap-4 rounded-[2.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.46)] px-5 py-5 shadow-[0_20px_60px_rgba(36,29,15,0.06)] sm:grid-cols-2 xl:grid-cols-4 lg:px-8">
           {board.summary.map((item) => (
             <div key={item.label} className="rounded-[1.5rem] px-4 py-4">
               <p className="text-xs uppercase tracking-[0.24em] text-[var(--sage)]">
@@ -36,6 +57,18 @@ export default async function OperacaoMenuPage() {
             </div>
           ))}
         </div>
+
+        {menuNotice ? (
+          <div className="mt-4 rounded-[1.5rem] border border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.08)] px-4 py-3 text-sm leading-6 text-[var(--forest)]">
+            {menuNotice}
+          </div>
+        ) : null}
+
+        {menuError ? (
+          <div className="mt-4 rounded-[1.5rem] border border-[rgba(138,93,59,0.22)] bg-[rgba(138,93,59,0.08)] px-4 py-3 text-sm leading-6 text-[var(--clay)]">
+            {menuError}
+          </div>
+        ) : null}
       </section>
 
       <section className="pt-14">
@@ -109,16 +142,31 @@ export default async function OperacaoMenuPage() {
             </div>
           </div>
 
-          <div className="luxury-card rounded-[2.2rem] p-6">
-            <SectionHeading
-              eyebrow="Novo prato"
-              title="Cadastrar item com acabamento profissional"
-              description="Preencha os campos para incluir um prato novo no cardapio da casa com categoria, descricao, preco e leitura operacional."
-              compact
-            />
+          <div className="grid gap-5">
+            <div className="luxury-card rounded-[2.2rem] p-6">
+              <SectionHeading
+                eyebrow="Nova categoria"
+                title="Adicionar categoria e organizar o cardapio"
+                description="Crie categorias novas para deixar o cardapio interno mais claro e com acesso rapido."
+                compact
+              />
 
-            <div className="mt-8">
-              <MenuItemComposer categories={board.categories} />
+              <div className="mt-8">
+                <MenuCategoryComposer />
+              </div>
+            </div>
+
+            <div className="luxury-card rounded-[2.2rem] p-6">
+              <SectionHeading
+                eyebrow="Novo prato"
+                title="Cadastrar item com acabamento profissional"
+                description="Preencha os campos para incluir um prato novo no cardapio da casa com categoria, descricao, preco e leitura operacional."
+                compact
+              />
+
+              <div className="mt-8">
+                <MenuItemComposer categories={board.categories} />
+              </div>
             </div>
           </div>
         </div>
@@ -205,6 +253,36 @@ export default async function OperacaoMenuPage() {
                             ))}
                           </div>
 
+                          <div className="mt-4 grid gap-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                            <p>
+                              <span className="font-semibold text-[var(--forest)]">
+                                Estoque:
+                              </span>{" "}
+                              {item.stockQuantity == null
+                                ? "sem controle ativo"
+                                : `${item.stockQuantity} unidade(s)`}
+                            </p>
+                            {item.stockQuantity != null ? (
+                              <p>
+                                <span className="font-semibold text-[var(--forest)]">
+                                  Alerta:
+                                </span>{" "}
+                                {item.lowStockThreshold} unidade(s)
+                              </p>
+                            ) : null}
+                            <p>
+                              <span className="font-semibold text-[var(--forest)]">
+                                Porcoes:
+                              </span>{" "}
+                              {Object.entries(item.portionPrices ?? {})
+                                .map(
+                                  ([size, value]) =>
+                                    `${formatPortionLabel(size)} ${formatCurrency(value)}`,
+                                )
+                                .join(" | ")}
+                            </p>
+                          </div>
+
                           <div className="mt-4 flex flex-wrap items-center gap-3">
                             <span
                               className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${
@@ -231,13 +309,13 @@ export default async function OperacaoMenuPage() {
                             </form>
                             <form action={deleteMenuItemAction}>
                               <input type="hidden" name="itemId" value={item.id} />
-                              <button
-                                type="submit"
+                              <ConfirmSubmitButton
+                                message={`Tem certeza que deseja retirar o prato ${item.name} do cardapio?`}
                                 className="pill-wrap-safe inline-flex items-center gap-2 rounded-full border border-[rgba(138,93,59,0.16)] bg-[rgba(138,93,59,0.06)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--clay)] transition hover:-translate-y-0.5"
                               >
                                 <Trash2 size={14} />
                                 Retirar prato
-                              </button>
+                              </ConfirmSubmitButton>
                             </form>
                           </div>
                         </article>

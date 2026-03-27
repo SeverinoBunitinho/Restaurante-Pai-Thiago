@@ -67,6 +67,7 @@ export function CartCheckout({ customerName, restaurantInfo }) {
       menuItemId: item.menuItemId,
       quantity: item.quantity,
       notes: item.notes,
+      portionSize: item.portionSize,
     })),
   );
   const effectiveFulfillmentType = hasDeliveryCoverage
@@ -207,7 +208,7 @@ export function CartCheckout({ customerName, restaurantInfo }) {
           <div className="mt-8 space-y-4">
             {items.map((item) => (
               <article
-                key={item.menuItemId}
+                key={item.lineId}
                 className="rounded-[1.9rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-5"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -225,6 +226,14 @@ export function CartCheckout({ customerName, restaurantInfo }) {
                     <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
                       Preparo medio: {item.prepTime || "sob consulta"}
                     </p>
+                    <p className="mt-1 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                      Porcao:{" "}
+                      {item.portionSize === "small"
+                        ? "Pequena"
+                        : item.portionSize === "large"
+                          ? "Grande"
+                          : "Media"}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm uppercase tracking-[0.18em] text-[var(--sage)]">
@@ -240,7 +249,7 @@ export function CartCheckout({ customerName, restaurantInfo }) {
                   <div className="inline-flex items-center rounded-full border border-[rgba(20,35,29,0.08)] bg-white/70 p-1">
                     <button
                       type="button"
-                      onClick={() => updateQuantity(item.menuItemId, item.quantity - 1)}
+                      onClick={() => updateQuantity(item.lineId, item.quantity - 1)}
                       className="rounded-full p-2 text-[var(--forest)] transition hover:bg-[rgba(20,35,29,0.06)]"
                     >
                       <Minus size={16} />
@@ -250,7 +259,7 @@ export function CartCheckout({ customerName, restaurantInfo }) {
                     </span>
                     <button
                       type="button"
-                      onClick={() => updateQuantity(item.menuItemId, item.quantity + 1)}
+                      onClick={() => updateQuantity(item.lineId, item.quantity + 1)}
                       className="rounded-full p-2 text-[var(--forest)] transition hover:bg-[rgba(20,35,29,0.06)]"
                     >
                       <Plus size={16} />
@@ -259,7 +268,7 @@ export function CartCheckout({ customerName, restaurantInfo }) {
 
                   <button
                     type="button"
-                    onClick={() => removeItem(item.menuItemId)}
+                    onClick={() => removeItem(item.lineId)}
                     className="inline-flex items-center gap-2 rounded-full border border-[rgba(138,93,59,0.18)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--clay)] transition hover:-translate-y-0.5"
                   >
                     <Trash2 size={14} />
@@ -272,7 +281,7 @@ export function CartCheckout({ customerName, restaurantInfo }) {
                   <input
                     value={item.notes}
                     onChange={(event) =>
-                      updateNotes(item.menuItemId, event.target.value)
+                      updateNotes(item.lineId, event.target.value)
                     }
                     maxLength={300}
                     placeholder="Ex.: sem cebola, ponto da carne para menos..."

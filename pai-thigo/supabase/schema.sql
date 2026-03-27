@@ -5,9 +5,29 @@ create table if not exists public.staff_directory (
   email text not null unique,
   full_name text not null,
   role text not null check (role in ('waiter', 'manager', 'owner')),
+  login text,
+  phone text,
+  address text,
+  rg text,
+  cpf text,
   active boolean not null default true,
   created_at timestamptz not null default timezone('utc', now())
 );
+
+alter table public.staff_directory
+add column if not exists login text;
+
+alter table public.staff_directory
+add column if not exists phone text;
+
+alter table public.staff_directory
+add column if not exists address text;
+
+alter table public.staff_directory
+add column if not exists rg text;
+
+alter table public.staff_directory
+add column if not exists cpf text;
 
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -63,6 +83,15 @@ add column if not exists allergens text[] not null default '{}';
 
 alter table public.menu_items
 add column if not exists image_url text;
+
+alter table public.menu_items
+add column if not exists stock_quantity integer;
+
+alter table public.menu_items
+add column if not exists low_stock_threshold integer not null default 0;
+
+alter table public.menu_items
+add column if not exists portion_prices jsonb not null default '{}'::jsonb;
 
 create table if not exists public.restaurant_settings (
   id text primary key default 'main',

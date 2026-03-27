@@ -33,6 +33,12 @@ const ANY_AREA_PREFERENCE_VALUES = new Set([
 
 const DEFAULT_MENU_ITEM_IMAGE = "/images/menu-placeholder.svg";
 const RESERVATION_CONFIRMATION_PREFIX = "RSV";
+const portionSizeOptions = ["small", "medium", "large"];
+const defaultPortionMultiplierBySize = {
+  small: 0.8,
+  medium: 1,
+  large: 1.35,
+};
 
 function sanitizeMenuItemImageUrl(value) {
   const rawValue = String(value ?? "").trim();
@@ -91,6 +97,48 @@ function resolveMenuItemImage(itemId, itemName, imageUrl) {
     sanitizeMenuItemImageUrl(fallbackMenuImageByName.get(normalizeMenuImageKey(itemName))) ||
     DEFAULT_MENU_ITEM_IMAGE
   );
+}
+
+function normalizePortionSize(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return portionSizeOptions.includes(normalized) ? normalized : "medium";
+}
+
+function getPortionLabel(size) {
+  if (size === "small") {
+    return "Pequena";
+  }
+
+  if (size === "large") {
+    return "Grande";
+  }
+
+  return "Media";
+}
+
+function buildPortionPricing(basePrice, portionPricesInput = {}) {
+  const parsedBasePrice = Number(basePrice ?? 0);
+  const safeBasePrice =
+    Number.isFinite(parsedBasePrice) && parsedBasePrice >= 0 ? parsedBasePrice : 0;
+  const payload = {};
+
+  for (const size of portionSizeOptions) {
+    const inputPrice = Number(portionPricesInput[size] ?? NaN);
+    const fallbackPrice = safeBasePrice * defaultPortionMultiplierBySize[size];
+    const resolvedPrice = Number.isFinite(inputPrice) && inputPrice >= 0
+      ? inputPrice
+      : fallbackPrice;
+
+    payload[size] = Number(resolvedPrice.toFixed(2));
+  }
+
+  return payload;
+}
+
+function resolvePortionUnitPrice(basePrice, portionPrices, portionSize) {
+  const normalizedPortion = normalizePortionSize(portionSize);
+  const pricing = buildPortionPricing(basePrice, portionPrices ?? {});
+  return pricing[normalizedPortion] ?? pricing.medium ?? Number(basePrice ?? 0);
 }
 
 function normalizeReservationArea(value) {
@@ -453,6 +501,7 @@ function mapMenuCategory(category, includeUnavailable = false) {
         name: item.name,
         description: item.description,
         price: Number(item.price),
+        portionPrices: buildPortionPricing(item.price, item.portion_prices ?? {}),
         imageUrl: resolveMenuItemImage(item.id, item.name, item.image_url),
         prepTime: item.prep_time ?? "12 min",
         spiceLevel: item.spice_level ?? "suave",
@@ -460,6 +509,16 @@ function mapMenuCategory(category, includeUnavailable = false) {
         allergens: item.allergens ?? [],
         signature: Boolean(item.is_signature),
         available: item.is_available ?? true,
+        stockQuantity:
+          Number.isFinite(Number(item.stock_quantity)) &&
+          Number(item.stock_quantity) >= 0
+            ? Number(item.stock_quantity)
+            : null,
+        lowStockThreshold:
+          Number.isFinite(Number(item.low_stock_threshold)) &&
+          Number(item.low_stock_threshold) >= 0
+            ? Number(item.low_stock_threshold)
+            : 0,
       })),
   };
 }
@@ -625,12 +684,31 @@ export async function getMenuCategories(options = {}) {
     return buildFallbackMenuCategories(includeUnavailable);
   }
 
-  const { data, error } = await supabase
+  const newColumnsSelect =
+    "id, name, slug, description, highlight_color, sort_order, menu_items(id, name, description, image_url, price, prep_time, spice_level, tags, allergens, is_signature, is_available, sort_order, stock_quantity, low_stock_threshold, portion_prices)";
+  const legacyColumnsSelect =
+    "id, name, slug, description, highlight_color, sort_order, menu_items(id, name, description, image_url, price, prep_time, spice_level, tags, allergens, is_signature, is_available, sort_order)";
+  let queryResult = await supabase
     .from("menu_categories")
-    .select(
-      "id, name, slug, description, highlight_color, sort_order, menu_items(id, name, description, image_url, price, prep_time, spice_level, tags, allergens, is_signature, is_available, sort_order)",
-    )
+    .select(newColumnsSelect)
     .order("sort_order", { ascending: true });
+
+  if (queryResult.error) {
+    const message = String(queryResult.error.message ?? "").toLowerCase();
+    const missingNewColumns =
+      message.includes("stock_quantity") ||
+      message.includes("low_stock_threshold") ||
+      message.includes("portion_prices");
+
+    if (missingNewColumns) {
+      queryResult = await supabase
+        .from("menu_categories")
+        .select(legacyColumnsSelect)
+        .order("sort_order", { ascending: true });
+    }
+  }
+
+  const { data, error } = queryResult;
 
   if (error || !data?.length) {
     return buildFallbackMenuCategories(includeUnavailable);
@@ -1451,6 +1529,7 @@ export async function createOrder(input) {
   const quantity = Number(input.quantity ?? 0);
   const menuItemId = String(input.menuItemId ?? "").trim();
   const notes = String(input.notes ?? "").trim();
+  const portionSize = normalizePortionSize(input.portionSize);
 
   if (!menuItemId || !Number.isFinite(quantity) || quantity < 1 || quantity > 20) {
     return {
@@ -1466,11 +1545,27 @@ export async function createOrder(input) {
     };
   }
 
-  const { data: menuItem, error: menuItemError } = await supabase
+  let menuItemResult = await supabase
     .from("menu_items")
-    .select("id, name, price, is_available")
+    .select("id, name, price, is_available, stock_quantity, portion_prices")
     .eq("id", menuItemId)
     .maybeSingle();
+
+  if (menuItemResult.error) {
+    const message = String(menuItemResult.error.message ?? "").toLowerCase();
+    const missingColumns =
+      message.includes("stock_quantity") || message.includes("portion_prices");
+
+    if (missingColumns) {
+      menuItemResult = await supabase
+        .from("menu_items")
+        .select("id, name, price, is_available")
+        .eq("id", menuItemId)
+        .maybeSingle();
+    }
+  }
+
+  const { data: menuItem, error: menuItemError } = menuItemResult;
 
   if (menuItemError || !menuItem || !menuItem.is_available) {
     return {
@@ -1479,8 +1574,30 @@ export async function createOrder(input) {
     };
   }
 
-  const unitPrice = Number(menuItem.price);
+  const stockQuantity = Number(menuItem.stock_quantity ?? NaN);
+  const hasStockControl = Number.isFinite(stockQuantity) && stockQuantity >= 0;
+
+  if (hasStockControl && quantity > stockQuantity) {
+    return {
+      ok: false,
+      message: `Estoque insuficiente para ${menuItem.name}. Disponivel agora: ${stockQuantity}.`,
+    };
+  }
+
+  const portionLabel = getPortionLabel(portionSize);
+  const unitPrice = resolvePortionUnitPrice(
+    Number(menuItem.price),
+    menuItem.portion_prices,
+    portionSize,
+  );
   const totalPrice = unitPrice * quantity;
+  const itemName =
+    portionSize === "medium"
+      ? menuItem.name
+      : `${menuItem.name} (${portionLabel})`;
+  const normalizedNotes = [notes, portionSize !== "medium" ? `Porcao: ${portionLabel}` : ""]
+    .filter(Boolean)
+    .join(" | ");
 
   const { error } = await supabase.from("orders").insert({
     user_id: user.id,
@@ -1488,11 +1605,11 @@ export async function createOrder(input) {
     guest_name: profile.full_name,
     guest_email: profile.email,
     checkout_reference: `PT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
-    item_name: menuItem.name,
+    item_name: itemName,
     quantity,
     unit_price: unitPrice,
     total_price: totalPrice,
-    notes: notes || null,
+    notes: normalizedNotes || null,
     fulfillment_type: "pickup",
     delivery_fee: 0,
     payment_method: "pix",
@@ -1506,6 +1623,13 @@ export async function createOrder(input) {
       message:
         "Nao foi possivel enviar o pedido agora. Verifique o schema e as policies do Supabase.",
     };
+  }
+
+  if (hasStockControl) {
+    await supabase
+      .from("menu_items")
+      .update({ stock_quantity: Math.max(0, stockQuantity - quantity) })
+      .eq("id", menuItem.id);
   }
 
   return {
@@ -1590,6 +1714,7 @@ export async function createCartOrder(input) {
           menuItemId: String(item.menuItemId ?? "").trim(),
           quantity: Number(item.quantity ?? 0),
           notes: String(item.notes ?? "").trim(),
+          portionSize: normalizePortionSize(item.portionSize),
         }))
         .filter(
           (item) =>
@@ -1656,10 +1781,25 @@ export async function createCartOrder(input) {
   }
 
   const menuItemIds = cartItems.map((item) => item.menuItemId);
-  const { data: menuItems, error: menuItemsError } = await supabase
+  let menuItemsResult = await supabase
     .from("menu_items")
-    .select("id, name, price, is_available")
+    .select("id, name, price, is_available, stock_quantity, portion_prices")
     .in("id", menuItemIds);
+
+  if (menuItemsResult.error) {
+    const message = String(menuItemsResult.error.message ?? "").toLowerCase();
+    const missingColumns =
+      message.includes("stock_quantity") || message.includes("portion_prices");
+
+    if (missingColumns) {
+      menuItemsResult = await supabase
+        .from("menu_items")
+        .select("id, name, price, is_available")
+        .in("id", menuItemIds);
+    }
+  }
+
+  const { data: menuItems, error: menuItemsError } = menuItemsResult;
 
   if (menuItemsError || !menuItems?.length) {
     return {
@@ -1669,6 +1809,36 @@ export async function createCartOrder(input) {
   }
 
   const menuMap = new Map(menuItems.map((item) => [item.id, item]));
+  const quantityByItemId = new Map();
+
+  for (const cartItem of cartItems) {
+    quantityByItemId.set(
+      cartItem.menuItemId,
+      (quantityByItemId.get(cartItem.menuItemId) ?? 0) + cartItem.quantity,
+    );
+  }
+
+  for (const [itemId, totalQuantity] of quantityByItemId.entries()) {
+    const menuItem = menuMap.get(itemId);
+
+    if (!menuItem || !menuItem.is_available) {
+      return {
+        ok: false,
+        message: "Um dos itens do carrinho nao esta mais disponivel.",
+      };
+    }
+
+    const stockQuantity = Number(menuItem.stock_quantity ?? NaN);
+    const hasStockControl = Number.isFinite(stockQuantity) && stockQuantity >= 0;
+
+    if (hasStockControl && totalQuantity > stockQuantity) {
+      return {
+        ok: false,
+        message: `Estoque insuficiente para ${menuItem.name}. Disponivel agora: ${stockQuantity}.`,
+      };
+    }
+  }
+
   const checkoutReference = `${
     fulfillmentType === "delivery" ? "DLV" : "RET"
   }-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
@@ -1686,9 +1856,24 @@ export async function createCartOrder(input) {
       };
     }
 
-    const unitPrice = Number(menuItem.price);
+    const portionLabel = getPortionLabel(cartItem.portionSize);
+    const unitPrice = resolvePortionUnitPrice(
+      Number(menuItem.price),
+      menuItem.portion_prices,
+      cartItem.portionSize,
+    );
     const totalPrice = unitPrice * cartItem.quantity;
     itemsSubtotal += totalPrice;
+    const itemName =
+      cartItem.portionSize === "medium"
+        ? menuItem.name
+        : `${menuItem.name} (${portionLabel})`;
+    const normalizedNotes = [
+      cartItem.notes,
+      cartItem.portionSize !== "medium" ? `Porcao: ${portionLabel}` : "",
+    ]
+      .filter(Boolean)
+      .join(" | ");
 
     ordersPayload.push({
       user_id: user.id,
@@ -1696,11 +1881,11 @@ export async function createCartOrder(input) {
       guest_name: profile.full_name,
       guest_email: profile.email,
       checkout_reference: checkoutReference,
-      item_name: menuItem.name,
+      item_name: itemName,
       quantity: cartItem.quantity,
       unit_price: unitPrice,
       total_price: totalPrice,
-      notes: cartItem.notes || null,
+      notes: normalizedNotes || null,
       fulfillment_type: fulfillmentType,
       delivery_neighborhood: resolvedNeighborhood || null,
       delivery_address: resolvedAddress || null,
@@ -1731,6 +1916,21 @@ export async function createCartOrder(input) {
       message:
         "Nao foi possivel finalizar o delivery agora. Rode o schema atualizado do Supabase com as colunas novas de entrega e tente novamente.",
     };
+  }
+
+  for (const [itemId, totalQuantity] of quantityByItemId.entries()) {
+    const menuItem = menuMap.get(itemId);
+    const stockQuantity = Number(menuItem?.stock_quantity ?? NaN);
+    const hasStockControl = Number.isFinite(stockQuantity) && stockQuantity >= 0;
+
+    if (!menuItem || !hasStockControl) {
+      continue;
+    }
+
+    await supabase
+      .from("menu_items")
+      .update({ stock_quantity: Math.max(0, stockQuantity - totalQuantity) })
+      .eq("id", itemId);
   }
 
   return {

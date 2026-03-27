@@ -291,9 +291,19 @@ function buildFallbackReportsBoard(period, customStartDate = "", customEndDate =
         description: "Os fechamentos do periodo reaparecem assim que a sincronizacao voltar.",
       },
       {
+        label: "Faturamento em comandas",
+        value: "0",
+        description: "Total movimentado em contas fechadas no periodo.",
+      },
+      {
         label: "Comissao prevista",
         value: "0",
         description: "O calculo de comissao depende da camada de comandas em producao.",
+      },
+      {
+        label: "Resultado liquido estimado",
+        value: "0",
+        description: "Faturamento menos comissao prevista da equipe.",
       },
     ],
     waiterCommissions: [],
@@ -579,6 +589,7 @@ export async function getServiceReportsBoard(period = "30d", options = {}) {
     (accumulator, waiter) => accumulator + waiter.commissionAmount,
     0,
   );
+  const estimatedNetResult = totalGrossSales - totalCommission;
   const financialTimelineMap = new Map();
 
   for (const check of closedChecks) {
@@ -629,6 +640,11 @@ export async function getServiceReportsBoard(period = "30d", options = {}) {
         label: "Comissao prevista",
         value: String(totalCommission),
         description: `Calculo usando a regra atual de ${commissionRate}% para garcons.`,
+      },
+      {
+        label: "Resultado liquido estimado",
+        value: String(estimatedNetResult),
+        description: "Faturamento de comandas menos comissao prevista da equipe.",
       },
       {
         label: "Ticket medio",

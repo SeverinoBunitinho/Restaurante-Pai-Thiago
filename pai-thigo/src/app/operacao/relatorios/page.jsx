@@ -106,7 +106,9 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                 const numericValue = Number(item.value);
                 const formattedValue = item.label.includes("Faturamento") ||
                   item.label.includes("Comissao") ||
-                  item.label.includes("Ticket")
+                  item.label.includes("Ticket") ||
+                  item.label.includes("Resultado") ||
+                  item.label.includes("Lucro")
                   ? formatCurrency(numericValue)
                   : item.value;
 

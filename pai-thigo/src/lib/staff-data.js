@@ -146,6 +146,7 @@ function mapOrder(order) {
     deliveryReference: order.delivery_reference ?? "",
     deliveryFee: Number(order.delivery_fee ?? 0),
     deliveryEtaMinutes: Number(order.delivery_eta_minutes ?? 0),
+    categoryName: order.menu_item?.category?.name ?? "",
     status: order.status,
     createdAt: order.created_at,
   };
@@ -1137,6 +1138,14 @@ export async function getMenuManagementBoard() {
 
   const categories = await getMenuCategories({ includeUnavailable: true });
   const items = categories.flatMap((category) => category.items);
+  const lowStockItems = items.filter((item) => {
+    if (item.stockQuantity == null) {
+      return false;
+    }
+
+    const threshold = Number(item.lowStockThreshold ?? 0);
+    return item.stockQuantity <= Math.max(0, threshold);
+  });
 
   return {
     summary: [
@@ -1154,6 +1163,11 @@ export async function getMenuManagementBoard() {
         label: "Itens pausados",
         value: String(items.filter((item) => !item.available).length),
         description: "Produtos temporariamente indisponiveis.",
+      },
+      {
+        label: "Estoque critico",
+        value: String(lowStockItems.length),
+        description: "Itens com estoque no limite definido para reposicao.",
       },
     ],
     categories,
@@ -1256,13 +1270,28 @@ export async function getOrdersBoard() {
     return buildFallbackOrdersBoard();
   }
 
-  const ordersResult = await supabase
+  let ordersResult = await supabase
     .from("orders")
     .select(
-      "id, guest_name, guest_email, checkout_reference, item_name, quantity, unit_price, total_price, notes, payment_method, fulfillment_type, delivery_neighborhood, delivery_address, delivery_reference, delivery_fee, delivery_eta_minutes, status, created_at",
+      "id, guest_name, guest_email, checkout_reference, item_name, quantity, unit_price, total_price, notes, payment_method, fulfillment_type, delivery_neighborhood, delivery_address, delivery_reference, delivery_fee, delivery_eta_minutes, status, created_at, menu_item:menu_items(category:menu_categories(name))",
     )
     .order("created_at", { ascending: false })
     .limit(18);
+
+  if (ordersResult.error) {
+    const message = String(ordersResult.error.message ?? "").toLowerCase();
+    const relationMissing = message.includes("menu_item") || message.includes("category");
+
+    if (relationMissing) {
+      ordersResult = await supabase
+        .from("orders")
+        .select(
+          "id, guest_name, guest_email, checkout_reference, item_name, quantity, unit_price, total_price, notes, payment_method, fulfillment_type, delivery_neighborhood, delivery_address, delivery_reference, delivery_fee, delivery_eta_minutes, status, created_at",
+        )
+        .order("created_at", { ascending: false })
+        .limit(18);
+    }
+  }
 
   if (ordersResult.error) {
     return buildFallbackOrdersBoard();
@@ -1308,13 +1337,30 @@ export async function getOrderCheckoutPrintReport(checkoutReference) {
     return null;
   }
 
-  const { data, error } = await supabase
+  let reportQueryResult = await supabase
     .from("orders")
     .select(
-      "id, guest_name, guest_email, checkout_reference, item_name, quantity, unit_price, total_price, notes, payment_method, fulfillment_type, delivery_neighborhood, delivery_address, delivery_reference, delivery_fee, delivery_eta_minutes, status, created_at, updated_at",
+      "id, guest_name, guest_email, checkout_reference, item_name, quantity, unit_price, total_price, notes, payment_method, fulfillment_type, delivery_neighborhood, delivery_address, delivery_reference, delivery_fee, delivery_eta_minutes, status, created_at, updated_at, menu_item:menu_items(category:menu_categories(name))",
     )
     .eq("checkout_reference", checkoutReference)
     .order("created_at", { ascending: true });
+
+  if (reportQueryResult.error) {
+    const message = String(reportQueryResult.error.message ?? "").toLowerCase();
+    const relationMissing = message.includes("menu_item") || message.includes("category");
+
+    if (relationMissing) {
+      reportQueryResult = await supabase
+        .from("orders")
+        .select(
+          "id, guest_name, guest_email, checkout_reference, item_name, quantity, unit_price, total_price, notes, payment_method, fulfillment_type, delivery_neighborhood, delivery_address, delivery_reference, delivery_fee, delivery_eta_minutes, status, created_at, updated_at",
+        )
+        .eq("checkout_reference", checkoutReference)
+        .order("created_at", { ascending: true });
+    }
+  }
+
+  const { data, error } = reportQueryResult;
 
   if (error || !data?.length) {
     return null;

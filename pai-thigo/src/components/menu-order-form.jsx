@@ -11,15 +11,28 @@ export function MenuOrderForm({
   menuItemId,
   name,
   price,
+  portionPrices,
   prepTime,
   signature = false,
   canOrder = true,
 }) {
   const [quantity, setQuantity] = useState("1");
+  const [portionSize, setPortionSize] = useState("medium");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("idle");
   const { addItem, getItemQuantity } = useCart();
   const currentQuantity = getItemQuantity(menuItemId);
+  const pricing = {
+    small: Number(portionPrices?.small ?? price * 0.8),
+    medium: Number(portionPrices?.medium ?? price),
+    large: Number(portionPrices?.large ?? price * 1.35),
+  };
+  const selectedUnitPrice = pricing[portionSize] ?? pricing.medium;
+  const portionLabels = {
+    small: "Pequena",
+    medium: "Media",
+    large: "Grande",
+  };
 
   if (!canOrder) {
     return (
@@ -34,7 +47,8 @@ export function MenuOrderForm({
     addItem({
       menuItemId,
       name,
-      price,
+      price: selectedUnitPrice,
+      portionSize,
       prepTime,
       signature,
       quantity: Number(quantity),
@@ -50,7 +64,7 @@ export function MenuOrderForm({
     <div
       className="mt-5 grid gap-4 rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4"
     >
-      <div className="grid gap-4 md:grid-cols-[132px_1fr]">
+      <div className="grid gap-4 md:grid-cols-[132px_1fr_150px]">
         <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
           Quantidade
           <select
@@ -63,6 +77,25 @@ export function MenuOrderForm({
                 {value}
               </option>
             ))}
+          </select>
+        </label>
+
+        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+          Porcao
+          <select
+            value={portionSize}
+            onChange={(event) => setPortionSize(event.target.value)}
+            className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          >
+            <option value="small">
+              Pequena - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.small)}
+            </option>
+            <option value="medium">
+              Media - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.medium)}
+            </option>
+            <option value="large">
+              Grande - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.large)}
+            </option>
           </select>
         </label>
 
@@ -92,7 +125,8 @@ export function MenuOrderForm({
           </Link>
         </div>
         <p className="max-w-md text-sm leading-6 text-[rgba(21,35,29,0.66)]">
-          Monte o pedido no carrinho e finalize o pagamento em um unico checkout.
+          {portionLabels[portionSize]} selecionada por{" "}
+          {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(selectedUnitPrice)}.
         </p>
       </div>
 

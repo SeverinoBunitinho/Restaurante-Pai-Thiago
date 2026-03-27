@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import {
   assignReservationTableAction,
+  createRestaurantTableAction,
   toggleRestaurantTableActiveAction,
 } from "@/app/operacao/actions";
 import { SectionHeading } from "@/components/section-heading";
@@ -86,6 +87,15 @@ export default async function OperacaoMesasPage({ searchParams }) {
   const session = await requireRole(["waiter", "manager", "owner"]);
   const board = await getSeatingBoard();
   const canManageTables = session.role === "manager" || session.role === "owner";
+  const areaOptions = Array.from(
+    new Set([
+      "Salao principal",
+      "Lounge",
+      "Sala reservada",
+      "Varanda",
+      ...(board.tables ?? []).map((table) => table.area).filter(Boolean),
+    ]),
+  ).sort((left, right) => left.localeCompare(right, "pt-BR"));
   const resolvedSearchParams = await searchParams;
   const mesaNotice = Array.isArray(resolvedSearchParams?.mesaNotice)
     ? resolvedSearchParams.mesaNotice[0]
@@ -215,6 +225,72 @@ export default async function OperacaoMesasPage({ searchParams }) {
               );
             })}
           </div>
+
+          {canManageTables ? (
+            <article className="mt-6 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] p-4">
+              <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+                Adicionar nova mesa
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                Dono e gerente podem ampliar o mapa do salao sem sair desta tela.
+              </p>
+
+              <form
+                action={createRestaurantTableAction}
+                className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_9rem_auto]"
+              >
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                    Nome da mesa
+                  </span>
+                  <input
+                    name="tableName"
+                    type="text"
+                    required
+                    maxLength={60}
+                    placeholder="Ex.: Mesa 25"
+                    className="w-full min-w-0 rounded-[1.1rem] border border-[rgba(20,35,29,0.12)] bg-white px-3 py-2.5 text-sm outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                    Area
+                  </span>
+                  <select
+                    name="area"
+                    defaultValue={areaOptions[0] ?? "Salao principal"}
+                    className="w-full min-w-0 rounded-[1.1rem] border border-[rgba(20,35,29,0.12)] bg-white px-3 py-2.5 text-sm outline-none"
+                  >
+                    {areaOptions.map((area) => (
+                      <option key={area} value={area}>
+                        {area}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                    Capacidade
+                  </span>
+                  <input
+                    name="capacity"
+                    type="number"
+                    min="1"
+                    max="20"
+                    required
+                    defaultValue="4"
+                    className="w-full min-w-0 rounded-[1.1rem] border border-[rgba(20,35,29,0.12)] bg-white px-3 py-2.5 text-sm outline-none"
+                  />
+                </label>
+
+                <button type="submit" className="button-primary w-full justify-center self-end md:w-auto">
+                  Salvar mesa
+                </button>
+              </form>
+            </article>
+          ) : null}
         </div>
       </section>
 

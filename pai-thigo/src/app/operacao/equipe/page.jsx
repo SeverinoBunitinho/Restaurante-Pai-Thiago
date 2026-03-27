@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { createStaffAccountAction, toggleStaffDirectoryStatusAction } from "@/app/operacao/actions";
 import { SectionHeading } from "@/components/section-heading";
 import { getStaffRoleLabel, requireRole } from "@/lib/auth";
@@ -12,10 +14,29 @@ function getRoleOptions(role) {
     : [{ value: "waiter", label: "Garcom" }];
 }
 
+const staffRoleFilters = [
+  { value: "all", label: "Todos" },
+  { value: "waiter", label: "Garcons" },
+  { value: "manager", label: "Gerentes" },
+  { value: "owner", label: "Dono" },
+];
+
+function normalizeRoleFilter(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return staffRoleFilters.some((item) => item.value === normalized)
+    ? normalized
+    : "all";
+}
+
 export default async function OperacaoEquipePage({ searchParams }) {
   const session = await requireRole(["manager", "owner"]);
   const board = await getStaffDirectoryBoard();
   const resolvedSearchParams = await searchParams;
+  const roleFilter = normalizeRoleFilter(
+    Array.isArray(resolvedSearchParams?.cargo)
+      ? resolvedSearchParams.cargo[0]
+      : resolvedSearchParams?.cargo,
+  );
   const staffNotice = Array.isArray(resolvedSearchParams?.staffNotice)
     ? resolvedSearchParams.staffNotice[0]
     : resolvedSearchParams?.staffNotice;
@@ -23,6 +44,11 @@ export default async function OperacaoEquipePage({ searchParams }) {
     ? resolvedSearchParams.staffError[0]
     : resolvedSearchParams?.staffError;
   const roleOptions = getRoleOptions(session.role);
+  const filteredStaff =
+    roleFilter === "all"
+      ? board.staff
+      : board.staff.filter((member) => member.role === roleFilter);
+  const waiters = board.staff.filter((member) => member.role === "waiter");
 
   return (
     <>
@@ -75,6 +101,65 @@ export default async function OperacaoEquipePage({ searchParams }) {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-[var(--forest)]">Login interno</span>
+                  <input
+                    name="login"
+                    type="text"
+                    maxLength={40}
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                    placeholder="Ex.: marina.gestao"
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-[var(--forest)]">Telefone</span>
+                  <input
+                    name="phone"
+                    type="text"
+                    maxLength={40}
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                    placeholder="(11) 99999-9999"
+                  />
+                </label>
+              </div>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-[var(--forest)]">Endereco</span>
+                <input
+                  name="address"
+                  type="text"
+                  maxLength={220}
+                  className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                  placeholder="Rua, numero, bairro e complemento"
+                />
+              </label>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-[var(--forest)]">RG</span>
+                  <input
+                    name="rg"
+                    type="text"
+                    maxLength={20}
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                    placeholder="Somente numeros e digito"
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-[var(--forest)]">CPF</span>
+                  <input
+                    name="cpf"
+                    type="text"
+                    maxLength={20}
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                    placeholder="Somente numeros"
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Cargo</span>
                   <select
                     name="role"
@@ -103,6 +188,19 @@ export default async function OperacaoEquipePage({ searchParams }) {
                 </label>
               </div>
 
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-[var(--forest)]">Confirmar senha</span>
+                <input
+                  name="passwordConfirm"
+                  type="password"
+                  required
+                  minLength={6}
+                  maxLength={72}
+                  className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                  placeholder="Repita a senha informada"
+                />
+              </label>
+
               <button type="submit" className="button-primary mt-2 w-full">
                 Salvar conta interna
               </button>
@@ -110,7 +208,7 @@ export default async function OperacaoEquipePage({ searchParams }) {
 
             <div className="mt-6 rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.6)] p-5 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
               {session.role === "owner"
-                ? "O dono pode registrar gerente e garcom. As contas entram confirmadas e prontas para login."
+                ? "O dono pode registrar gerente e garcom. Para gerente, preencha login, endereco, telefone, RG e CPF."
                 : "O gerente registra apenas garcons. Isso protege a camada administrativa da casa."}
             </div>
           </div>
@@ -124,6 +222,16 @@ export default async function OperacaoEquipePage({ searchParams }) {
             </h2>
 
             <div className="mt-8 grid gap-4">
+              <article className="rounded-[1.5rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-4 text-sm leading-7 text-[rgba(255,247,232,0.8)]">
+                Lista individual de garcons cadastrados: {waiters.length}.{" "}
+                <Link
+                  href="/operacao/equipe?cargo=waiter#lista-garcons"
+                  className="font-semibold text-[var(--gold-soft)] underline underline-offset-4"
+                >
+                  Ver lista de garcons
+                </Link>
+              </article>
+
               {[
                 "Garcom opera comandas, abre conta, associa produtos, cancela e fecha atendimento.",
                 "Gerente acompanha toda a equipe, calcula comissao e emite relatorios de ocupacao.",
@@ -150,9 +258,55 @@ export default async function OperacaoEquipePage({ searchParams }) {
             compact
           />
 
+          <div className="mt-6 flex flex-wrap gap-3">
+            {staffRoleFilters.map((filter) => (
+              <Link
+                key={filter.value}
+                href={
+                  filter.value === "all"
+                    ? "/operacao/equipe"
+                    : `/operacao/equipe?cargo=${filter.value}`
+                }
+                className={`filter-chip ${roleFilter === filter.value ? "filter-chip-active" : ""}`}
+              >
+                {filter.label}
+                <span className="rounded-full bg-[rgba(20,35,29,0.08)] px-2 py-0.5 text-[10px] font-semibold tracking-normal text-current">
+                  {filter.value === "all"
+                    ? board.staff.length
+                    : board.staff.filter((member) => member.role === filter.value).length}
+                </span>
+              </Link>
+            ))}
+          </div>
+
+          <div
+            id="lista-garcons"
+            className="mt-6 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.6)] p-4"
+          >
+            <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+              Lista individual de garcons cadastrados
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {waiters.length ? (
+                waiters.map((waiter) => (
+                  <span
+                    key={waiter.id}
+                    className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--forest)]"
+                  >
+                    {waiter.full_name}
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm text-[rgba(21,35,29,0.68)]">
+                  Nenhum garcom cadastrado no momento.
+                </span>
+              )}
+            </div>
+          </div>
+
           <div className="mt-8 space-y-4">
-            {board.staff.length ? (
-              board.staff.map((member) => {
+            {filteredStaff.length ? (
+              filteredStaff.map((member) => {
                 const canToggle =
                   member.role !== "owner" &&
                   (session.role === "owner" || member.role === "waiter");
@@ -232,10 +386,10 @@ export default async function OperacaoEquipePage({ searchParams }) {
             ) : (
               <article className="rounded-[1.8rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.54)] p-6">
                 <p className="text-lg font-semibold text-[var(--forest)]">
-                  Nenhum perfil interno disponivel agora
+                  Nenhum perfil encontrado para este filtro
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                  A lista da equipe reaparece assim que o painel recuperar a leitura do banco.
+                  Ajuste o filtro de cargo para visualizar outro grupo da equipe.
                 </p>
               </article>
             )}
