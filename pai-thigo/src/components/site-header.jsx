@@ -28,6 +28,7 @@ import {
   isStaffRole,
 } from "@/lib/auth";
 import { getRestaurantProfile } from "@/lib/restaurant-profile";
+import { getStaffModules } from "@/lib/staff-modules";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 function getOrderStatusLabel(value) {
@@ -291,6 +292,43 @@ export async function SiteHeader() {
     getHeaderNotificationContext(session),
   ]);
   const staffSession = isStaffRole(session?.role);
+  const staffDropdownItems = staffSession && session
+    ? (() => {
+        const modules = getStaffModules(session.role);
+        const hrefBadgeMap = {
+          "/operacao/comandas": {
+            badgeCount: notificationContext.orders,
+            badgeKind: "orders",
+            badgeLatestAt: notificationContext.ordersLatestAt,
+          },
+          "/operacao/reservas": {
+            badgeCount: notificationContext.reservations,
+            badgeKind: "reservations",
+            badgeLatestAt: notificationContext.reservationsLatestAt,
+          },
+        };
+        const items = [
+          { href: getRouteForRole(session.role), label: "Painel", exact: true },
+          { href: "/operacao", label: "Central", exact: true },
+          ...modules
+            .filter(
+              (moduleItem) =>
+                moduleItem.href !== getRouteForRole(session.role) &&
+                moduleItem.href !== "/operacao",
+            )
+            .map((moduleItem) => ({
+              href: moduleItem.href,
+              label: moduleItem.title,
+              ...hrefBadgeMap[moduleItem.href],
+            })),
+          { href: "/area-funcionario", label: "Portal", exact: true },
+        ];
+
+        return Array.from(
+          new Map(items.map((item) => [item.href, item])).values(),
+        );
+      })()
+    : [];
   const navItems = staffSession
       ? [
         { href: "/painel", label: "Painel", exact: true },
@@ -415,7 +453,7 @@ export async function SiteHeader() {
                     </summary>
 
                     <div className="header-dropdown-panel">
-                      {navItems.map((item) => (
+                      {staffDropdownItems.map((item) => (
                         <ActiveLink
                           key={item.href}
                           href={item.href}
