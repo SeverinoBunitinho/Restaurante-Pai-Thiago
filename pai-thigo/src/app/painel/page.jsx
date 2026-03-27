@@ -13,7 +13,6 @@ import {
   getTablesBoard,
   reservationStatusMeta,
 } from "@/lib/staff-data";
-import { getStaffModules } from "@/lib/staff-modules";
 import { formatReservationMoment } from "@/lib/utils";
 
 function getStatusView(status) {
@@ -43,7 +42,6 @@ export default async function PainelPage() {
         : Promise.resolve({ metrics: [], insights: [] }),
     ]);
 
-  const modules = getStaffModules(session.role);
   const occupiedTables = tablesBoard.tables.filter(
     (table) => table.state === "ocupada",
   ).length;
@@ -208,28 +206,33 @@ export default async function PainelPage() {
           <div className="grid gap-5 lg:grid-cols-[1.02fr_0.98fr]">
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
-                eyebrow="Rotas taticas"
-                title="Modulos para agir sem perder tempo"
-                description="Os acessos abaixo foram reunidos para transformar o painel em um ponto rapido de decisao."
+                eyebrow="Direcao do turno"
+                title="Leitura rapida para decidir com seguranca"
+                description="Este painel resume o essencial para o cargo atual, sem blocos repetidos e com foco em acoes do momento."
                 compact
               />
 
-              <div className="mt-8 grid gap-4 md:grid-cols-2">
-                {modules.map((module) => (
-                  <Link
-                    key={module.key}
-                    href={module.href}
-                    className="staff-feature-link rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                  >
-                    <module.icon className="text-[var(--gold)]" size={20} />
-                    <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
-                      {module.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      {module.description}
-                    </p>
-                  </Link>
-                ))}
+              <div className="mt-8 space-y-4">
+                <article className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5">
+                  <p className="text-sm uppercase tracking-[0.2em] text-[var(--gold)]">
+                    Como usar este painel
+                  </p>
+                  <p className="mt-3 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
+                    Primeiro leia as pendencias do turno, depois confirme a disponibilidade
+                    de mesas e so entao siga para pedidos, reservas e central. Esse fluxo
+                    reduz retrabalho e melhora a resposta da equipe.
+                  </p>
+                </article>
+                <article className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5">
+                  <p className="text-sm uppercase tracking-[0.2em] text-[var(--gold)]">
+                    Foco do perfil atual
+                  </p>
+                  <p className="mt-3 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
+                    Perfil ativo: {getStaffRoleLabel(session.role)}. Os dados desta tela sao
+                    priorizados para sua rotina de operacao, atendimento e acompanhamento da
+                    casa em tempo real.
+                  </p>
+                </article>
               </div>
             </div>
 
