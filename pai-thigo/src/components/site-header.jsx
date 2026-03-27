@@ -3,6 +3,7 @@ import {
   BriefcaseBusiness,
   CalendarRange,
   ChevronDown,
+  ChevronRight,
   ClipboardList,
   Dot,
   House,
@@ -75,9 +76,18 @@ const staffDropdownSectionsTemplate = [
 function buildStaffDropdownSections({ role, notifications }) {
   const modules = getStaffModules(role);
   const availableItems = new Map([
-    ["/painel", { href: "/painel", label: "Painel", exact: true }],
-    ["/operacao", { href: "/operacao", label: "Central", exact: true }],
-    ["/area-funcionario", { href: "/area-funcionario", label: "Portal", exact: true }],
+    [
+      "/painel",
+      { href: "/painel", label: "Painel", exact: true, icon: LayoutDashboard },
+    ],
+    [
+      "/operacao",
+      { href: "/operacao", label: "Central", exact: true, icon: BriefcaseBusiness },
+    ],
+    [
+      "/area-funcionario",
+      { href: "/area-funcionario", label: "Portal", exact: true, icon: Shield },
+    ],
   ]);
 
   for (const moduleItem of modules) {
@@ -85,6 +95,7 @@ function buildStaffDropdownSections({ role, notifications }) {
       availableItems.set(moduleItem.href, {
         href: moduleItem.href,
         label: moduleItem.title,
+        icon: moduleItem.icon,
       });
     }
   }
@@ -412,6 +423,10 @@ export async function SiteHeader() {
         },
       })
     : [];
+  const staffDropdownItemCount = staffDropdownSections.reduce(
+    (total, section) => total + section.items.length,
+    0,
+  );
   const navItems = staffSession
       ? [
         { href: "/painel", label: "Painel", exact: true },
@@ -536,6 +551,14 @@ export async function SiteHeader() {
                     </summary>
 
                     <div className="header-dropdown-panel">
+                      <div className="header-dropdown-head">
+                        <p className="header-dropdown-head-eyebrow">navegacao interna</p>
+                        <p className="header-dropdown-head-title">
+                          {staffDropdownItemCount} acesso(s) do{" "}
+                          {getStaffRoleLabel(session.role).toLowerCase()}
+                        </p>
+                      </div>
+
                       {staffDropdownSections.map((section) => (
                         <section key={section.title} className="header-dropdown-section">
                           <p className="header-dropdown-section-title">{section.title}</p>
@@ -548,8 +571,13 @@ export async function SiteHeader() {
                                 className="header-dropdown-link"
                                 activeClassName="header-dropdown-link-active"
                               >
-                                <span className="inline-flex items-center gap-2">
-                                  <span>{item.label}</span>
+                                <span className="header-dropdown-link-main">
+                                  <span className="header-dropdown-link-icon">
+                                    <item.icon size={14} />
+                                  </span>
+                                  <span className="header-dropdown-link-title">{item.label}</span>
+                                </span>
+                                <span className="header-dropdown-link-side">
                                   {item.badgeCount && item.badgeKind ? (
                                     <NotificationCountBadge
                                       count={item.badgeCount}
@@ -560,6 +588,7 @@ export async function SiteHeader() {
                                       ariaLabel={`${item.badgeCount} notificacoes`}
                                     />
                                   ) : null}
+                                  <ChevronRight size={14} className="header-dropdown-link-arrow" />
                                 </span>
                               </ActiveLink>
                             ))}
