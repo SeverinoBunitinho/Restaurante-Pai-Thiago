@@ -31,6 +31,115 @@ import { getRestaurantProfile } from "@/lib/restaurant-profile";
 import { getStaffModules } from "@/lib/staff-modules";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
+const staffDropdownSectionsTemplate = [
+  {
+    title: "Principal",
+    hrefs: ["/painel", "/operacao"],
+  },
+  {
+    title: "Atendimento",
+    hrefs: [
+      "/operacao/comandas",
+      "/operacao/reservas",
+      "/operacao/mesas",
+      "/operacao/cozinha",
+    ],
+  },
+  {
+    title: "Gestao",
+    hrefs: [
+      "/operacao/menu",
+      "/operacao/equipe",
+      "/operacao/escala",
+      "/operacao/checklists",
+      "/operacao/incidentes",
+      "/operacao/campanhas",
+    ],
+  },
+  {
+    title: "Inteligencia",
+    hrefs: [
+      "/operacao/relatorios",
+      "/operacao/previsao",
+      "/operacao/configuracoes",
+      "/operacao/executivo",
+      "/operacao/auditoria",
+    ],
+  },
+  {
+    title: "Conta",
+    hrefs: ["/area-funcionario"],
+  },
+];
+
+function buildStaffDropdownSections({ role, notifications }) {
+  const modules = getStaffModules(role);
+  const availableItems = new Map([
+    ["/painel", { href: "/painel", label: "Painel", exact: true }],
+    ["/operacao", { href: "/operacao", label: "Central", exact: true }],
+    ["/area-funcionario", { href: "/area-funcionario", label: "Portal", exact: true }],
+  ]);
+
+  for (const moduleItem of modules) {
+    if (!availableItems.has(moduleItem.href)) {
+      availableItems.set(moduleItem.href, {
+        href: moduleItem.href,
+        label: moduleItem.title,
+      });
+    }
+  }
+
+  const withBadge = (item) => {
+    if (item.href === "/operacao/comandas") {
+      return {
+        ...item,
+        badgeCount: notifications.orders,
+        badgeKind: "orders",
+        badgeLatestAt: notifications.ordersLatestAt,
+      };
+    }
+
+    if (item.href === "/operacao/reservas") {
+      return {
+        ...item,
+        badgeCount: notifications.reservations,
+        badgeKind: "reservations",
+        badgeLatestAt: notifications.reservationsLatestAt,
+      };
+    }
+
+    return item;
+  };
+
+  const templateHrefs = new Set(
+    staffDropdownSectionsTemplate.flatMap((section) => section.hrefs),
+  );
+
+  const sections = staffDropdownSectionsTemplate
+    .map((section) => ({
+      title: section.title,
+      items: section.hrefs
+        .map((href) => availableItems.get(href))
+        .filter(Boolean)
+        .map(withBadge),
+    }))
+    .filter((section) => section.items.length);
+
+  const extraItems = Array.from(availableItems.values())
+    .filter((item) => !templateHrefs.has(item.href))
+    .sort((left, right) => left.label.localeCompare(right.label, "pt-BR"))
+    .map(withBadge);
+
+  if (extraItems.length) {
+    sections.push({
+      title: "Outros",
+      items: extraItems,
+    });
+  }
+
+  return sections;
+}
+
 function getOrderStatusLabel(value) {
   const labels = {
     received: "Pedido recebido",
@@ -292,42 +401,16 @@ export async function SiteHeader() {
     getHeaderNotificationContext(session),
   ]);
   const staffSession = isStaffRole(session?.role);
-  const staffDropdownItems = staffSession && session
-    ? (() => {
-        const modules = getStaffModules(session.role);
-        const hrefBadgeMap = {
-          "/operacao/comandas": {
-            badgeCount: notificationContext.orders,
-            badgeKind: "orders",
-            badgeLatestAt: notificationContext.ordersLatestAt,
-          },
-          "/operacao/reservas": {
-            badgeCount: notificationContext.reservations,
-            badgeKind: "reservations",
-            badgeLatestAt: notificationContext.reservationsLatestAt,
-          },
-        };
-        const items = [
-          { href: getRouteForRole(session.role), label: "Painel", exact: true },
-          { href: "/operacao", label: "Central", exact: true },
-          ...modules
-            .filter(
-              (moduleItem) =>
-                moduleItem.href !== getRouteForRole(session.role) &&
-                moduleItem.href !== "/operacao",
-            )
-            .map((moduleItem) => ({
-              href: moduleItem.href,
-              label: moduleItem.title,
-              ...hrefBadgeMap[moduleItem.href],
-            })),
-          { href: "/area-funcionario", label: "Portal", exact: true },
-        ];
-
-        return Array.from(
-          new Map(items.map((item) => [item.href, item])).values(),
-        );
-      })()
+  const staffDropdownSections = staffSession && session
+    ? buildStaffDropdownSections({
+        role: session.role,
+        notifications: {
+          orders: notificationContext.orders,
+          reservations: notificationContext.reservations,
+          ordersLatestAt: notificationContext.ordersLatestAt,
+          reservationsLatestAt: notificationContext.reservationsLatestAt,
+        },
+      })
     : [];
   const navItems = staffSession
       ? [
@@ -453,28 +536,35 @@ export async function SiteHeader() {
                     </summary>
 
                     <div className="header-dropdown-panel">
-                      {staffDropdownItems.map((item) => (
-                        <ActiveLink
-                          key={item.href}
-                          href={item.href}
-                          exact={item.exact}
-                          className="header-dropdown-link"
-                          activeClassName="header-dropdown-link-active"
-                        >
-                          <span className="inline-flex items-center gap-2">
-                            <span>{item.label}</span>
-                            {item.badgeCount && item.badgeKind ? (
-                              <NotificationCountBadge
-                                count={item.badgeCount}
-                                latestAt={item.badgeLatestAt}
-                                kind={item.badgeKind}
-                                staffSession={staffSession}
-                                className="nav-link-badge"
-                                ariaLabel={`${item.badgeCount} notificacoes`}
-                              />
-                            ) : null}
-                          </span>
-                        </ActiveLink>
+                      {staffDropdownSections.map((section) => (
+                        <section key={section.title} className="header-dropdown-section">
+                          <p className="header-dropdown-section-title">{section.title}</p>
+                          <div className="header-dropdown-section-list">
+                            {section.items.map((item) => (
+                              <ActiveLink
+                                key={item.href}
+                                href={item.href}
+                                exact={item.exact}
+                                className="header-dropdown-link"
+                                activeClassName="header-dropdown-link-active"
+                              >
+                                <span className="inline-flex items-center gap-2">
+                                  <span>{item.label}</span>
+                                  {item.badgeCount && item.badgeKind ? (
+                                    <NotificationCountBadge
+                                      count={item.badgeCount}
+                                      latestAt={item.badgeLatestAt}
+                                      kind={item.badgeKind}
+                                      staffSession={staffSession}
+                                      className="nav-link-badge"
+                                      ariaLabel={`${item.badgeCount} notificacoes`}
+                                    />
+                                  ) : null}
+                                </span>
+                              </ActiveLink>
+                            ))}
+                          </div>
+                        </section>
                       ))}
                     </div>
                   </details>

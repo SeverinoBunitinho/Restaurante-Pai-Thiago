@@ -1228,6 +1228,31 @@ textarea {
   overflow-y: auto;
 }
 
+.header-dropdown-section {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.header-dropdown-section + .header-dropdown-section {
+  margin-top: 0.25rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed rgba(20, 35, 29, 0.14);
+}
+
+.header-dropdown-section-title {
+  padding-inline: 0.22rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.header-dropdown-section-list {
+  display: grid;
+  gap: 0.3rem;
+}
+
 .header-dropdown-link {
   display: inline-flex;
   align-items: center;
