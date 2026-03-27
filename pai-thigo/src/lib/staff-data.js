@@ -511,8 +511,24 @@ function buildFallbackMenuManagement() {
         value: "0",
         description: "O catalogo volta a refletir a cozinha assim que o banco responder novamente.",
       },
+      {
+        label: "Estoque critico",
+        value: "0",
+        description: "Itens proximos do limite de reposicao.",
+      },
+      {
+        label: "Itens esgotados",
+        value: "0",
+        description: "Produtos com estoque zerado neste momento.",
+      },
+      {
+        label: "Unidades em estoque",
+        value: "0",
+        description: "Total estimado para apoiar planejamento de reposicao.",
+      },
     ],
     categories: [],
+    stockAlerts: [],
     usingSupabase: false,
   };
 }
@@ -1137,15 +1153,51 @@ export async function getMenuManagementBoard() {
   }
 
   const categories = await getMenuCategories({ includeUnavailable: true });
-  const items = categories.flatMap((category) => category.items);
-  const lowStockItems = items.filter((item) => {
-    if (item.stockQuantity == null) {
+  const stockCatalog = categories.flatMap((category) =>
+    category.items.map((item) => ({
+      ...item,
+      categoryName: category.name,
+    })),
+  );
+  const items = stockCatalog;
+  const controlledStockItems = items.filter((item) => item.stockQuantity != null);
+  const outOfStockItems = controlledStockItems.filter(
+    (item) => Number(item.stockQuantity) <= 0,
+  );
+  const lowStockItems = controlledStockItems.filter((item) => {
+    const stock = Number(item.stockQuantity ?? 0);
+
+    if (stock <= 0) {
       return false;
     }
 
     const threshold = Number(item.lowStockThreshold ?? 0);
-    return item.stockQuantity <= Math.max(0, threshold);
+    return stock <= Math.max(0, threshold);
   });
+  const totalUnitsInStock = controlledStockItems.reduce(
+    (total, item) => total + Number(item.stockQuantity ?? 0),
+    0,
+  );
+  const stockAlerts = [...outOfStockItems, ...lowStockItems]
+    .sort((left, right) => {
+      const leftStock = Number(left.stockQuantity ?? 0);
+      const rightStock = Number(right.stockQuantity ?? 0);
+
+      if (leftStock !== rightStock) {
+        return leftStock - rightStock;
+      }
+
+      return left.name.localeCompare(right.name, "pt-BR");
+    })
+    .slice(0, 24)
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      categoryName: item.categoryName,
+      stockQuantity: Number(item.stockQuantity ?? 0),
+      lowStockThreshold: Math.max(0, Number(item.lowStockThreshold ?? 0)),
+      available: Boolean(item.available),
+    }));
 
   return {
     summary: [
@@ -1169,8 +1221,19 @@ export async function getMenuManagementBoard() {
         value: String(lowStockItems.length),
         description: "Itens com estoque no limite definido para reposicao.",
       },
+      {
+        label: "Itens esgotados",
+        value: String(outOfStockItems.length),
+        description: "Produtos sem unidades disponiveis para novos pedidos.",
+      },
+      {
+        label: "Unidades em estoque",
+        value: String(totalUnitsInStock),
+        description: "Volume total sob controle de estoque no cardapio.",
+      },
     ],
     categories,
+    stockAlerts,
     usingSupabase: true,
   };
 }

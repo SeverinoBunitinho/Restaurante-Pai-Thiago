@@ -1,8 +1,9 @@
-import { ChefHat, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, ChefHat, Sparkles, Trash2 } from "lucide-react";
 
 import {
   deleteMenuItemAction,
   toggleMenuItemAvailabilityAction,
+  updateMenuItemStockAction,
   updateMenuItemAction,
 } from "@/app/operacao/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
@@ -22,6 +23,37 @@ function formatPortionLabel(size) {
   }
 
   return "M";
+}
+
+function getStockState(item) {
+  const hasStockControl =
+    Number.isFinite(Number(item.stockQuantity)) && Number(item.stockQuantity) >= 0;
+
+  if (!hasStockControl) {
+    return {
+      hasStockControl: false,
+      stockQuantity: null,
+      lowStockThreshold: 0,
+      isOutOfStock: false,
+      isLowStock: false,
+    };
+  }
+
+  const stockQuantity = Number(item.stockQuantity);
+  const lowStockThreshold =
+    Number.isFinite(Number(item.lowStockThreshold)) &&
+    Number(item.lowStockThreshold) >= 0
+      ? Number(item.lowStockThreshold)
+      : 0;
+
+  return {
+    hasStockControl: true,
+    stockQuantity,
+    lowStockThreshold,
+    isOutOfStock: stockQuantity <= 0,
+    isLowStock:
+      stockQuantity > 0 && stockQuantity <= Math.max(0, lowStockThreshold),
+  };
 }
 
 export default async function OperacaoMenuPage({ searchParams }) {
@@ -69,6 +101,122 @@ export default async function OperacaoMenuPage({ searchParams }) {
             {menuError}
           </div>
         ) : null}
+      </section>
+
+      <section className="pt-8">
+        <div className="luxury-card rounded-[2.2rem] p-6">
+          <SectionHeading
+            eyebrow="Controle de estoque"
+            title="Reposicao orientada por limite de pratos"
+            description="Use este painel para ver itens criticos, ajustar quantidade em segundos e evitar falta no turno."
+            compact
+          />
+
+          {board.stockAlerts?.length ? (
+            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+              {board.stockAlerts.map((alertItem) => {
+                const isOutOfStock = Number(alertItem.stockQuantity ?? 0) <= 0;
+                const isLowStock =
+                  !isOutOfStock &&
+                  Number(alertItem.stockQuantity ?? 0) <=
+                    Math.max(0, Number(alertItem.lowStockThreshold ?? 0));
+
+                return (
+                  <article
+                    key={`stock-alert-${alertItem.id}`}
+                    className="rounded-[1.6rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                          {alertItem.categoryName}
+                        </p>
+                        <h3 className="mt-2 text-xl font-semibold text-[var(--forest)]">
+                          {alertItem.name}
+                        </h3>
+                      </div>
+                      <span
+                        className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] ${
+                          isOutOfStock
+                            ? "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]"
+                            : isLowStock
+                              ? "bg-[rgba(182,135,66,0.12)] text-[var(--gold)]"
+                              : "bg-[rgba(95,123,109,0.12)] text-[var(--sage)]"
+                        }`}
+                      >
+                        <AlertTriangle size={14} />
+                        {isOutOfStock ? "Esgotado" : "Reposicao recomendada"}
+                      </span>
+                    </div>
+
+                    <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.7)]">
+                      Estoque atual:{" "}
+                      <span className="font-semibold text-[var(--forest)]">
+                        {alertItem.stockQuantity}
+                      </span>{" "}
+                      | alerta em{" "}
+                      <span className="font-semibold text-[var(--forest)]">
+                        {alertItem.lowStockThreshold}
+                      </span>
+                      .
+                    </p>
+
+                    <form
+                      action={updateMenuItemStockAction}
+                      className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+                    >
+                      <input type="hidden" name="itemId" value={alertItem.id} />
+
+                      <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                        Novo estoque
+                        <input
+                          name="stockQuantity"
+                          type="number"
+                          min="0"
+                          required
+                          defaultValue={Math.max(0, Number(alertItem.stockQuantity ?? 0))}
+                          className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.86)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                        />
+                      </label>
+
+                      <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                        Limite de alerta
+                        <input
+                          name="lowStockThreshold"
+                          type="number"
+                          min="0"
+                          required
+                          defaultValue={Math.max(0, Number(alertItem.lowStockThreshold ?? 0))}
+                          className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.86)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                        />
+                      </label>
+
+                      <label className="sm:col-span-2 inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
+                        <input
+                          type="checkbox"
+                          name="reactivateWhenRestocked"
+                          className="accent-[var(--gold)]"
+                        />
+                        Reativar item ao repor
+                      </label>
+
+                      <button
+                        type="submit"
+                        className="sm:col-span-2 pill-wrap-safe inline-flex w-full items-center justify-center rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
+                      >
+                        Salvar estoque
+                      </button>
+                    </form>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <article className="mt-8 rounded-[1.6rem] border border-[rgba(95,123,109,0.16)] bg-[rgba(95,123,109,0.08)] p-5 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+              Nenhum item esta em faixa critica de reposicao. O estoque atual esta equilibrado para o turno.
+            </article>
+          )}
+        </div>
       </section>
 
       <section className="pt-14">
@@ -195,7 +343,10 @@ export default async function OperacaoMenuPage({ searchParams }) {
 
                   <div className="mt-6 grid gap-4 lg:grid-cols-2">
                     {category.items.length ? (
-                      category.items.map((item) => (
+                      category.items.map((item) => {
+                        const stockState = getStockState(item);
+
+                        return (
                         <article
                           key={item.id}
                           className="rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4"
@@ -245,16 +396,24 @@ export default async function OperacaoMenuPage({ searchParams }) {
                               <span className="font-semibold text-[var(--forest)]">
                                 Estoque:
                               </span>{" "}
-                              {item.stockQuantity == null
+                              {stockState.stockQuantity == null
                                 ? "sem controle ativo"
-                                : `${item.stockQuantity} unidade(s)`}
+                                : `${stockState.stockQuantity} unidade(s)`}
                             </p>
-                            {item.stockQuantity != null ? (
+                            {stockState.stockQuantity != null ? (
                               <p>
                                 <span className="font-semibold text-[var(--forest)]">
                                   Alerta:
                                 </span>{" "}
-                                {item.lowStockThreshold} unidade(s)
+                                {stockState.lowStockThreshold} unidade(s)
+                              </p>
+                            ) : null}
+                            {stockState.stockQuantity != null ? (
+                              <p>
+                                <span className="font-semibold text-[var(--forest)]">
+                                  Limite de pratos possiveis:
+                                </span>{" "}
+                                {stockState.stockQuantity}
                               </p>
                             ) : null}
                             <p>
@@ -273,13 +432,49 @@ export default async function OperacaoMenuPage({ searchParams }) {
                           <div className="mt-4 flex flex-wrap items-center gap-3">
                             <span
                               className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${
-                                item.available
-                                  ? "bg-[rgba(95,123,109,0.12)] text-[var(--sage)]"
-                                  : "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]"
+                                stockState.isOutOfStock
+                                  ? "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]"
+                                  : stockState.isLowStock
+                                    ? "bg-[rgba(182,135,66,0.12)] text-[var(--gold)]"
+                                    : item.available
+                                      ? "bg-[rgba(95,123,109,0.12)] text-[var(--sage)]"
+                                      : "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]"
                               }`}
                             >
-                              {item.available ? "ativo" : "pausado"}
+                              {stockState.isOutOfStock
+                                ? "esgotado"
+                                : stockState.isLowStock
+                                  ? "estoque baixo"
+                                  : item.available
+                                    ? "ativo"
+                                    : "pausado"}
                             </span>
+                            {stockState.stockQuantity != null ? (
+                              <form action={updateMenuItemStockAction}>
+                                <input type="hidden" name="itemId" value={item.id} />
+                                <input
+                                  type="hidden"
+                                  name="lowStockThreshold"
+                                  value={stockState.lowStockThreshold}
+                                />
+                                <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2">
+                                  <input
+                                    name="stockQuantity"
+                                    type="number"
+                                    min="0"
+                                    required
+                                    defaultValue={Math.max(0, Number(stockState.stockQuantity ?? 0))}
+                                    className="w-16 bg-transparent text-xs font-semibold text-[var(--forest)] outline-none"
+                                  />
+                                  <button
+                                    type="submit"
+                                    className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--forest)] transition hover:-translate-y-0.5"
+                                  >
+                                    Salvar estoque
+                                  </button>
+                                </div>
+                              </form>
+                            ) : null}
                             <form action={toggleMenuItemAvailabilityAction}>
                               <input type="hidden" name="itemId" value={item.id} />
                               <input
@@ -505,7 +700,8 @@ export default async function OperacaoMenuPage({ searchParams }) {
                             </form>
                           </details>
                         </article>
-                      ))
+                        );
+                      })
                     ) : (
                       <article className="rounded-[1.5rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.52)] p-5">
                         <p className="text-lg font-semibold text-[var(--forest)]">

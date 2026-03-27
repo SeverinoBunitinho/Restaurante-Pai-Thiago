@@ -27,16 +27,29 @@ function sanitizeCartItems(value) {
   }
 
   return value
-    .map((item) => ({
-      menuItemId: String(item.menuItemId ?? "").trim(),
-      name: String(item.name ?? "").trim(),
-      price: Number(item.price ?? 0),
-      prepTime: String(item.prepTime ?? "").trim(),
-      signature: Boolean(item.signature),
-      portionSize: normalizePortionSize(item.portionSize),
-      quantity: Number(item.quantity ?? 1),
-      notes: String(item.notes ?? "").trim(),
-    }))
+    .map((item) => {
+      const stockQuantity = Number(item.stockQuantity ?? NaN);
+      const lowStockThreshold = Number(item.lowStockThreshold ?? NaN);
+
+      return {
+        menuItemId: String(item.menuItemId ?? "").trim(),
+        name: String(item.name ?? "").trim(),
+        price: Number(item.price ?? 0),
+        prepTime: String(item.prepTime ?? "").trim(),
+        signature: Boolean(item.signature),
+        portionSize: normalizePortionSize(item.portionSize),
+        quantity: Number(item.quantity ?? 1),
+        notes: String(item.notes ?? "").trim(),
+        stockQuantity:
+          Number.isFinite(stockQuantity) && stockQuantity >= 0
+            ? stockQuantity
+            : null,
+        lowStockThreshold:
+          Number.isFinite(lowStockThreshold) && lowStockThreshold >= 0
+            ? lowStockThreshold
+            : 0,
+      };
+    })
     .map((item) => ({
       ...item,
       lineId: buildCartLineId(item.menuItemId, item.portionSize),
@@ -48,7 +61,8 @@ function sanitizeCartItems(value) {
         Number.isFinite(item.price) &&
         Number.isFinite(item.quantity) &&
         item.quantity >= 1 &&
-        item.quantity <= 20,
+        item.quantity <= 20 &&
+        (item.stockQuantity == null || item.quantity <= item.stockQuantity),
     );
 }
 
@@ -95,8 +109,35 @@ export function CartProvider({ children }) {
         const normalizedItem = sanitizeCartItems([item])[0];
 
         if (!normalizedItem) {
-          return;
+          return { ok: false, reason: "invalid_item" };
         }
+
+        const hasStockControl =
+          Number.isFinite(normalizedItem.stockQuantity) &&
+          normalizedItem.stockQuantity >= 0;
+        const currentItemQuantity = items
+          .filter((cartItem) => cartItem.menuItemId === normalizedItem.menuItemId)
+          .reduce((total, cartItem) => total + cartItem.quantity, 0);
+        const remainingStockForItem = hasStockControl
+          ? Math.max(0, normalizedItem.stockQuantity - currentItemQuantity)
+          : 20;
+
+        if (hasStockControl && remainingStockForItem <= 0) {
+          return {
+            ok: false,
+            reason: "stock_limit",
+            addedQuantity: 0,
+            remainingStock: 0,
+          };
+        }
+
+        const quantityToAdd = Math.max(
+          1,
+          Math.min(
+            normalizedItem.quantity,
+            hasStockControl ? remainingStockForItem : 20,
+          ),
+        );
 
         startTransition(() => {
           setItems((currentItems) => {
@@ -105,7 +146,34 @@ export function CartProvider({ children }) {
             );
 
             if (!existingItem) {
-              return [...currentItems, normalizedItem];
+              return [
+                ...currentItems,
+                {
+                  ...normalizedItem,
+                  quantity: quantityToAdd,
+                },
+              ];
+            }
+
+            const sameItemQuantityWithoutCurrentLine = currentItems
+              .filter(
+                (currentItem) =>
+                  currentItem.menuItemId === normalizedItem.menuItemId &&
+                  currentItem.lineId !== existingItem.lineId,
+              )
+              .reduce((total, currentItem) => total + currentItem.quantity, 0);
+            const maxAllowedForCurrentLine = hasStockControl
+              ? Math.max(
+                  0,
+                  Math.min(
+                    20,
+                    normalizedItem.stockQuantity - sameItemQuantityWithoutCurrentLine,
+                  ),
+                )
+              : 20;
+
+            if (maxAllowedForCurrentLine <= 0) {
+              return currentItems;
             }
 
             return currentItems.map((currentItem) =>
@@ -113,15 +181,26 @@ export function CartProvider({ children }) {
                 ? {
                     ...currentItem,
                     quantity: Math.min(
-                      currentItem.quantity + normalizedItem.quantity,
-                      20,
+                      currentItem.quantity + quantityToAdd,
+                      maxAllowedForCurrentLine,
                     ),
                     notes: normalizedItem.notes || currentItem.notes,
+                    stockQuantity: normalizedItem.stockQuantity,
+                    lowStockThreshold: normalizedItem.lowStockThreshold,
                   }
                 : currentItem,
             );
           });
         });
+
+        return {
+          ok: true,
+          reason: "added",
+          addedQuantity: quantityToAdd,
+          remainingStock: hasStockControl
+            ? Math.max(0, remainingStockForItem - quantityToAdd)
+            : null,
+        };
       },
       removeItem(lineId) {
         startTransition(() => {
@@ -142,10 +221,41 @@ export function CartProvider({ children }) {
             currentItems
               .map((item) =>
                 item.lineId === lineId
-                  ? {
-                      ...item,
-                      quantity: Math.max(1, Math.min(nextQuantity, 20)),
-                    }
+                  ? (() => {
+                      const hasStockControl =
+                        Number.isFinite(item.stockQuantity) && item.stockQuantity >= 0;
+
+                      if (!hasStockControl) {
+                        return {
+                          ...item,
+                          quantity: Math.max(1, Math.min(nextQuantity, 20)),
+                        };
+                      }
+
+                      const quantityUsedBySiblingLines = currentItems
+                        .filter(
+                          (currentItem) =>
+                            currentItem.menuItemId === item.menuItemId &&
+                            currentItem.lineId !== lineId,
+                        )
+                        .reduce(
+                          (total, currentItem) => total + currentItem.quantity,
+                          0,
+                        );
+                      const maxAllowedForLine = Math.max(
+                        0,
+                        Math.min(20, item.stockQuantity - quantityUsedBySiblingLines),
+                      );
+
+                      if (maxAllowedForLine <= 0) {
+                        return null;
+                      }
+
+                      return {
+                        ...item,
+                        quantity: Math.max(1, Math.min(nextQuantity, maxAllowedForLine)),
+                      };
+                    })()
                   : item,
               )
               .filter(Boolean),
@@ -172,6 +282,40 @@ export function CartProvider({ children }) {
         return items
           .filter((item) => item.menuItemId === menuItemId)
           .reduce((total, item) => total + item.quantity, 0);
+      },
+      getItemStockInfo(menuItemId) {
+        const matchingItems = items.filter((item) => item.menuItemId === menuItemId);
+
+        if (!matchingItems.length) {
+          return {
+            hasStockControl: false,
+            stockQuantity: null,
+            totalInCart: 0,
+            remaining: null,
+            lowStockThreshold: 0,
+          };
+        }
+
+        const stockQuantity = Number(matchingItems[0]?.stockQuantity ?? NaN);
+        const hasStockControl = Number.isFinite(stockQuantity) && stockQuantity >= 0;
+        const totalInCart = matchingItems.reduce(
+          (total, item) => total + item.quantity,
+          0,
+        );
+        const lowStockThreshold = Number(
+          matchingItems[0]?.lowStockThreshold ?? 0,
+        );
+
+        return {
+          hasStockControl,
+          stockQuantity: hasStockControl ? stockQuantity : null,
+          totalInCart,
+          remaining: hasStockControl ? Math.max(0, stockQuantity - totalInCart) : null,
+          lowStockThreshold:
+            Number.isFinite(lowStockThreshold) && lowStockThreshold >= 0
+              ? lowStockThreshold
+              : 0,
+        };
       },
     };
   }, [isHydrated, items]);

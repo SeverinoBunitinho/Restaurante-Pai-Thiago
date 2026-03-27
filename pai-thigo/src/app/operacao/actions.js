@@ -1166,7 +1166,10 @@ export async function addServiceCheckItemAction(formData) {
     const nextStock = Math.max(0, stockQuantity - quantity);
     await supabase
       .from("menu_items")
-      .update({ stock_quantity: nextStock })
+      .update({
+        stock_quantity: nextStock,
+        is_available: nextStock > 0 ? menuItem.is_available : false,
+      })
       .eq("id", menuItem.id);
   }
 
@@ -1958,6 +1961,135 @@ export async function updateMenuItemAction(formData) {
   redirect(
     buildMenuRedirectPath({
       menuNotice: successMessage,
+    }),
+  );
+}
+
+export async function updateMenuItemStockAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+  const itemId = String(formData.get("itemId") ?? "").trim();
+  const stockQuantity = parseNonNegativeInteger(formData.get("stockQuantity"));
+  const lowStockThreshold = parseNonNegativeInteger(formData.get("lowStockThreshold"));
+  const reactivateWhenRestocked = formData.has("reactivateWhenRestocked");
+
+  if (!itemId || stockQuantity == null) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Informe um item valido e a quantidade de estoque para salvar.",
+      }),
+    );
+  }
+
+  if (
+    lowStockThreshold != null &&
+    lowStockThreshold > stockQuantity
+  ) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "O alerta de estoque nao pode ser maior que o estoque total.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Nao foi possivel conectar ao Supabase para atualizar o estoque.",
+      }),
+    );
+  }
+
+  let itemResult = await supabase
+    .from("menu_items")
+    .select("id, name, is_available, low_stock_threshold")
+    .eq("id", itemId)
+    .maybeSingle();
+
+  if (itemResult.error) {
+    const message = String(itemResult.error.message ?? "").toLowerCase();
+    const missingLowStockColumn = message.includes("low_stock_threshold");
+
+    if (missingLowStockColumn) {
+      itemResult = await supabase
+        .from("menu_items")
+        .select("id, name, is_available")
+        .eq("id", itemId)
+        .maybeSingle();
+    }
+  }
+
+  if (itemResult.error || !itemResult.data) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "O prato nao foi encontrado para atualizar o estoque.",
+      }),
+    );
+  }
+
+  const currentItem = itemResult.data;
+  const resolvedLowStockThreshold =
+    lowStockThreshold ?? Math.max(0, Number(currentItem.low_stock_threshold ?? 0));
+  const updatePayload = {
+    stock_quantity: stockQuantity,
+    low_stock_threshold: resolvedLowStockThreshold,
+    is_available:
+      stockQuantity <= 0
+        ? false
+        : reactivateWhenRestocked
+          ? true
+          : currentItem.is_available,
+  };
+
+  let updateResult = await supabase
+    .from("menu_items")
+    .update(updatePayload)
+    .eq("id", itemId);
+
+  if (updateResult.error) {
+    const message = String(updateResult.error.message ?? "").toLowerCase();
+    const stockColumnsMissing =
+      message.includes("stock_quantity") ||
+      message.includes("low_stock_threshold") ||
+      updateResult.error.code === "PGRST204";
+
+    if (stockColumnsMissing) {
+      updateResult = {
+        error: null,
+      };
+    }
+  }
+
+  if (updateResult.error) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Nao foi possivel atualizar o estoque deste prato agora.",
+      }),
+    );
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "menu_item_stock_updated",
+    entityType: "menu_item",
+    entityId: itemId,
+    entityLabel: currentItem.name ?? null,
+    description: "Estoque do cardapio atualizado manualmente.",
+    metadata: {
+      stockQuantity,
+      lowStockThreshold: resolvedLowStockThreshold,
+      reactivateWhenRestocked,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirect(
+    buildMenuRedirectPath({
+      menuNotice:
+        stockQuantity <= 0
+          ? `${currentItem.name} ficou com estoque zerado e foi pausado automaticamente.`
+          : `Estoque de ${currentItem.name} atualizado para ${stockQuantity} unidade(s).`,
     }),
   );
 }

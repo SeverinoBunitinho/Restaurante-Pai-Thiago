@@ -169,6 +169,25 @@ export default async function CardapioPage() {
 
                   <div className="mt-8 grid gap-4 lg:grid-cols-2">
                     {category.items.map((item) => (
+                      (() => {
+                        const hasStockControl =
+                          Number.isFinite(Number(item.stockQuantity)) &&
+                          Number(item.stockQuantity) >= 0;
+                        const stockQuantity = hasStockControl
+                          ? Number(item.stockQuantity)
+                          : null;
+                        const lowStockThreshold =
+                          Number.isFinite(Number(item.lowStockThreshold)) &&
+                          Number(item.lowStockThreshold) >= 0
+                            ? Number(item.lowStockThreshold)
+                            : 0;
+                        const isOutOfStock = hasStockControl && stockQuantity <= 0;
+                        const isLowStock =
+                          hasStockControl &&
+                          stockQuantity > 0 &&
+                          stockQuantity <= Math.max(0, lowStockThreshold);
+
+                        return (
                       <article
                         key={item.id}
                         className="group stat-panel overflow-hidden p-0"
@@ -224,6 +243,21 @@ export default async function CardapioPage() {
                                 {tag}
                               </span>
                             ))}
+                            {hasStockControl ? (
+                              <span
+                                className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] ${
+                                  isOutOfStock
+                                    ? "border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] text-[var(--clay)]"
+                                    : isLowStock
+                                      ? "border-[rgba(182,135,66,0.24)] bg-[rgba(182,135,66,0.08)] text-[var(--gold)]"
+                                      : "border-[rgba(95,123,109,0.18)] bg-[rgba(95,123,109,0.08)] text-[var(--sage)]"
+                                }`}
+                              >
+                                {isOutOfStock
+                                  ? "esgotado"
+                                  : `${stockQuantity} unidade(s) disponiveis`}
+                              </span>
+                            ) : null}
                           </div>
 
                           <div className="mt-4 rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.5)] px-4 py-3">
@@ -256,9 +290,13 @@ export default async function CardapioPage() {
                             prepTime={item.prepTime}
                             signature={item.signature}
                             canOrder={canOrder}
+                            stockQuantity={item.stockQuantity}
+                            lowStockThreshold={item.lowStockThreshold}
                           />
                         </div>
                       </article>
+                        );
+                      })()
                     ))}
                   </div>
                 </section>

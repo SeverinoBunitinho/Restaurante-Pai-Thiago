@@ -60,7 +60,17 @@ export function CartCheckout({ customerName, restaurantInfo }) {
     submitCartCheckoutAction,
     initialCartCheckoutState,
   );
-  const { items, itemCount, totalPrice, isHydrated, clearCart, removeItem, updateNotes, updateQuantity } =
+  const {
+    items,
+    itemCount,
+    totalPrice,
+    isHydrated,
+    clearCart,
+    removeItem,
+    updateNotes,
+    updateQuantity,
+    getItemStockInfo,
+  } =
     useCart();
   const handledSuccessRef = useRef(false);
   const serializedItems = JSON.stringify(
@@ -250,6 +260,17 @@ export function CartCheckout({ customerName, restaurantInfo }) {
         ) : (
           <div className="mt-8 space-y-4">
             {items.map((item) => (
+              (() => {
+                const stockInfo = getItemStockInfo(item.menuItemId);
+                const isStockControlled = stockInfo.hasStockControl;
+                const stockLimit = isStockControlled
+                  ? Number(stockInfo.stockQuantity ?? 0)
+                  : null;
+                const totalItemQuantityInCart = Number(stockInfo.totalInCart ?? 0);
+                const reachedStockLimit =
+                  isStockControlled && totalItemQuantityInCart >= stockLimit;
+
+                return (
               <article
                 key={item.lineId}
                 className="rounded-[1.9rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-5"
@@ -303,6 +324,7 @@ export function CartCheckout({ customerName, restaurantInfo }) {
                     <button
                       type="button"
                       onClick={() => updateQuantity(item.lineId, item.quantity + 1)}
+                      disabled={reachedStockLimit}
                       className="rounded-full p-2 text-[var(--forest)] transition hover:bg-[rgba(20,35,29,0.06)]"
                     >
                       <Plus size={16} />
@@ -319,6 +341,19 @@ export function CartCheckout({ customerName, restaurantInfo }) {
                   </button>
                 </div>
 
+                {isStockControlled ? (
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-[rgba(21,35,29,0.64)]">
+                    Limite atual: {stockLimit} unidade(s). Restante no carrinho:{" "}
+                    {Math.max(0, Number(stockInfo.remaining ?? 0))}.
+                  </p>
+                ) : null}
+
+                {reachedStockLimit ? (
+                  <p className="mt-2 text-sm leading-6 text-[var(--clay)]">
+                    Limite de estoque atingido para este prato. Reposicao necessaria para aumentar o pedido.
+                  </p>
+                ) : null}
+
                 <label className="mt-5 grid gap-2 text-sm font-medium text-[var(--forest)]">
                   Observacao para a equipe
                   <input
@@ -332,6 +367,8 @@ export function CartCheckout({ customerName, restaurantInfo }) {
                   />
                 </label>
               </article>
+                );
+              })()
             ))}
           </div>
         )}

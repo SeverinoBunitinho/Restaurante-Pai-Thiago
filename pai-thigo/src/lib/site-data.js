@@ -1927,9 +1927,13 @@ export async function createCartOrder(input) {
       continue;
     }
 
+    const nextStockQuantity = Math.max(0, stockQuantity - totalQuantity);
     await supabase
       .from("menu_items")
-      .update({ stock_quantity: Math.max(0, stockQuantity - totalQuantity) })
+      .update({
+        stock_quantity: nextStockQuantity,
+        is_available: nextStockQuantity > 0 ? Boolean(menuItem.is_available) : false,
+      })
       .eq("id", itemId);
   }
 
