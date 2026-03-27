@@ -3,6 +3,7 @@ import { ChefHat, Sparkles, Trash2 } from "lucide-react";
 import {
   deleteMenuItemAction,
   toggleMenuItemAvailabilityAction,
+  updateMenuItemAction,
 } from "@/app/operacao/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { MenuItemComposer } from "@/components/menu-item-composer";
@@ -304,6 +305,205 @@ export default async function OperacaoMenuPage({ searchParams }) {
                               </ConfirmSubmitButton>
                             </form>
                           </div>
+
+                          <details className="mt-4 rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
+                            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
+                              Editar item e estoque
+                            </summary>
+
+                            <form action={updateMenuItemAction} className="mt-4 grid gap-3">
+                              <input type="hidden" name="itemId" value={item.id} />
+
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  Categoria
+                                  <select
+                                    name="categoryId"
+                                    defaultValue={category.id}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm font-medium text-[var(--forest)] outline-none"
+                                  >
+                                    {board.categories.map((categoryOption) => (
+                                      <option key={categoryOption.id} value={categoryOption.id}>
+                                        {categoryOption.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  Nome
+                                  <input
+                                    name="name"
+                                    required
+                                    defaultValue={item.name}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+                              </div>
+
+                              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                Descricao
+                                <textarea
+                                  name="description"
+                                  rows={3}
+                                  required
+                                  defaultValue={item.description}
+                                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                />
+                              </label>
+
+                              <div className="grid gap-3 md:grid-cols-3">
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  Preco
+                                  <input
+                                    name="price"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    required
+                                    defaultValue={item.price}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  Preparo
+                                  <input
+                                    name="prepTime"
+                                    defaultValue={item.prepTime ?? ""}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  Intensidade
+                                  <input
+                                    name="spiceLevel"
+                                    defaultValue={item.spiceLevel ?? ""}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+                              </div>
+
+                              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                Imagem (URL)
+                                <input
+                                  name="imageUrl"
+                                  defaultValue={item.imageUrl ?? ""}
+                                  placeholder="https://... ou /images/prato.jpg"
+                                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                />
+                              </label>
+
+                              <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  Estoque
+                                  <input
+                                    name="stockQuantity"
+                                    type="number"
+                                    min="0"
+                                    defaultValue={item.stockQuantity ?? ""}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  Alerta
+                                  <input
+                                    name="lowStockThreshold"
+                                    type="number"
+                                    min="0"
+                                    defaultValue={item.lowStockThreshold ?? 0}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  P
+                                  <input
+                                    name="portionSmallPrice"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    defaultValue={item.portionPrices?.small ?? ""}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  M
+                                  <input
+                                    name="portionMediumPrice"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    defaultValue={item.portionPrices?.medium ?? item.price}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  G
+                                  <input
+                                    name="portionLargePrice"
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    defaultValue={item.portionPrices?.large ?? ""}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+                              </div>
+
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  Tags
+                                  <input
+                                    name="tags"
+                                    defaultValue={item.tags.join(", ")}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+
+                                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                                  Alergenicos
+                                  <input
+                                    name="allergens"
+                                    defaultValue={item.allergens.join(", ")}
+                                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                                  />
+                                </label>
+                              </div>
+
+                              <div className="flex flex-wrap gap-3">
+                                <label className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
+                                  <input
+                                    type="checkbox"
+                                    name="isSignature"
+                                    defaultChecked={item.signature}
+                                    className="accent-[var(--gold)]"
+                                  />
+                                  Assinatura
+                                </label>
+                                <label className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
+                                  <input
+                                    type="checkbox"
+                                    name="isAvailable"
+                                    defaultChecked={item.available}
+                                    className="accent-[var(--gold)]"
+                                  />
+                                  Ativo
+                                </label>
+                              </div>
+
+                              <button
+                                type="submit"
+                                className="pill-wrap-safe inline-flex w-full items-center justify-center rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5 md:w-auto"
+                              >
+                                Salvar edicao
+                              </button>
+                            </form>
+                          </details>
                         </article>
                       ))
                     ) : (

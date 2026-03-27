@@ -1749,6 +1749,219 @@ export async function createMenuItemAction(_previousState, formData) {
   };
 }
 
+export async function updateMenuItemAction(formData) {
+  await requireRole(["manager", "owner"]);
+
+  const itemId = String(formData.get("itemId") ?? "").trim();
+  const categoryId = String(formData.get("categoryId") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const rawImageUrl = String(formData.get("imageUrl") ?? "").trim();
+  const urlImage = normalizeMenuImageUrl(rawImageUrl);
+  const prepTime = String(formData.get("prepTime") ?? "").trim();
+  const spiceLevel = String(formData.get("spiceLevel") ?? "").trim();
+  const tags = String(formData.get("tags") ?? "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+  const allergens = String(formData.get("allergens") ?? "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+  const stockQuantity = parseNonNegativeInteger(formData.get("stockQuantity"));
+  const lowStockThreshold = parseNonNegativeInteger(formData.get("lowStockThreshold"));
+  const portionSmallPrice = parseCurrencyValue(formData.get("portionSmallPrice"));
+  const portionMediumPrice = parseCurrencyValue(formData.get("portionMediumPrice"));
+  const portionLargePrice = parseCurrencyValue(formData.get("portionLargePrice"));
+  const isSignature = formData.has("isSignature");
+  const isAvailable = formData.has("isAvailable");
+  const price = parseCurrencyValue(formData.get("price"));
+
+  if (!itemId) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Nao foi possivel identificar o prato para editar.",
+      }),
+    );
+  }
+
+  if (!categoryId || !name || !description) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Categoria, nome e descricao sao obrigatorios para editar o prato.",
+      }),
+    );
+  }
+
+  if (!Number.isFinite(price) || price < 0) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Informe um preco valido para atualizar o prato.",
+      }),
+    );
+  }
+
+  if (
+    stockQuantity != null &&
+    lowStockThreshold != null &&
+    lowStockThreshold > stockQuantity
+  ) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "O alerta de estoque nao pode ser maior que o estoque total.",
+      }),
+    );
+  }
+
+  if (urlImage === null) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError:
+          "A imagem precisa estar em URL valida (http/https) ou caminho local iniciando com /images/.",
+      }),
+    );
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  if (!supabase) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Nao foi possivel conectar ao Supabase para editar o prato.",
+      }),
+    );
+  }
+
+  const [categoryResult, itemResult] = await Promise.all([
+    supabase
+      .from("menu_categories")
+      .select("id")
+      .eq("id", categoryId)
+      .maybeSingle(),
+    supabase
+      .from("menu_items")
+      .select("id")
+      .eq("id", itemId)
+      .maybeSingle(),
+  ]);
+
+  if (categoryResult.error || !categoryResult.data) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "A categoria selecionada nao existe mais no sistema.",
+      }),
+    );
+  }
+
+  if (itemResult.error || !itemResult.data) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "O prato selecionado nao foi encontrado para edicao.",
+      }),
+    );
+  }
+
+  const portionPrices = buildPortionPricing(price, {
+    small: Number.isFinite(portionSmallPrice) && portionSmallPrice >= 0
+      ? portionSmallPrice
+      : undefined,
+    medium: Number.isFinite(portionMediumPrice) && portionMediumPrice >= 0
+      ? portionMediumPrice
+      : undefined,
+    large: Number.isFinite(portionLargePrice) && portionLargePrice >= 0
+      ? portionLargePrice
+      : undefined,
+  });
+
+  const updatePayload = {
+    category_id: categoryId,
+    name,
+    description,
+    image_url: urlImage || null,
+    price,
+    prep_time: prepTime || null,
+    spice_level: spiceLevel || null,
+    tags,
+    allergens,
+    is_signature: isSignature,
+    is_available: isAvailable,
+    stock_quantity: stockQuantity,
+    low_stock_threshold: lowStockThreshold ?? 0,
+    portion_prices: portionPrices,
+  };
+
+  const payloadWithoutImage = { ...updatePayload };
+  delete payloadWithoutImage.image_url;
+  const compatibilityPayloads = [updatePayload, payloadWithoutImage].flatMap((payload) => [
+    payload,
+    (() => {
+      const withoutStock = { ...payload };
+      delete withoutStock.stock_quantity;
+      delete withoutStock.low_stock_threshold;
+      delete withoutStock.portion_prices;
+      return withoutStock;
+    })(),
+  ]);
+
+  let error = null;
+  let imageColumnMissing = false;
+  let stockColumnsMissing = false;
+
+  for (const payload of compatibilityPayloads) {
+    const result = await supabase
+      .from("menu_items")
+      .update(payload)
+      .eq("id", itemId);
+    error = result.error;
+
+    if (!error) {
+      imageColumnMissing = payload.image_url == null;
+      stockColumnsMissing =
+        payload.stock_quantity === undefined ||
+        payload.low_stock_threshold === undefined ||
+        payload.portion_prices === undefined;
+      break;
+    }
+
+    const errorMessage = String(error.message ?? "").toLowerCase();
+    const canTryNext =
+      errorMessage.includes("image_url") ||
+      errorMessage.includes("stock_quantity") ||
+      errorMessage.includes("low_stock_threshold") ||
+      errorMessage.includes("portion_prices") ||
+      error.code === "PGRST204";
+
+    if (!canTryNext) {
+      break;
+    }
+  }
+
+  if (error) {
+    redirect(
+      buildMenuRedirectPath({
+        menuError: "Nao foi possivel atualizar o prato agora.",
+      }),
+    );
+  }
+
+  revalidateStaffPaths();
+
+  const successMessage =
+    imageColumnMissing && stockColumnsMissing
+      ? "Prato atualizado. O banco ainda nao tem colunas de imagem/estoque/porcoes."
+      : imageColumnMissing
+        ? "Prato atualizado. A imagem nao foi salva porque a coluna image_url ainda nao existe."
+        : stockColumnsMissing
+          ? "Prato atualizado. Campos de estoque/porcoes nao foram salvos porque o banco nao tem essas colunas."
+          : "Prato atualizado com sucesso.";
+
+  redirect(
+    buildMenuRedirectPath({
+      menuNotice: successMessage,
+    }),
+  );
+}
+
 export async function createMenuCategoryAction(_previousState, formData) {
   await requireRole(["manager", "owner"]);
 
