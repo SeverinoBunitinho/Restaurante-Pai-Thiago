@@ -13,6 +13,10 @@ import {
   getPaymentMethodLabel,
 } from "@/lib/utils";
 
+function normalizeCheckoutReference(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
 function formatOrderMoment(value) {
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
@@ -22,10 +26,54 @@ function formatOrderMoment(value) {
   }).format(new Date(value));
 }
 
-export default async function PedidosPage() {
+function getOrderStatusFlow(fulfillmentType) {
+  if (fulfillmentType === "delivery") {
+    return ["received", "preparing", "ready", "dispatching", "delivered"];
+  }
+
+  return ["received", "preparing", "ready", "delivered"];
+}
+
+function getOrderStepState(sequence, currentStatus, stepStatus) {
+  const currentIndex = sequence.indexOf(currentStatus);
+  const stepIndex = sequence.indexOf(stepStatus);
+
+  if (currentStatus === "cancelled") {
+    return "pending";
+  }
+
+  if (currentIndex === -1 || stepIndex === -1) {
+    return "pending";
+  }
+
+  if (currentIndex === stepIndex) {
+    return "current";
+  }
+
+  if (currentIndex > stepIndex) {
+    return "done";
+  }
+
+  return "pending";
+}
+
+export default async function PedidosPage({ searchParams }) {
   const session = await requireRole("customer");
+  const resolvedSearchParams = await searchParams;
   const dashboard = await getCustomerDashboard(session.user.id);
   const orderGroups = dashboard.orderGroups ?? [];
+  const trackedCheckout =
+    Array.isArray(resolvedSearchParams?.checkout)
+      ? resolvedSearchParams.checkout[0]
+      : resolvedSearchParams?.checkout;
+  const normalizedTrackedCheckout = normalizeCheckoutReference(trackedCheckout);
+  const trackedOrderGroup = normalizedTrackedCheckout
+    ? orderGroups.find(
+        (orderGroup) =>
+          normalizeCheckoutReference(orderGroup.checkoutReference) ===
+          normalizedTrackedCheckout,
+      ) ?? null
+    : null;
   const activeOrders = orderGroups.filter(
     (order) => !["delivered", "cancelled"].includes(order.status),
   ).length;
@@ -100,6 +148,71 @@ export default async function PedidosPage() {
           </div>
         </section>
 
+        {trackedCheckout ? (
+          <section id="acompanhamento" className="shell pt-10">
+            <div className="luxury-card rounded-[2rem] p-6">
+              {trackedOrderGroup ? (
+                <>
+                  <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+                    Acompanhamento em tempo real
+                  </p>
+                  <h2 className="mt-3 text-2xl font-semibold text-[var(--forest)]">
+                    {trackedOrderGroup.checkoutReference}
+                  </h2>
+                  <p className="mt-2 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
+                    Este painel atualiza automaticamente quando a equipe muda o
+                    status do pedido.
+                  </p>
+
+                  {trackedOrderGroup.status === "cancelled" ? (
+                    <div className="mt-5 rounded-[1.4rem] border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-4 py-4 text-sm leading-6 text-[var(--clay)]">
+                      Este pedido foi cancelado pela operacao.
+                    </div>
+                  ) : (
+                    <div className="mt-5 grid gap-3 md:grid-cols-5">
+                      {(() => {
+                        const statusFlow = getOrderStatusFlow(
+                          trackedOrderGroup.fulfillmentType,
+                        );
+
+                        return statusFlow.map((step) => {
+                        const stepMeta = orderStatusMeta[step] ?? {
+                          label: step,
+                        };
+                        const stepState = getOrderStepState(
+                          statusFlow,
+                          trackedOrderGroup.status,
+                          step,
+                        );
+                        const stepClasses =
+                          stepState === "done"
+                            ? "border-[rgba(95,123,109,0.24)] bg-[rgba(95,123,109,0.12)] text-[var(--sage)]"
+                            : stepState === "current"
+                              ? "border-[rgba(182,135,66,0.28)] bg-[rgba(182,135,66,0.14)] text-[var(--gold)]"
+                              : "border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.6)] text-[rgba(21,35,29,0.68)]";
+
+                        return (
+                          <div
+                            key={step}
+                            className={`rounded-[1.2rem] border px-3 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em] ${stepClasses}`}
+                          >
+                            {stepMeta.label}
+                          </div>
+                        );
+                        });
+                      })()}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="rounded-[1.4rem] border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-4 py-4 text-sm leading-6 text-[var(--clay)]">
+                  Nenhum pedido foi localizado para a referencia informada.
+                </div>
+              )}
+            </div>
+          </section>
+        ) : null}
+
         <section className="shell pt-20">
           <SectionHeading
             eyebrow="Historico"
@@ -118,7 +231,11 @@ export default async function PedidosPage() {
                 return (
                   <article
                     key={orderGroup.id}
-                    className="luxury-card rounded-[2rem] p-6"
+                    className={`luxury-card rounded-[2rem] p-6 ${
+                      trackedOrderGroup?.id === orderGroup.id
+                        ? "border border-[rgba(182,135,66,0.24)]"
+                        : ""
+                    }`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="min-w-0">
@@ -215,6 +332,15 @@ export default async function PedidosPage() {
                           </p>
                         </div>
                       ))}
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <Link
+                        href={`/pedidos?checkout=${encodeURIComponent(orderGroup.checkoutReference)}#acompanhamento`}
+                        className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
+                      >
+                        Ver acompanhamento ao vivo
+                      </Link>
                     </div>
                   </article>
                 );

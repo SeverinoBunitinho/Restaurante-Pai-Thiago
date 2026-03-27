@@ -52,6 +52,7 @@ export function CartCheckout({ customerName, restaurantInfo }) {
   const [selectedFulfillmentType, setSelectedFulfillmentType] = useState(
     hasDeliveryCoverage ? fulfillmentTypeOptions[0].value : "pickup",
   );
+  const [hideRealtimeQuestion, setHideRealtimeQuestion] = useState(false);
   const [selectedDeliveryNeighborhood, setSelectedDeliveryNeighborhood] = useState(
     restaurantInfo.delivery.neighborhoods[0]?.slug ?? "",
   );
@@ -193,6 +194,48 @@ export function CartCheckout({ customerName, restaurantInfo }) {
               <p className="mt-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
                 Total final: {formatCurrency(state.grandTotal)}
               </p>
+            ) : null}
+
+            {state.checkoutReference ? (
+              <div className="mt-6 rounded-[1.6rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                  Acompanhamento ao vivo
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.74)]">
+                  Deseja acompanhar este pedido em tempo real e ver cada etapa
+                  (recebido, em preparo, pronto e finalizado)?
+                </p>
+                {!hideRealtimeQuestion ? (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <Link
+                      href={`/pedidos?checkout=${encodeURIComponent(state.checkoutReference)}`}
+                      className="button-primary w-full justify-center sm:w-auto"
+                    >
+                      Sim, acompanhar ao vivo
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setHideRealtimeQuestion(true)}
+                      className="button-secondary w-full justify-center sm:w-auto"
+                    >
+                      Agora nao
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <p className="text-sm leading-6 text-[rgba(21,35,29,0.7)]">
+                      Quando quiser, voce pode abrir a aba de pedidos e ver o
+                      andamento ao vivo.
+                    </p>
+                    <Link
+                      href={`/pedidos?checkout=${encodeURIComponent(state.checkoutReference)}`}
+                      className="inline-flex items-center rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
+                    >
+                      Ver em tempo real
+                    </Link>
+                  </div>
+                )}
+              </div>
             ) : null}
 
             <div className="mt-6 flex flex-wrap gap-3">
