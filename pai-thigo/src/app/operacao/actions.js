@@ -4,6 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireRole } from "@/lib/auth";
+import {
+  buildEmergencyCleanupCutoffIso,
+  closedOrderStatuses,
+  closedReservationStatuses,
+  emergencyCleanupConfirmationText,
+  normalizeEmergencyCleanupRetentionDays,
+} from "@/lib/emergency-cleanup";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { paymentMethodOptions } from "@/lib/utils";
@@ -26,9 +33,6 @@ const orderStatuses = [
   "delivered",
   "cancelled",
 ];
-const closedOrderStatuses = ["delivered", "cancelled"];
-const closedReservationStatuses = ["completed", "cancelled"];
-const emergencyCleanupConfirmationText = "LIMPEZA EXTREMA";
 
 const staffRoles = ["waiter", "manager"];
 const shiftStatuses = ["planned", "confirmed", "completed", "absent"];
@@ -1526,11 +1530,9 @@ export async function runEmergencyCleanupAction(_previousState, formData) {
   const confirmationText = String(formData.get("confirmationText") ?? "")
     .trim()
     .toUpperCase();
-  const retentionDaysRaw = String(formData.get("retentionDays") ?? "").trim();
-  const parsedRetentionDays = Number.parseInt(retentionDaysRaw, 10);
-  const retentionDays = Number.isInteger(parsedRetentionDays)
-    ? Math.min(Math.max(parsedRetentionDays, 1), 3650)
-    : 30;
+  const retentionDays = normalizeEmergencyCleanupRetentionDays(
+    formData.get("retentionDays") ?? formData.get("dias"),
+  );
   const buildErrorResponse = (message) => ({
     status: "error",
     message,
@@ -1556,40 +1558,45 @@ export async function runEmergencyCleanupAction(_previousState, formData) {
     );
   }
 
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
-  const cutoffIso = cutoffDate.toISOString();
+  const cutoffIso = buildEmergencyCleanupCutoffIso(retentionDays);
 
-  const [ordersResult, reservationsResult] = await Promise.all([
+  const [ordersCountResult, reservationsCountResult] = await Promise.all([
     supabase
       .from("orders")
-      .select("id", { count: "exact" })
+      .select("*", { head: true, count: "exact" })
       .in("status", closedOrderStatuses)
       .lt("updated_at", cutoffIso),
     supabase
       .from("reservations")
-      .select("id", { count: "exact" })
+      .select("*", { head: true, count: "exact" })
       .in("status", closedReservationStatuses)
       .lt("updated_at", cutoffIso),
   ]);
 
-  if (ordersResult.error || reservationsResult.error) {
+  if (ordersCountResult.error || reservationsCountResult.error) {
     return buildErrorResponse(
       "Nao foi possivel listar os registros para limpeza. Tente novamente em instantes.",
     );
   }
 
-  const orderIds = (ordersResult.data ?? []).map((item) => item.id);
-  const reservationIds = (reservationsResult.data ?? []).map((item) => item.id);
+  const expectedOrders = Number(ordersCountResult.count ?? 0);
+  const expectedReservations = Number(reservationsCountResult.count ?? 0);
   let removedOrders = 0;
   let removedReservations = 0;
 
-  if (orderIds.length) {
+  if (!expectedOrders && !expectedReservations) {
+    return buildSuccessResponse(
+      `Nenhum registro encerrado com mais de ${retentionDays} dia(s) foi encontrado para limpeza.`,
+    );
+  }
+
+  if (expectedOrders) {
     const removeOrdersResult = await supabase
       .from("orders")
       .delete()
-      .in("id", orderIds)
-      .select("id");
+      .in("status", closedOrderStatuses)
+      .lt("updated_at", cutoffIso)
+      .select("id", { count: "exact" });
 
     if (removeOrdersResult.error) {
       return buildErrorResponse(
@@ -1597,15 +1604,18 @@ export async function runEmergencyCleanupAction(_previousState, formData) {
       );
     }
 
-    removedOrders = removeOrdersResult.data?.length ?? orderIds.length;
+    removedOrders = Number(
+      removeOrdersResult.count ?? removeOrdersResult.data?.length ?? expectedOrders,
+    );
   }
 
-  if (reservationIds.length) {
+  if (expectedReservations) {
     const removeReservationsResult = await supabase
       .from("reservations")
       .delete()
-      .in("id", reservationIds)
-      .select("id");
+      .in("status", closedReservationStatuses)
+      .lt("updated_at", cutoffIso)
+      .select("id", { count: "exact" });
 
     if (removeReservationsResult.error) {
       return buildErrorResponse(
@@ -1613,8 +1623,11 @@ export async function runEmergencyCleanupAction(_previousState, formData) {
       );
     }
 
-    removedReservations =
-      removeReservationsResult.data?.length ?? reservationIds.length;
+    removedReservations = Number(
+      removeReservationsResult.count ??
+        removeReservationsResult.data?.length ??
+        expectedReservations,
+    );
   }
 
   await writeOperationAuditLog(supabase, session, {
@@ -1627,6 +1640,8 @@ export async function runEmergencyCleanupAction(_previousState, formData) {
     metadata: {
       retentionDays,
       cutoffIso,
+      expectedOrders,
+      expectedReservations,
       removedOrders,
       removedReservations,
     },
@@ -1635,8 +1650,8 @@ export async function runEmergencyCleanupAction(_previousState, formData) {
   revalidateStaffPaths();
 
   if (!removedOrders && !removedReservations) {
-    return buildSuccessResponse(
-      `Nenhum registro encerrado com mais de ${retentionDays} dia(s) foi encontrado para limpeza.`,
+    return buildErrorResponse(
+      "A previa mostrou registros elegiveis, mas nenhum item foi removido. Confira as permissoes RLS/Delete no Supabase.",
     );
   }
 

@@ -303,6 +303,12 @@ export function EmergencyCleanupPanel() {
         action={formAction}
         className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))] gap-3"
       >
+        <input
+          type="hidden"
+          name="dias"
+          value={String(normalizeRetentionDays(retentionDaysInput))}
+        />
+
         <label className="grid gap-2">
           <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(217,185,122,0.88)]">
             Dias
@@ -310,6 +316,7 @@ export function EmergencyCleanupPanel() {
           <input
             name="retentionDays"
             type="number"
+            inputMode="numeric"
             min="1"
             max="3650"
             value={retentionDaysInput}

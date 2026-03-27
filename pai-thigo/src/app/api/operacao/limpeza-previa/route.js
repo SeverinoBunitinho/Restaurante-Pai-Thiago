@@ -1,20 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentSession } from "@/lib/auth";
+import {
+  buildEmergencyCleanupCutoffIso,
+  closedOrderStatuses,
+  closedReservationStatuses,
+  normalizeEmergencyCleanupRetentionDays,
+} from "@/lib/emergency-cleanup";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-
-const closedOrderStatuses = ["delivered", "cancelled"];
-const closedReservationStatuses = ["completed", "cancelled"];
-
-function normalizeRetentionDays(value) {
-  const parsed = Number.parseInt(String(value ?? "").trim(), 10);
-
-  if (!Number.isInteger(parsed)) {
-    return 30;
-  }
-
-  return Math.min(Math.max(parsed, 1), 3650);
-}
 
 function formatReservationSlot(item) {
   const dateValue = String(item?.reservation_date ?? "").trim();
@@ -78,12 +71,10 @@ export async function GET(request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const retentionDays = normalizeRetentionDays(
+  const retentionDays = normalizeEmergencyCleanupRetentionDays(
     searchParams.get("dias") ?? searchParams.get("retentionDays"),
   );
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
-  const cutoffIso = cutoffDate.toISOString();
+  const cutoffIso = buildEmergencyCleanupCutoffIso(retentionDays);
 
   const [
     ordersCountResult,
