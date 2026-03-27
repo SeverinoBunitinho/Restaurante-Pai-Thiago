@@ -141,7 +141,15 @@ function getOrderActions(status, fulfillmentType = "pickup") {
   return [];
 }
 
-function buildComandasHref({ mesa, status, comanda, busca, nome, categoria }) {
+function buildComandasHref({
+  mesa,
+  status,
+  comanda,
+  busca,
+  nome,
+  categoria,
+  view,
+}) {
   const params = new URLSearchParams();
 
   if (mesa) {
@@ -166,6 +174,10 @@ function buildComandasHref({ mesa, status, comanda, busca, nome, categoria }) {
 
   if (categoria) {
     params.set("categoria", categoria);
+  }
+
+  if (view) {
+    params.set("view", view);
   }
 
   const query = params.toString();
@@ -405,6 +417,10 @@ export default async function OperacaoComandasPage({ searchParams }) {
   const orderCheckoutError = Array.isArray(resolvedSearchParams?.pedidoError)
     ? resolvedSearchParams.pedidoError[0]
     : resolvedSearchParams?.pedidoError;
+  const viewParam = Array.isArray(resolvedSearchParams?.view)
+    ? resolvedSearchParams.view[0]
+    : resolvedSearchParams?.view;
+  const activeView = viewParam === "pedidos" ? "pedidos" : "mesa";
 
   const [checksBoard, ordersBoard] = await Promise.all([
     getServiceChecksBoard(tableQuery ?? ""),
@@ -570,6 +586,38 @@ export default async function OperacaoComandasPage({ searchParams }) {
         </div>
       </section>
 
+      <section className="pt-8">
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={buildComandasHref({
+              mesa: tableQuery ?? "",
+              status: activeStatus,
+              comanda: checkoutQuery ?? "",
+              nome: orderNameQuery ?? "",
+              categoria: orderCategoryQuery ?? "",
+              view: "mesa",
+            })}
+            className={`filter-chip ${activeView === "mesa" ? "filter-chip-active" : ""}`}
+          >
+            Conta por mesa
+          </Link>
+          <Link
+            href={buildComandasHref({
+              mesa: tableQuery ?? "",
+              status: activeStatus,
+              comanda: checkoutQuery ?? "",
+              nome: orderNameQuery ?? "",
+              categoria: orderCategoryQuery ?? "",
+              view: "pedidos",
+            })}
+            className={`filter-chip ${activeView === "pedidos" ? "filter-chip-active" : ""}`}
+          >
+            Pedidos do site
+          </Link>
+        </div>
+      </section>
+
+      {activeView === "mesa" ? (
       <section className="pt-14">
         <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="luxury-card rounded-[2.2rem] p-6">
@@ -943,7 +991,11 @@ export default async function OperacaoComandasPage({ searchParams }) {
                   checksBoard.openChecks.map((check) => (
                     <Link
                       key={check.id}
-                      href={buildComandasHref({ mesa: check.table?.name, status: activeStatus })}
+                      href={buildComandasHref({
+                        mesa: check.table?.name,
+                        status: activeStatus,
+                        view: activeView,
+                      })}
                       className="block rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5 transition hover:-translate-y-0.5"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1001,7 +1053,9 @@ export default async function OperacaoComandasPage({ searchParams }) {
           </div>
         </div>
       </section>
+      ) : null}
 
+      {activeView === "pedidos" ? (
       <section className="pt-14">
         <div className="luxury-card rounded-[2.2rem] p-6">
           <SectionHeading
@@ -1075,7 +1129,11 @@ export default async function OperacaoComandasPage({ searchParams }) {
                 Buscar
               </button>
               <Link
-                href={buildComandasHref({ mesa: tableQuery ?? "", status: activeStatus })}
+                href={buildComandasHref({
+                  mesa: tableQuery ?? "",
+                  status: activeStatus,
+                  view: activeView,
+                })}
                 className="button-secondary w-full justify-center self-end lg:w-auto"
               >
                 Limpar busca
@@ -1192,6 +1250,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
                   comanda: checkoutQuery ?? "",
                   nome: orderNameQuery ?? "",
                   categoria: orderCategoryQuery ?? "",
+                  view: activeView,
                 })}
                 className={`filter-chip ${activeStatus === filter.value ? "filter-chip-active" : ""}`}
               >
@@ -1460,6 +1519,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
           </div>
         </div>
       </section>
+      ) : null}
     </>
   );
 }

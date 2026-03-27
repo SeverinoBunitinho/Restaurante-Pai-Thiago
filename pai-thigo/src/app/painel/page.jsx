@@ -313,7 +313,7 @@ export default async function PainelPage() {
                             </span>
                           </div>
                           <p className="mt-2 text-sm text-[rgba(21,35,29,0.72)]">
-                            {order.guestName || "Cliente"} • {order.totalItems} item(ns)
+                            {order.guestName || "Cliente"} - {order.totalItems} item(ns)
                           </p>
                           <p className="mt-1 text-xs text-[rgba(21,35,29,0.62)]">
                             {formatOrderMoment(order.createdAt)}
@@ -354,7 +354,7 @@ export default async function PainelPage() {
                             </span>
                           </div>
                           <p className="mt-2 text-sm text-[rgba(21,35,29,0.72)]">
-                            {formatReservationMoment(reservation.date, reservation.time)} •{" "}
+                            {formatReservationMoment(reservation.date, reservation.time)} -{" "}
                             {reservation.guests} pessoa(s)
                           </p>
                         </article>
@@ -371,91 +371,51 @@ export default async function PainelPage() {
           </div>
         </section>
 
-        <section className="shell pt-20">
-          <div className="grid gap-5 lg:grid-cols-[1.02fr_0.98fr]">
-            <div className="luxury-card rounded-[2.2rem] p-6">
-              <SectionHeading
-                eyebrow="Direcao do turno"
-                title="Leitura rapida para decidir com seguranca"
-                description="Este painel resume o essencial para o cargo atual, sem blocos repetidos e com foco em acoes do momento."
-                compact
-              />
+        <section className="shell pt-14">
+          <div className="luxury-card rounded-[2.2rem] p-6">
+            <SectionHeading
+              eyebrow="Leitura do salao"
+              title="Mesas em destaque no turno"
+              description="Resumo curto das mesas para acomodacao e ritmo de atendimento."
+              compact
+            />
 
-              <div className="mt-8 space-y-4">
-                <article className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5">
-                  <p className="text-sm uppercase tracking-[0.2em] text-[var(--gold)]">
-                    Como usar este painel
-                  </p>
-                  <p className="mt-3 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
-                    Primeiro leia as pendencias do turno, depois confirme a disponibilidade
-                    de mesas e so entao siga para pedidos, reservas e central. Esse fluxo
-                    reduz retrabalho e melhora a resposta da equipe.
-                  </p>
-                </article>
-                <article className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5">
-                  <p className="text-sm uppercase tracking-[0.2em] text-[var(--gold)]">
-                    Foco do perfil atual
-                  </p>
-                  <p className="mt-3 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
-                    Perfil ativo: {getStaffRoleLabel(session.role)}. Os dados desta tela sao
-                    priorizados para sua rotina de operacao, atendimento e acompanhamento da
-                    casa em tempo real.
-                  </p>
-                </article>
-              </div>
-            </div>
-
-            <div className="luxury-card rounded-[2.2rem] p-6">
-              <SectionHeading
-                eyebrow="Leitura do salao"
-                title="Estado das mesas e distribuicao de areas"
-                description="Uma leitura consolidada para decidir onde acomodar melhor as proximas reservas."
-                compact
-              />
-
-              <div className="mt-8 space-y-4">
-                {tablesBoard.tables.length ? (
-                  tablesBoard.tables.slice(0, 4).map((table) => (
-                    <article
-                      key={table.id}
-                      className="staff-surface-card rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <h3 className="text-lg font-semibold text-[var(--forest)]">
-                            {table.name}
-                          </h3>
-                          <p className="mt-1 text-sm text-[rgba(21,35,29,0.72)]">
-                            {table.area} - capacidade {table.capacity}
-                          </p>
-                        </div>
-                        <span className="rounded-full bg-[rgba(20,35,29,0.08)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
-                          {table.state}
-                        </span>
+            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {tablesBoard.tables.length ? (
+                tablesBoard.tables.slice(0, 4).map((table) => (
+                  <article
+                    key={table.id}
+                    className="staff-surface-card rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-semibold text-[var(--forest)]">
+                          {table.name}
+                        </h3>
+                        <p className="mt-1 text-sm text-[rgba(21,35,29,0.72)]">
+                          {table.area}
+                        </p>
                       </div>
-                      <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                        {table.detail}
-                      </p>
-                    </article>
-                  ))
-                ) : (
-                  <article className="rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.56)] p-5">
-                    <p className="text-lg font-semibold text-[var(--forest)]">
-                      Sem leitura de mesas no momento
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      O estado do salao reaparece automaticamente assim que a
-                      conexao com o banco for restabelecida.
+                      <span className="rounded-full bg-[rgba(20,35,29,0.08)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--forest)]">
+                        {table.state}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                      {table.detail}
                     </p>
                   </article>
-                )}
-              </div>
+                ))
+              ) : (
+                <article className="rounded-[1.4rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.56)] p-4 text-sm leading-6 text-[rgba(21,35,29,0.72)] md:col-span-2 xl:col-span-4">
+                  Sem leitura de mesas no momento.
+                </article>
+              )}
             </div>
           </div>
         </section>
 
         {session.role !== "waiter" ? (
-          <section className="shell pt-20">
+          <section className="shell pt-14">
             <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
               <div className="luxury-card rounded-[2.2rem] p-6">
                 <SectionHeading
@@ -553,7 +513,7 @@ export default async function PainelPage() {
         ) : null}
 
         {session.role === "owner" ? (
-          <section className="shell pt-20">
+          <section className="shell pt-14">
             <div className="staff-cta-panel luxury-card-dark rounded-[2.2rem] p-6 text-[var(--cream)]">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>

@@ -4,8 +4,8 @@ import { ArrowRight, Compass } from "lucide-react";
 import { SectionHeading } from "@/components/section-heading";
 import { getStaffRoleLabel, requireRole } from "@/lib/auth";
 import {
-  getModuleByKey,
   getStaffPanel,
+  getModuleByKey,
   getStaffModules,
 } from "@/lib/staff-modules";
 
@@ -102,11 +102,6 @@ export default async function OperacaoOverviewPage() {
   const modules = getStaffModules(session.role);
   const flows = roleFlows[session.role] ?? roleFlows.waiter;
   const protocols = roleProtocols[session.role] ?? roleProtocols.waiter;
-  const flowKeys = new Set(flows.flatMap((flow) => flow.keys));
-  const complementaryModules = modules.filter((module) => !flowKeys.has(module.key));
-  const modulesForGrid = complementaryModules;
-  const quickItems = complementaryModules.slice(0, 3);
-  const panelModule = getModuleByKey("painel");
 
   return (
     <>
@@ -235,95 +230,6 @@ export default async function OperacaoOverviewPage() {
                 </article>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="pt-14">
-        <div className="grid gap-5 lg:grid-cols-[0.98fr_1.02fr]">
-          <div className="luxury-card rounded-[2.2rem] p-6">
-            <SectionHeading
-              eyebrow="Modulos complementares"
-              title="Acessos complementares da central"
-              description="Modulos que nao apareceram nas trilhas iniciais."
-              compact
-            />
-
-            {modulesForGrid.length ? (
-              <div className="mt-8 grid gap-4 md:grid-cols-2">
-                {modulesForGrid.map((module) => (
-                  <Link
-                    key={module.key}
-                    href={module.href}
-                    className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5 transition hover:-translate-y-0.5"
-                  >
-                    <module.icon className="text-[var(--gold)]" size={20} />
-                    <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
-                      {module.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      {module.description}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <article className="mt-8 rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.56)] p-5">
-                <p className="text-lg font-semibold text-[var(--forest)]">
-                  Fluxo completo para este cargo
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                  As trilhas acima ja cobrem os modulos essenciais do turno.
-                </p>
-              </article>
-            )}
-          </div>
-
-          <div className="luxury-card rounded-[2.2rem] p-6">
-            <SectionHeading
-              eyebrow="Acesso rapido"
-              title="Rotas de entrada recomendadas para o seu cargo"
-              description="Atalhos diretos para iniciar o turno com navegacao simples."
-              compact
-            />
-
-            {quickItems.length ? (
-              <div className="mt-8 grid gap-4">
-                {quickItems.map((item) => (
-                  <Link
-                    key={item.key}
-                    href={item.href}
-                    className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                  >
-                    <item.icon className="text-[var(--gold)]" size={18} />
-                    <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      {item.description}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-8 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5">
-                <p className="text-lg font-semibold text-[var(--forest)]">
-                  Turno alinhado
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                  Se precisar de uma visao geral da operacao, use o painel do turno.
-                </p>
-                {panelModule ? (
-                  <Link
-                    href={panelModule.href}
-                    className="mt-4 inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
-                  >
-                    {panelModule.title}
-                    <ArrowRight size={14} />
-                  </Link>
-                ) : null}
-              </div>
-            )}
           </div>
         </div>
       </section>
