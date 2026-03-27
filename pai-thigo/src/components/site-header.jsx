@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   BriefcaseBusiness,
   CalendarRange,
+  ChevronDown,
   ClipboardList,
   Dot,
   House,
@@ -405,30 +406,67 @@ export async function SiteHeader() {
                 </div>
               </Link>
 
-              <nav className="hidden items-center gap-2 lg:flex">
-                {navItems.map((item) => (
-                  <ActiveLink
-                    key={item.href}
-                    href={item.href}
-                    exact={item.exact}
-                    className="nav-link"
-                    activeClassName="nav-link-active"
-                  >
-                    <span className="nav-link-content">
-                      <span>{item.label}</span>
-                      {item.badgeCount && item.badgeKind ? (
-                        <NotificationCountBadge
-                          count={item.badgeCount}
-                          latestAt={item.badgeLatestAt}
-                          kind={item.badgeKind}
-                          staffSession={staffSession}
-                          className="nav-link-badge"
-                          ariaLabel={`${item.badgeCount} notificacoes`}
-                        />
-                      ) : null}
-                    </span>
-                  </ActiveLink>
-                ))}
+              <nav className="hidden items-center lg:flex">
+                {staffSession ? (
+                  <details className="header-dropdown">
+                    <summary className="header-dropdown-trigger">
+                      <span>Menu</span>
+                      <ChevronDown className="header-dropdown-chevron" size={16} />
+                    </summary>
+
+                    <div className="header-dropdown-panel">
+                      {navItems.map((item) => (
+                        <ActiveLink
+                          key={item.href}
+                          href={item.href}
+                          exact={item.exact}
+                          className="header-dropdown-link"
+                          activeClassName="header-dropdown-link-active"
+                        >
+                          <span className="inline-flex items-center gap-2">
+                            <span>{item.label}</span>
+                            {item.badgeCount && item.badgeKind ? (
+                              <NotificationCountBadge
+                                count={item.badgeCount}
+                                latestAt={item.badgeLatestAt}
+                                kind={item.badgeKind}
+                                staffSession={staffSession}
+                                className="nav-link-badge"
+                                ariaLabel={`${item.badgeCount} notificacoes`}
+                              />
+                            ) : null}
+                          </span>
+                        </ActiveLink>
+                      ))}
+                    </div>
+                  </details>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {navItems.map((item) => (
+                      <ActiveLink
+                        key={item.href}
+                        href={item.href}
+                        exact={item.exact}
+                        className="nav-link"
+                        activeClassName="nav-link-active"
+                      >
+                        <span className="nav-link-content">
+                          <span>{item.label}</span>
+                          {item.badgeCount && item.badgeKind ? (
+                            <NotificationCountBadge
+                              count={item.badgeCount}
+                              latestAt={item.badgeLatestAt}
+                              kind={item.badgeKind}
+                              staffSession={staffSession}
+                              className="nav-link-badge"
+                              ariaLabel={`${item.badgeCount} notificacoes`}
+                            />
+                          ) : null}
+                        </span>
+                      </ActiveLink>
+                    ))}
+                  </div>
+                )}
               </nav>
 
               <div className="site-header-actions flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-2">
