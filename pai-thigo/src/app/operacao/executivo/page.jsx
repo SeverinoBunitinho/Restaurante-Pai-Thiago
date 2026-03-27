@@ -1,16 +1,10 @@
-import Link from "next/link";
-
 import { SectionHeading } from "@/components/section-heading";
 import { requireRole } from "@/lib/auth";
 import { getExecutiveBoard } from "@/lib/staff-data";
-import { getStaffModules } from "@/lib/staff-modules";
 
 export default async function OperacaoExecutivoPage() {
   await requireRole("owner");
   const board = await getExecutiveBoard();
-  const modules = getStaffModules("owner").filter(
-    (module) => module.key !== "executivo",
-  );
 
   return (
     <>
@@ -71,27 +65,46 @@ export default async function OperacaoExecutivoPage() {
 
           <div className="luxury-card-dark rounded-[2.2rem] p-6 text-[var(--cream)]">
             <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-              Acesso rapido
+              Direcionamento executivo
             </p>
             <h2 className="display-title page-section-title mt-4 text-white">
-              Modulos que apoiam a decisao estrategica
+              Prioridades do dono para manter a casa fluindo
             </h2>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-[rgba(255,247,232,0.74)]">
+              Esta area foi simplificada para reduzir excesso de informacao.
+              O foco aqui e orientar a tomada de decisao sem repetir modulos.
+            </p>
 
-            <div className="mt-8 grid gap-4">
-              {modules.map((module) => (
-                <Link
-                  key={module.key}
-                  href={module.href}
-                  className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5 transition hover:-translate-y-0.5"
-                >
-                  <h3 className="text-lg font-semibold text-white">
-                    {module.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                    {module.description}
-                  </p>
-                </Link>
-              ))}
+            <div className="mt-7 space-y-3">
+              <article className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[rgba(217,185,122,0.92)]">
+                  1. Leitura inicial
+                </p>
+                <p className="mt-2 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
+                  Comece pelas pendencias de reservas e pedidos para decidir a
+                  prioridade operacional do turno.
+                </p>
+              </article>
+
+              <article className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[rgba(217,185,122,0.92)]">
+                  2. Ajuste de estrutura
+                </p>
+                <p className="mt-2 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
+                  Reorganize equipe, salao e disponibilidade do cardapio para
+                  manter atendimento consistente.
+                </p>
+              </article>
+
+              <article className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[rgba(217,185,122,0.92)]">
+                  3. Revisao final
+                </p>
+                <p className="mt-2 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
+                  Feche o ciclo com relatorios e indicadores para orientar as
+                  proximas decisoes da casa.
+                </p>
+              </article>
             </div>
           </div>
         </div>
