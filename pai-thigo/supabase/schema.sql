@@ -8,6 +8,8 @@ create table if not exists public.staff_directory (
   login text,
   phone text,
   address text,
+  birth_date date,
+  education_level text,
   rg text,
   cpf text,
   active boolean not null default true,
@@ -22,6 +24,12 @@ add column if not exists phone text;
 
 alter table public.staff_directory
 add column if not exists address text;
+
+alter table public.staff_directory
+add column if not exists birth_date date;
+
+alter table public.staff_directory
+add column if not exists education_level text;
 
 alter table public.staff_directory
 add column if not exists rg text;

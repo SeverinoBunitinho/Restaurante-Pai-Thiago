@@ -101,6 +101,82 @@ export default async function OperacaoEquipePage({ searchParams }) {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-[var(--forest)]">Telefone</span>
+                  <input
+                    name="phone"
+                    type="text"
+                    required
+                    maxLength={40}
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                    placeholder="(11) 99999-9999"
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-[var(--forest)]">
+                    Data de nascimento
+                  </span>
+                  <input
+                    name="birthDate"
+                    type="date"
+                    required
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                  />
+                </label>
+              </div>
+
+              <label className="grid gap-2">
+                <span className="text-sm font-semibold text-[var(--forest)]">Endereco</span>
+                <input
+                  name="address"
+                  type="text"
+                  required
+                  maxLength={220}
+                  className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                  placeholder="Rua, numero, bairro e complemento"
+                />
+              </label>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-[var(--forest)]">CPF</span>
+                  <input
+                    name="cpf"
+                    type="text"
+                    required
+                    maxLength={20}
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                    placeholder="Somente numeros"
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-[var(--forest)]">
+                    Grau de escolaridade
+                  </span>
+                  <select
+                    name="educationLevel"
+                    defaultValue=""
+                    required
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                  >
+                    <option value="" disabled>
+                      Selecione
+                    </option>
+                    <option value="fundamental">Fundamental</option>
+                    <option value="medio">Medio</option>
+                    <option value="tecnico">Tecnico</option>
+                    <option value="superior">Superior</option>
+                    <option value="pos_graduacao">Pos-graduacao</option>
+                    <option value="mestrado">Mestrado</option>
+                    <option value="doutorado">Doutorado</option>
+                    <option value="outro">Outro</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="grid gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Login interno</span>
                   <input
                     name="login"
@@ -111,54 +187,6 @@ export default async function OperacaoEquipePage({ searchParams }) {
                   />
                 </label>
 
-                <label className="grid gap-2">
-                  <span className="text-sm font-semibold text-[var(--forest)]">Telefone</span>
-                  <input
-                    name="phone"
-                    type="text"
-                    maxLength={40}
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
-                    placeholder="(11) 99999-9999"
-                  />
-                </label>
-              </div>
-
-              <label className="grid gap-2">
-                <span className="text-sm font-semibold text-[var(--forest)]">Endereco</span>
-                <input
-                  name="address"
-                  type="text"
-                  maxLength={220}
-                  className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
-                  placeholder="Rua, numero, bairro e complemento"
-                />
-              </label>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="grid gap-2">
-                  <span className="text-sm font-semibold text-[var(--forest)]">RG</span>
-                  <input
-                    name="rg"
-                    type="text"
-                    maxLength={20}
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
-                    placeholder="Somente numeros e digito"
-                  />
-                </label>
-
-                <label className="grid gap-2">
-                  <span className="text-sm font-semibold text-[var(--forest)]">CPF</span>
-                  <input
-                    name="cpf"
-                    type="text"
-                    maxLength={20}
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
-                    placeholder="Somente numeros"
-                  />
-                </label>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
                 <label className="grid gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Cargo</span>
                   <select
@@ -173,7 +201,9 @@ export default async function OperacaoEquipePage({ searchParams }) {
                     ))}
                   </select>
                 </label>
+              </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
                 <label className="grid gap-2">
                   <span className="text-sm font-semibold text-[var(--forest)]">Senha provisoria</span>
                   <input
@@ -186,20 +216,22 @@ export default async function OperacaoEquipePage({ searchParams }) {
                     placeholder="Minimo de 6 caracteres"
                   />
                 </label>
-              </div>
 
-              <label className="grid gap-2">
-                <span className="text-sm font-semibold text-[var(--forest)]">Confirmar senha</span>
-                <input
-                  name="passwordConfirm"
-                  type="password"
-                  required
-                  minLength={6}
-                  maxLength={72}
-                  className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
-                  placeholder="Repita a senha informada"
-                />
-              </label>
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold text-[var(--forest)]">
+                    Confirmar senha
+                  </span>
+                  <input
+                    name="passwordConfirm"
+                    type="password"
+                    required
+                    minLength={6}
+                    maxLength={72}
+                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                    placeholder="Repita a senha informada"
+                  />
+                </label>
+              </div>
 
               <button type="submit" className="button-primary mt-2 w-full">
                 Salvar conta interna
@@ -208,7 +240,7 @@ export default async function OperacaoEquipePage({ searchParams }) {
 
             <div className="mt-6 rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.6)] p-5 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
               {session.role === "owner"
-                ? "O dono pode registrar gerente e garcom. Para gerente, preencha login, endereco, telefone, RG e CPF."
+                ? "O dono pode registrar gerente e garcom. Para gerente, preencha login interno e todos os dados cadastrais."
                 : "O gerente registra apenas garcons. Isso protege a camada administrativa da casa."}
             </div>
           </div>

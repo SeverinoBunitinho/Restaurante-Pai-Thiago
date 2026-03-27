@@ -35,6 +35,16 @@ const orderStatuses = [
 ];
 
 const staffRoles = ["waiter", "manager"];
+const staffEducationLevels = [
+  "fundamental",
+  "medio",
+  "tecnico",
+  "superior",
+  "pos_graduacao",
+  "mestrado",
+  "doutorado",
+  "outro",
+];
 const shiftStatuses = ["planned", "confirmed", "completed", "absent"];
 const campaignStatuses = ["draft", "active", "paused", "finished"];
 const campaignChannels = ["site", "whatsapp", "instagram", "email", "interno"];
@@ -113,6 +123,11 @@ function normalizeRg(value) {
     .replace(/[^0-9xX]/g, "")
     .toUpperCase()
     .trim();
+}
+
+function normalizeEducationLevel(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return staffEducationLevels.includes(normalized) ? normalized : "";
 }
 
 function normalizePortionSize(value) {
@@ -690,6 +705,9 @@ export async function createStaffAccountAction(formData) {
   const login = normalizeStaffIdentifier(formData.get("login"));
   const phone = String(formData.get("phone") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
+  const birthDateRaw = String(formData.get("birthDate") ?? "").trim();
+  const birthDate = isDateOnly(birthDateRaw) ? birthDateRaw : "";
+  const educationLevel = normalizeEducationLevel(formData.get("educationLevel"));
   const rg = normalizeRg(formData.get("rg"));
   const cpf = normalizeCpf(formData.get("cpf"));
   const password = String(formData.get("password") ?? "").trim();
@@ -721,19 +739,25 @@ export async function createStaffAccountAction(formData) {
     redirectWithStaffError("O gerente pode cadastrar apenas garcons.");
   }
 
+  if (!phone || !address || !cpf || !birthDate || !educationLevel) {
+    redirectWithStaffError(
+      "Preencha telefone, endereco, data de nascimento, CPF e grau de escolaridade.",
+    );
+  }
+
+  if (cpf.length !== 11) {
+    redirectWithStaffError("O CPF precisa ter 11 digitos.");
+  }
+
+  if (birthDate > getTodayInBrazilDate()) {
+    redirectWithStaffError("A data de nascimento nao pode estar no futuro.");
+  }
+
   if (requiresManagerFullProfile) {
-    if (!address || !phone || !rg || !cpf || !login) {
+    if (!login) {
       redirectWithStaffError(
-        "Para cadastrar gerente, preencha endereco, telefone, RG, CPF e login interno.",
+        "Para cadastrar gerente, informe o login interno para controle operacional.",
       );
-    }
-
-    if (cpf.length !== 11) {
-      redirectWithStaffError("O CPF do gerente precisa ter 11 digitos.");
-    }
-
-    if (rg.length < 7) {
-      redirectWithStaffError("Informe um RG valido para o gerente.");
     }
 
     if (login.length < 3) {
@@ -745,6 +769,8 @@ export async function createStaffAccountAction(formData) {
     full_name: fullName,
     phone: phone || undefined,
     address: address || undefined,
+    birth_date: birthDate || undefined,
+    education_level: educationLevel || undefined,
     rg: rg || undefined,
     cpf: cpf || undefined,
     staff_login: login || undefined,
@@ -752,6 +778,8 @@ export async function createStaffAccountAction(formData) {
   const staffMetadata = {
     phone: phone || null,
     address: address || null,
+    birth_date: birthDate || null,
+    education_level: educationLevel || null,
     rg: rg || null,
     cpf: cpf || null,
     login: login || null,
@@ -774,6 +802,8 @@ export async function createStaffAccountAction(formData) {
     login: login || null,
     phone: phone || null,
     address: address || null,
+    birth_date: birthDate || null,
+    education_level: educationLevel || null,
     rg: rg || null,
     cpf: cpf || null,
   };
@@ -796,6 +826,8 @@ export async function createStaffAccountAction(formData) {
       directoryErrorMessage.includes("login") ||
       directoryErrorMessage.includes("phone") ||
       directoryErrorMessage.includes("address") ||
+      directoryErrorMessage.includes("birth_date") ||
+      directoryErrorMessage.includes("education_level") ||
       directoryErrorMessage.includes("rg") ||
       directoryErrorMessage.includes("cpf");
 
