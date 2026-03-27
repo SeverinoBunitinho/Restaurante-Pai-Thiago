@@ -1,3 +1,5 @@
+import { BarChart3, Radar, Sparkles, UsersRound } from "lucide-react";
+
 import { SectionHeading } from "@/components/section-heading";
 import { requireRole } from "@/lib/auth";
 import { getExecutiveBoard } from "@/lib/staff-data";
@@ -5,6 +7,29 @@ import { getExecutiveBoard } from "@/lib/staff-data";
 export default async function OperacaoExecutivoPage() {
   await requireRole("owner");
   const board = await getExecutiveBoard();
+  const prioritySteps = [
+    {
+      id: "01",
+      title: "Leitura inicial",
+      description:
+        "Comece pelas pendencias de reservas e pedidos para decidir a prioridade operacional do turno.",
+      icon: Radar,
+    },
+    {
+      id: "02",
+      title: "Ajuste de estrutura",
+      description:
+        "Reorganize equipe, salao e disponibilidade do cardapio para manter atendimento consistente.",
+      icon: UsersRound,
+    },
+    {
+      id: "03",
+      title: "Revisao final",
+      description:
+        "Feche o ciclo com relatorios e indicadores para orientar as proximas decisoes da casa.",
+      icon: BarChart3,
+    },
+  ];
 
   return (
     <>
@@ -64,47 +89,44 @@ export default async function OperacaoExecutivoPage() {
           </div>
 
           <div className="luxury-card-dark rounded-[2.2rem] p-6 text-[var(--cream)]">
-            <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-              Direcionamento executivo
-            </p>
-            <h2 className="display-title page-section-title mt-4 text-white">
-              Prioridades do dono para manter a casa fluindo
-            </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-[rgba(255,247,232,0.74)]">
-              Esta area foi simplificada para reduzir excesso de informacao.
-              O foco aqui e orientar a tomada de decisao sem repetir modulos.
-            </p>
+            <div className="executive-priority-shell">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
+                  Direcionamento executivo
+                </p>
+                <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(217,185,122,0.2)] bg-[rgba(255,255,255,0.06)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[rgba(255,247,232,0.84)]">
+                  <Sparkles size={12} />
+                  fluxo do dono
+                </span>
+              </div>
 
-            <div className="mt-7 space-y-3">
-              <article className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[rgba(217,185,122,0.92)]">
-                  1. Leitura inicial
-                </p>
-                <p className="mt-2 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
-                  Comece pelas pendencias de reservas e pedidos para decidir a
-                  prioridade operacional do turno.
-                </p>
-              </article>
+              <h2 className="display-title page-section-title mt-4 text-white">
+                Prioridades do dono para manter a casa fluindo
+              </h2>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-[rgba(255,247,232,0.74)]">
+                Sequencia pratica para ler o turno, agir com clareza e encerrar
+                com decisao orientada por dados.
+              </p>
 
-              <article className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[rgba(217,185,122,0.92)]">
-                  2. Ajuste de estrutura
-                </p>
-                <p className="mt-2 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
-                  Reorganize equipe, salao e disponibilidade do cardapio para
-                  manter atendimento consistente.
-                </p>
-              </article>
-
-              <article className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[rgba(217,185,122,0.92)]">
-                  3. Revisao final
-                </p>
-                <p className="mt-2 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
-                  Feche o ciclo com relatorios e indicadores para orientar as
-                  proximas decisoes da casa.
-                </p>
-              </article>
+              <div className="executive-priority-grid mt-7">
+                {prioritySteps.map((step) => (
+                  <article key={step.id} className="executive-priority-card px-4 py-4">
+                    <div className="flex items-start gap-3">
+                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[rgba(217,185,122,0.24)] bg-[rgba(255,255,255,0.08)] text-[var(--gold-soft)]">
+                        <step.icon size={16} />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[rgba(217,185,122,0.92)]">
+                          {step.id}. {step.title}
+                        </p>
+                        <p className="mt-2 text-sm leading-7 text-[rgba(255,247,232,0.76)]">
+                          {step.description}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           </div>
         </div>
