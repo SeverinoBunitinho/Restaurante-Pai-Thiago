@@ -7,6 +7,38 @@ import { BellRing, Volume2, VolumeX, X } from "lucide-react";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+const STATIC_NON_REALTIME_ROUTES = new Set([
+  "/login",
+  "/cadastro",
+  "/recuperar-senha",
+  "/redefinir-senha",
+  "/privacidade",
+  "/termos",
+  "/cancelamentos",
+]);
+
+const CUSTOMER_BASE_TABLES = [
+  "orders",
+  "reservations",
+  "restaurant_tables",
+  "menu_items",
+  "menu_categories",
+  "restaurant_settings",
+  "delivery_zones",
+  "profiles",
+  "customer_testimonials",
+];
+
+const STAFF_BASE_TABLES = [
+  "orders",
+  "reservations",
+  "restaurant_tables",
+  "service_checks",
+  "service_check_items",
+  "profiles",
+  "operation_audit_logs",
+];
+
 function getRealtimeTables(pathname) {
   const tables = new Set();
   const addTables = (...tableNames) => {
@@ -17,68 +49,72 @@ function getRealtimeTables(pathname) {
     return [];
   }
 
-  // Rotas estaticas nao precisam de sincronizacao em tempo real.
-  if (
-    pathname === "/login" ||
-    pathname === "/cadastro" ||
-    pathname === "/recuperar-senha" ||
-    pathname === "/redefinir-senha" ||
-    pathname === "/privacidade" ||
-    pathname === "/termos" ||
-    pathname === "/cancelamentos"
-  ) {
+  if (STATIC_NON_REALTIME_ROUTES.has(pathname)) {
     return [];
   }
 
   if (pathname === "/") {
-    addTables("orders", "reservations", "restaurant_tables", "menu_items", "menu_categories");
+    addTables(...CUSTOMER_BASE_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/area-cliente") {
-    addTables("profiles", "reservations", "orders");
+    addTables(...CUSTOMER_BASE_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/pedidos") {
-    addTables("orders");
+    addTables(...CUSTOMER_BASE_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/reservas") {
-    addTables("reservations", "restaurant_tables");
+    addTables(...CUSTOMER_BASE_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/cardapio") {
-    addTables("menu_items", "menu_categories", "orders", "reservations");
+    addTables(...CUSTOMER_BASE_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/carrinho") {
-    addTables(
-      "menu_items",
-      "menu_categories",
-      "restaurant_settings",
-      "delivery_zones",
-      "orders",
-      "reservations",
-    );
+    addTables(...CUSTOMER_BASE_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/eventos" || pathname === "/contato") {
-    addTables("orders", "reservations");
+    addTables(...CUSTOMER_BASE_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/area-funcionario") {
-    addTables("reservations", "orders", "restaurant_tables", "service_checks");
+    addTables(
+      ...STAFF_BASE_TABLES,
+      "staff_directory",
+      "staff_shifts",
+      "menu_items",
+      "menu_categories",
+      "marketing_campaigns",
+      "marketing_coupons",
+      "restaurant_settings",
+      "delivery_zones",
+    );
     return Array.from(tables);
   }
 
   if (pathname === "/painel") {
-    addTables("reservations", "orders", "restaurant_tables", "service_checks", "service_check_items");
+    addTables(
+      ...STAFF_BASE_TABLES,
+      "staff_directory",
+      "staff_shifts",
+      "menu_items",
+      "menu_categories",
+      "marketing_campaigns",
+      "marketing_coupons",
+      "restaurant_settings",
+      "delivery_zones",
+    );
     return Array.from(tables);
   }
 
@@ -108,17 +144,23 @@ function getRealtimeTables(pathname) {
   }
 
   if (pathname.startsWith("/operacao/equipe")) {
-    addTables("staff_directory", "profiles", "reservations", "orders");
+    addTables(
+      ...STAFF_BASE_TABLES,
+      "staff_directory",
+      "staff_shifts",
+      "menu_items",
+      "menu_categories",
+    );
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/escala")) {
-    addTables("staff_shifts", "staff_directory", "profiles");
+    addTables(...STAFF_BASE_TABLES, "staff_shifts", "staff_directory");
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/campanhas")) {
-    addTables("marketing_campaigns", "marketing_coupons", "orders");
+    addTables(...STAFF_BASE_TABLES, "marketing_campaigns", "marketing_coupons");
     return Array.from(tables);
   }
 
@@ -127,8 +169,18 @@ function getRealtimeTables(pathname) {
     return Array.from(tables);
   }
 
+  if (pathname.startsWith("/operacao/checklists")) {
+    addTables("operation_audit_logs");
+    return Array.from(tables);
+  }
+
+  if (pathname.startsWith("/operacao/incidentes")) {
+    addTables("operation_audit_logs");
+    return Array.from(tables);
+  }
+
   if (pathname.startsWith("/operacao/previsao")) {
-    addTables("orders", "reservations", "service_checks");
+    addTables(...STAFF_BASE_TABLES, "menu_items");
     return Array.from(tables);
   }
 
@@ -140,22 +192,51 @@ function getRealtimeTables(pathname) {
       "profiles",
       "reservations",
       "orders",
+      "staff_directory",
     );
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/configuracoes")) {
-    addTables("restaurant_settings", "delivery_zones", "reservations", "orders");
+    addTables(
+      ...STAFF_BASE_TABLES,
+      "restaurant_settings",
+      "delivery_zones",
+      "menu_categories",
+      "menu_items",
+      "staff_shifts",
+      "marketing_campaigns",
+      "marketing_coupons",
+      "staff_directory",
+    );
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/executivo")) {
-    addTables("reservations", "orders", "profiles", "staff_directory", "restaurant_tables", "menu_items");
+    addTables(
+      ...STAFF_BASE_TABLES,
+      "staff_directory",
+      "staff_shifts",
+      "menu_items",
+      "menu_categories",
+      "marketing_campaigns",
+      "marketing_coupons",
+    );
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao")) {
-    addTables("reservations", "orders", "restaurant_tables", "service_checks");
+    addTables(
+      ...STAFF_BASE_TABLES,
+      "staff_directory",
+      "staff_shifts",
+      "menu_items",
+      "menu_categories",
+      "marketing_campaigns",
+      "marketing_coupons",
+      "restaurant_settings",
+      "delivery_zones",
+    );
     return Array.from(tables);
   }
 
@@ -275,15 +356,26 @@ const CUSTOMER_ALERT_VISIBLE_MS = 6200;
 function getRefreshTiming(pathname) {
   if (pathname?.startsWith("/operacao/comandas")) {
     return {
-      debounceMs: 220,
-      minIntervalMs: 750,
+      debounceMs: 120,
+      minIntervalMs: 420,
+    };
+  }
+
+  if (
+    pathname?.startsWith("/operacao/reservas") ||
+    pathname?.startsWith("/operacao/mesas") ||
+    pathname?.startsWith("/operacao/cozinha")
+  ) {
+    return {
+      debounceMs: 140,
+      minIntervalMs: 540,
     };
   }
 
   if (pathname?.startsWith("/operacao") || pathname === "/painel") {
     return {
-      debounceMs: 260,
-      minIntervalMs: 900,
+      debounceMs: 220,
+      minIntervalMs: 760,
     };
   }
 
@@ -293,15 +385,46 @@ function getRefreshTiming(pathname) {
     pathname === "/reservas"
   ) {
     return {
-      debounceMs: 360,
-      minIntervalMs: 1600,
+      debounceMs: 260,
+      minIntervalMs: 980,
     };
   }
 
   return {
-    debounceMs: 480,
-    minIntervalMs: 2200,
+    debounceMs: 420,
+    minIntervalMs: 1800,
   };
+}
+
+function getFallbackRefreshInterval(pathname) {
+  if (!pathname) {
+    return 18000;
+  }
+
+  if (
+    pathname.startsWith("/operacao/comandas") ||
+    pathname.startsWith("/operacao/reservas") ||
+    pathname.startsWith("/operacao/mesas") ||
+    pathname.startsWith("/operacao/cozinha")
+  ) {
+    return 6500;
+  }
+
+  if (pathname.startsWith("/operacao") || pathname === "/painel") {
+    return 9000;
+  }
+
+  if (
+    pathname === "/area-cliente" ||
+    pathname === "/pedidos" ||
+    pathname === "/reservas" ||
+    pathname === "/cardapio" ||
+    pathname === "/carrinho"
+  ) {
+    return 12000;
+  }
+
+  return 18000;
 }
 
 function hasRecentOrderAlert(orderKey) {
@@ -516,6 +639,10 @@ export function AppLiveSync() {
   const soundEnabledRef = useRef(isSoundEnabled);
   const [supabase] = useState(() => getSupabaseBrowserClient());
 
+  useEffect(() => {
+    lastRefreshAtRef.current = Date.now();
+  }, [pathname]);
+
   const dismissStaffAlert = () => {
     if (staffAlertTimeoutRef.current) {
       clearTimeout(staffAlertTimeoutRef.current);
@@ -676,7 +803,11 @@ export function AppLiveSync() {
       );
     });
 
-    channel.subscribe();
+    channel.subscribe((status) => {
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+        scheduleRefresh();
+      }
+    });
 
     return () => {
       if (timeoutRef.current) {
@@ -686,6 +817,50 @@ export function AppLiveSync() {
       supabase.removeChannel(channel);
     };
   }, [pathname, router, supabase]);
+
+  useEffect(() => {
+    const tables = getRealtimeTables(pathname);
+
+    if (!tables.length || (!isStaffWorkspace(pathname) && !isCustomerWorkspace(pathname))) {
+      return undefined;
+    }
+
+    const heartbeatMs = getFallbackRefreshInterval(pathname);
+    const minGapMs = Math.max(1800, Math.floor(heartbeatMs * 0.7));
+
+    const refreshIfStale = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastRefreshAtRef.current < minGapMs) {
+        return;
+      }
+
+      lastRefreshAtRef.current = now;
+      router.refresh();
+    };
+
+    const onVisibilityChange = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        refreshIfStale();
+      }
+    };
+
+    const intervalId = setInterval(refreshIfStale, heartbeatMs);
+
+    window.addEventListener("online", refreshIfStale);
+    window.addEventListener("focus", refreshIfStale);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener("online", refreshIfStale);
+      window.removeEventListener("focus", refreshIfStale);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [pathname, router]);
 
   useEffect(() => {
     if (!supabase || !isStaffWorkspace(pathname)) {
