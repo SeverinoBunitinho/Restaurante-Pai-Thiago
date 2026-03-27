@@ -807,6 +807,17 @@ export async function createStaffAccountAction(formData) {
     rg: rg || null,
     cpf: cpf || null,
   };
+  const legacyStaffDirectoryPayload = {
+    email,
+    full_name: fullName,
+    role,
+    active: true,
+    login: login || null,
+    phone: phone || null,
+    address: address || null,
+    rg: rg || null,
+    cpf: cpf || null,
+  };
   const basicStaffDirectoryPayload = {
     email,
     full_name: fullName,
@@ -821,13 +832,25 @@ export async function createStaffAccountAction(formData) {
     const directoryErrorMessage = String(
       directoryResult.error.message ?? "",
     ).toLowerCase();
+    const hasBirthDateOrEducationColumnIssue =
+      directoryErrorMessage.includes("birth_date") ||
+      directoryErrorMessage.includes("education_level");
+    if (hasBirthDateOrEducationColumnIssue) {
+      directoryResult = await supabase
+        .from("staff_directory")
+        .upsert(legacyStaffDirectoryPayload, { onConflict: "email" });
+    }
+  }
+
+  if (directoryResult.error) {
+    const directoryErrorMessage = String(
+      directoryResult.error.message ?? "",
+    ).toLowerCase();
     const hasMissingColumn =
       directoryErrorMessage.includes("column") ||
       directoryErrorMessage.includes("login") ||
       directoryErrorMessage.includes("phone") ||
       directoryErrorMessage.includes("address") ||
-      directoryErrorMessage.includes("birth_date") ||
-      directoryErrorMessage.includes("education_level") ||
       directoryErrorMessage.includes("rg") ||
       directoryErrorMessage.includes("cpf");
 
