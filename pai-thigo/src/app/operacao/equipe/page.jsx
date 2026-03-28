@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-import { createStaffAccountAction, toggleStaffDirectoryStatusAction } from "@/app/operacao/actions";
+import {
+  createStaffAccountAction,
+  deleteStaffAccountAction,
+  toggleStaffDirectoryStatusAction,
+} from "@/app/operacao/actions";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { SectionHeading } from "@/components/section-heading";
 import { getStaffRoleLabel, requireRole } from "@/lib/auth";
 import { getStaffDirectoryBoard } from "@/lib/staff-data";
@@ -26,6 +31,10 @@ function normalizeRoleFilter(value) {
   return staffRoleFilters.some((item) => item.value === normalized)
     ? normalized
     : "all";
+}
+
+function normalizeEmail(value) {
+  return String(value ?? "").trim().toLowerCase();
 }
 
 export default async function OperacaoEquipePage({ searchParams }) {
@@ -354,6 +363,10 @@ export default async function OperacaoEquipePage({ searchParams }) {
                 const canToggle =
                   member.role !== "owner" &&
                   (session.role === "owner" || member.role === "waiter");
+                const canDelete =
+                  member.role !== "owner" &&
+                  normalizeEmail(member.email) !== normalizeEmail(session.profile?.email) &&
+                  (session.role === "owner" || member.role === "waiter");
 
                 return (
                   <article
@@ -417,6 +430,18 @@ export default async function OperacaoEquipePage({ searchParams }) {
                           Controle reservado
                         </span>
                       )}
+
+                      {canDelete ? (
+                        <form action={deleteStaffAccountAction}>
+                          <input type="hidden" name="staffId" value={member.id} />
+                          <ConfirmSubmitButton
+                            message={`Tem certeza que deseja excluir ${member.full_name} da equipe? Esta acao remove o acesso interno.`}
+                            className="rounded-full border border-[rgba(138,93,59,0.22)] bg-[rgba(138,93,59,0.08)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--clay)] transition hover:-translate-y-0.5"
+                          >
+                            Excluir conta
+                          </ConfirmSubmitButton>
+                        </form>
+                      ) : null}
 
                       <p className="text-sm leading-6 text-[rgba(21,35,29,0.68)]">
                         {member.role === "owner"

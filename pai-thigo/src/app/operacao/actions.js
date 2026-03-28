@@ -940,6 +940,167 @@ export async function createStaffAccountAction(formData) {
   );
 }
 
+export async function deleteStaffAccountAction(formData) {
+  const session = await requireRole(["manager", "owner"]);
+
+  const staffId = String(formData.get("staffId") ?? "").trim();
+  const redirectWithStaffError = (staffError) =>
+    redirect(
+      buildRouteWithParams("/operacao/equipe", {
+        staffError,
+      }),
+    );
+  const redirectWithStaffNotice = (staffNotice) =>
+    redirect(
+      buildRouteWithParams("/operacao/equipe", {
+        staffNotice,
+      }),
+    );
+
+  if (!staffId) {
+    redirectWithStaffError("Nao foi possivel identificar o funcionario para exclusao.");
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const adminClient = getSupabaseAdminClient();
+
+  if (!supabase || !adminClient) {
+    redirectWithStaffError(
+      "Nao foi possivel conectar ao Supabase administrativo para excluir a conta.",
+    );
+  }
+
+  const { data: staffMember, error: staffMemberError } = await supabase
+    .from("staff_directory")
+    .select("id, email, full_name, role")
+    .eq("id", staffId)
+    .maybeSingle();
+
+  if (staffMemberError || !staffMember) {
+    redirectWithStaffError("O funcionario selecionado nao foi encontrado.");
+  }
+
+  const memberRole = String(staffMember.role ?? "").trim().toLowerCase();
+  const memberEmail = normalizeEmail(staffMember.email);
+  const memberName = String(staffMember.full_name ?? "").trim() || "Funcionario";
+  const actorEmail = normalizeEmail(session.profile?.email);
+
+  if (memberRole === "owner") {
+    redirectWithStaffError("A conta do dono nao pode ser excluida por esta tela.");
+  }
+
+  if (session.role === "manager" && memberRole !== "waiter") {
+    redirectWithStaffError("Gerente pode excluir apenas contas de garcom.");
+  }
+
+  if (memberEmail && memberEmail === actorEmail) {
+    redirectWithStaffError("Voce nao pode excluir a propria conta enquanto esta logado.");
+  }
+
+  const {
+    data: { users },
+    error: listUsersError,
+  } = await adminClient.auth.admin.listUsers({
+    page: 1,
+    perPage: 1000,
+  });
+
+  if (listUsersError) {
+    redirectWithStaffError("Nao foi possivel verificar as contas internas no Auth.");
+  }
+
+  const authUser = users.find(
+    (user) => normalizeEmail(user.email) === memberEmail,
+  );
+  const actorUserId = String(session.profile?.user_id ?? "");
+
+  if (authUser && actorUserId && authUser.id === actorUserId) {
+    redirectWithStaffError("Voce nao pode excluir a propria conta enquanto esta logado.");
+  }
+
+  let authMode = "directory_only";
+
+  if (authUser) {
+    const { error: profileDemotionError } = await adminClient
+      .from("profiles")
+      .update({
+        role: "customer",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", authUser.id);
+
+    if (profileDemotionError) {
+      redirectWithStaffError("Nao foi possivel ajustar o perfil antes de excluir a conta.");
+    }
+
+    const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(
+      authUser.id,
+    );
+
+    if (deleteAuthError) {
+      const fallbackPassword = `${crypto.randomUUID()}Aa!9`;
+      const { error: lockAuthError } = await adminClient.auth.admin.updateUserById(
+        authUser.id,
+        {
+          password: fallbackPassword,
+          ban_duration: "876000h",
+          user_metadata: {
+            ...(authUser.user_metadata ?? {}),
+            deactivated_by: actorUserId || null,
+            deactivated_at: new Date().toISOString(),
+          },
+        },
+      );
+
+      if (lockAuthError) {
+        redirectWithStaffError(
+          "Nao foi possivel excluir ou bloquear esta conta no Auth agora.",
+        );
+      }
+
+      authMode = "blocked";
+    } else {
+      authMode = "deleted";
+    }
+  }
+
+  const { error: removeDirectoryError } = await supabase
+    .from("staff_directory")
+    .delete()
+    .eq("id", staffId);
+
+  if (removeDirectoryError) {
+    redirectWithStaffError(
+      "A conta foi tratada, mas nao foi possivel remover o cadastro interno da equipe.",
+    );
+  }
+
+  await writeOperationAuditLog(supabase, session, {
+    eventType: "staff_account_deleted",
+    entityType: "staff_directory",
+    entityId: staffId,
+    entityLabel: memberName,
+    description:
+      authMode === "blocked"
+        ? "Conta retirada da equipe e bloqueada por seguranca."
+        : "Conta retirada da equipe.",
+    metadata: {
+      role: memberRole,
+      email: memberEmail,
+      authMode,
+      actorRole: session.role,
+    },
+  });
+
+  revalidateStaffPaths();
+
+  redirectWithStaffNotice(
+    authMode === "blocked"
+      ? `${memberName} foi removido da equipe. A conta ficou bloqueada por seguranca.`
+      : `${memberName} foi removido da equipe com sucesso.`,
+  );
+}
+
 export async function openServiceCheckAction(formData) {
   const session = await requireRole(["waiter", "manager", "owner"]);
 

@@ -977,12 +977,15 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
     startDate: startDate ?? "",
     endDate: endDate ?? "",
   });
+  const selectedWaiterId = String(selectedWaiterIdFromQuery ?? "").trim();
   const selectedWaiter =
-    board.waiterCommissions.find(
-      (item) => item.userId === selectedWaiterIdFromQuery,
-    ) ??
-    board.waiterCommissions[0] ??
-    null;
+    selectedWaiterId
+      ? (
+          board.waiterCommissions.find(
+            (item) => item.userId === selectedWaiterId,
+          ) ?? null
+        )
+      : null;
   const selectedWaiterSeries = selectedWaiter
     ? (
         board.waiterDailySeries.find(
@@ -1411,8 +1414,14 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                     <select
                       name="waiter"
                       defaultValue={selectedWaiter?.userId ?? ""}
+                      required={board.waiterCommissions.length > 0}
                       className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
                     >
+                      {board.waiterCommissions.length ? (
+                        <option value="" disabled>
+                          Selecione um garcom
+                        </option>
+                      ) : null}
                       {board.waiterCommissions.length ? (
                         board.waiterCommissions.map((waiter) => (
                           <option key={waiter.userId} value={waiter.userId}>
@@ -1576,10 +1585,18 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                     Ranking da equipe
                   </p>
                   <div className="mt-3">
-                    <WaiterCommissionsChart
-                      waiterCommissions={board.waiterCommissions}
-                      selectedWaiterId={selectedWaiter?.userId ?? ""}
-                    />
+                    {selectedWaiter ? (
+                      <WaiterCommissionsChart
+                        waiterCommissions={board.waiterCommissions}
+                        selectedWaiterId={selectedWaiter.userId}
+                      />
+                    ) : (
+                      <article className="rounded-[1.2rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-4">
+                        <p className="text-sm font-semibold text-[var(--forest)]">
+                          Selecione um garcom para abrir o grafico comparativo
+                        </p>
+                      </article>
+                    )}
                   </div>
                 </article>
               </div>
