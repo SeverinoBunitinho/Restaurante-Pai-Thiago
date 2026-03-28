@@ -823,61 +823,127 @@ function OccupancyList({ tableOccupancy = [] }) {
     );
   }
 
+  const groupedByArea = tableOccupancy
+    .slice()
+    .sort((left, right) => {
+      const areaCompare = String(left.area ?? "").localeCompare(
+        String(right.area ?? ""),
+        "pt-BR",
+      );
+
+      if (areaCompare !== 0) {
+        return areaCompare;
+      }
+
+      return String(left.name ?? "").localeCompare(String(right.name ?? ""), "pt-BR");
+    })
+    .reduce((accumulator, table) => {
+      const key = String(table.area ?? "Sem area");
+      const current = accumulator.get(key) ?? [];
+      current.push(table);
+      accumulator.set(key, current);
+      return accumulator;
+    }, new Map());
+  const groupedAreas = Array.from(groupedByArea.entries()).map(
+    ([areaName, tables]) => {
+      const totalRevenue = tables.reduce(
+        (accumulator, table) => accumulator + Number(table.grossSales ?? 0),
+        0,
+      );
+      const totalAccounts = tables.reduce(
+        (accumulator, table) => accumulator + Number(table.totalAccounts ?? 0),
+        0,
+      );
+      const openNow = tables.filter((table) => Number(table.openAccounts ?? 0) > 0).length;
+
+      return {
+        areaName,
+        tables,
+        totalRevenue,
+        totalAccounts,
+        openNow,
+      };
+    },
+  );
+
   return (
-    <div className="space-y-4">
-      {tableOccupancy.map((table) => (
-        <article
-          key={table.id}
-          className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
+    <div className="space-y-3">
+      {groupedAreas.map((group, index) => (
+        <details
+          key={`occupancy-${group.areaName}`}
+          open={index === 0}
+          className="overflow-hidden rounded-[1.6rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.64)]"
         >
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                {table.area}
+                Setor
               </p>
-              <h3 className="mt-2 text-xl font-semibold text-[var(--forest)]">
-                {table.name}
-              </h3>
-              <p className="mt-1 text-sm text-[rgba(21,35,29,0.7)]">
-                Capacidade para {table.capacity} pessoa(s)
+              <p className="mt-1 text-base font-semibold text-[var(--forest)]">
+                {group.areaName}
               </p>
             </div>
-            <span
-              className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${
-                table.openAccounts
-                  ? "bg-[rgba(182,135,66,0.12)] text-[var(--gold)]"
-                  : "bg-[rgba(95,123,109,0.12)] text-[var(--sage)]"
-              }`}
-            >
-              {table.openAccounts ? "aberta agora" : "sem conta aberta"}
-            </span>
-          </div>
+            <div className="flex flex-wrap items-center gap-2 text-[0.62rem] font-semibold uppercase tracking-[0.14em]">
+              <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.86)] px-2.5 py-1.5 text-[var(--forest)]">
+                {group.tables.length} mesa(s)
+              </span>
+              <span className="rounded-full border border-[rgba(182,135,66,0.22)] bg-[rgba(182,135,66,0.1)] px-2.5 py-1.5 text-[var(--gold)]">
+                {group.openNow} aberta(s) agora
+              </span>
+              <span className="rounded-full border border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.1)] px-2.5 py-1.5 text-[var(--sage)]">
+                {group.totalAccounts} conta(s)
+              </span>
+              <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.86)] px-2.5 py-1.5 text-[var(--forest)]">
+                {formatCurrency(group.totalRevenue)}
+              </span>
+            </div>
+          </summary>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                Contas no periodo
-              </p>
-              <p className="mt-3 text-2xl font-semibold text-[var(--forest)]">
-                {table.totalAccounts}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
-                {table.closedAccounts} fechadas e {table.cancelledAccounts} canceladas.
-              </p>
-            </div>
-            <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
-              <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                Valor movimentado
-              </p>
-              <p className="mt-3 text-2xl font-semibold text-[var(--forest)]">
-                {formatCurrency(table.grossSales)}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
-                Baseado apenas nas comandas fechadas da mesa.
-              </p>
+          <div className="border-t border-[rgba(20,35,29,0.08)] p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {group.tables.map((table) => (
+                <article
+                  key={table.id}
+                  className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-3.5 py-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--forest)]">{table.name}</p>
+                      <p className="text-xs text-[rgba(21,35,29,0.68)]">
+                        Capacidade: {table.capacity} pessoa(s)
+                      </p>
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-1 text-[0.58rem] font-semibold uppercase tracking-[0.14em] ${
+                        table.openAccounts
+                          ? "bg-[rgba(182,135,66,0.12)] text-[var(--gold)]"
+                          : "bg-[rgba(95,123,109,0.12)] text-[var(--sage)]"
+                      }`}
+                    >
+                      {table.openAccounts ? "aberta" : "livre"}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap gap-1.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-[rgba(21,35,29,0.72)]">
+                    <span className="rounded-full bg-[rgba(255,255,255,0.86)] px-2 py-1">
+                      Contas: {table.totalAccounts}
+                    </span>
+                    <span className="rounded-full bg-[rgba(255,255,255,0.86)] px-2 py-1">
+                      Fechadas: {table.closedAccounts}
+                    </span>
+                    <span className="rounded-full bg-[rgba(255,255,255,0.86)] px-2 py-1">
+                      Canceladas: {table.cancelledAccounts}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-sm font-semibold text-[var(--forest)]">
+                    Receita: {formatCurrency(table.grossSales)}
+                  </p>
+                </article>
+              ))}
             </div>
           </div>
-        </article>
+        </details>
       ))}
     </div>
   );
