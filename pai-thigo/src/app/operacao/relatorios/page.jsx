@@ -52,21 +52,12 @@ function parseCommissionRate(value, fallbackRate) {
   return Math.max(0, Math.min(100, parsed));
 }
 
-function normalizeSearchText(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
 function buildReportsHref({
   tab,
   period,
   startDate,
   endDate,
   waiterId,
-  waiterSearch,
   calculatorRate,
 }) {
   const params = new URLSearchParams();
@@ -87,10 +78,6 @@ function buildReportsHref({
 
   if (waiterId) {
     params.set("waiter", waiterId);
-  }
-
-  if (waiterSearch) {
-    params.set("waiterSearch", waiterSearch);
   }
 
   if (calculatorRate !== "" && calculatorRate != null) {
@@ -981,9 +968,6 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
   const selectedWaiterIdFromQuery = Array.isArray(resolvedSearchParams?.waiter)
     ? resolvedSearchParams.waiter[0]
     : resolvedSearchParams?.waiter;
-  const waiterSearchFromQuery = Array.isArray(resolvedSearchParams?.waiterSearch)
-    ? resolvedSearchParams.waiterSearch[0]
-    : resolvedSearchParams?.waiterSearch;
   const calculatorRateFromQuery = Array.isArray(resolvedSearchParams?.rate)
     ? resolvedSearchParams.rate[0]
     : resolvedSearchParams?.rate;
@@ -993,31 +977,12 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
     startDate: startDate ?? "",
     endDate: endDate ?? "",
   });
-  const waiterSearch = String(waiterSearchFromQuery ?? "").trim();
-  const normalizedWaiterSearch = normalizeSearchText(waiterSearch);
-  const waiterOptions = normalizedWaiterSearch
-    ? board.waiterCommissions.filter((waiter) => {
-        const normalizedName = normalizeSearchText(waiter.fullName);
-        const normalizedEmail = normalizeSearchText(waiter.email);
-
-        return (
-          normalizedName.includes(normalizedWaiterSearch) ||
-          normalizedEmail.includes(normalizedWaiterSearch)
-        );
-      })
-    : board.waiterCommissions;
   const selectedWaiter =
-    waiterOptions.find(
+    board.waiterCommissions.find(
       (item) => item.userId === selectedWaiterIdFromQuery,
     ) ??
-    (normalizedWaiterSearch
-      ? waiterOptions[0] ?? null
-      : board.waiterCommissions.find(
-          (item) => item.userId === selectedWaiterIdFromQuery,
-        ) ??
-        waiterOptions[0] ??
-        board.waiterCommissions[0] ??
-        null);
+    board.waiterCommissions[0] ??
+    null;
   const selectedWaiterSeries = selectedWaiter
     ? (
         board.waiterDailySeries.find(
@@ -1025,8 +990,6 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
         )?.series ?? []
       )
     : [];
-  const waiterSearchHasResults =
-    !normalizedWaiterSearch || waiterOptions.length > 0;
   const calculatorRate = parseCommissionRate(
     calculatorRateFromQuery,
     board.commissionRate,
@@ -1244,7 +1207,6 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                     startDate: board.startDate,
                     endDate: board.endDate,
                     waiterId: selectedWaiter?.userId ?? "",
-                    waiterSearch,
                     calculatorRate,
                   })}
                     className={`filter-chip ${activeTab === item.value ? "filter-chip-active" : ""}`}
@@ -1266,14 +1228,12 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                             startDate: board.startDate,
                             endDate: board.endDate,
                             waiterId: selectedWaiter?.userId ?? "",
-                            waiterSearch,
                             calculatorRate,
                           })
                         : buildReportsHref({
                             tab: activeTab,
                             period: option.value,
                             waiterId: selectedWaiter?.userId ?? "",
-                            waiterSearch,
                             calculatorRate,
                           })
                     }
@@ -1314,7 +1274,6 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
             {selectedWaiter ? (
               <input type="hidden" name="waiter" value={selectedWaiter.userId} />
             ) : null}
-            <input type="hidden" name="waiterSearch" value={waiterSearch} />
             <input type="hidden" name="rate" value={calculatorRate} />
             <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
               Inicio
@@ -1447,18 +1406,6 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
 
                   <label className="grid gap-2">
                     <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
-                      Buscar garcom
-                    </span>
-                    <input
-                      name="waiterSearch"
-                      defaultValue={waiterSearch}
-                      placeholder="Ex.: caio, marina, joao..."
-                      className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
-                    />
-                  </label>
-
-                  <label className="grid gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
                       Garcom
                     </span>
                     <select
@@ -1466,14 +1413,14 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                       defaultValue={selectedWaiter?.userId ?? ""}
                       className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
                     >
-                      {waiterOptions.length ? (
-                        waiterOptions.map((waiter) => (
+                      {board.waiterCommissions.length ? (
+                        board.waiterCommissions.map((waiter) => (
                           <option key={waiter.userId} value={waiter.userId}>
                             {waiter.fullName}
                           </option>
                         ))
                       ) : (
-                        <option value="">Sem garcom encontrado na busca</option>
+                        <option value="">Sem garcom no periodo</option>
                       )}
                     </select>
                   </label>
@@ -1495,17 +1442,9 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
 
                   <button type="submit" className="button-primary w-full justify-center">
                     <Calculator size={16} />
-                    Buscar e calcular comissao
+                    Calcular comissao
                   </button>
                 </form>
-
-                <p className="mt-3 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
-                  {normalizedWaiterSearch
-                    ? waiterSearchHasResults
-                      ? `${waiterOptions.length} garcom(ns) encontrado(s) para "${waiterSearch}".`
-                      : `Nenhum garcom encontrado para "${waiterSearch}".`
-                    : "Digite no campo de busca para filtrar um garcom especifico e abrir o grafico individual."}
-                </p>
               </div>
 
               <div className="luxury-card rounded-[2.2rem] p-6">
