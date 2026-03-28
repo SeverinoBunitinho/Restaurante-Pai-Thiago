@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Image from "next/image";
 import { Clock3, Flame, Sparkles } from "lucide-react";
 
@@ -187,17 +186,6 @@ export default async function CardapioPage() {
                 categorias organizadas para leitura rapida
               </span>
             </div>
-
-            {canOrder ? (
-              <div className="menu-hero-actions mt-6 flex flex-wrap gap-3">
-                <Link href="/carrinho" className="button-primary w-full justify-center sm:w-auto">
-                  Abrir carrinho
-                </Link>
-                <Link href="/area-cliente" className="button-secondary w-full justify-center sm:w-auto">
-                  Abrir perfil
-                </Link>
-              </div>
-            ) : null}
 
             <div className="mt-8 flex flex-wrap gap-3">
               <span className="menu-hero-chip info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
