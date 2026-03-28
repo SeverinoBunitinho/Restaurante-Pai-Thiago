@@ -1,7 +1,5 @@
 import {
-  CalendarCheck2,
   Clock3,
-  ClipboardList,
   MapPinned,
 } from "lucide-react";
 
@@ -103,43 +101,6 @@ export default async function ReservasPage() {
           </div>
         </section>
 
-        <section className="shell pt-20">
-          <div className="grid gap-5 lg:grid-cols-3">
-            {[
-              {
-                icon: CalendarCheck2,
-                title: isStaff ? "Fila centralizada" : "Historico organizado",
-                text: isStaff
-                  ? "Cada pedido de reserva fica registrado com data, horario, origem e observacoes."
-                  : "Sua conta concentra visitas passadas e proximas reservas em uma area propria.",
-              },
-              {
-                icon: ClipboardList,
-                title: isStaff ? "Atendimento da equipe" : "Atendimento personalizado",
-                text: isStaff
-                  ? "Garcom e gerente conseguem registrar rapidamente pedidos vindos de varios canais."
-                  : "A equipe recebe o contexto da sua visita e consegue preparar um atendimento melhor.",
-              },
-              {
-                icon: Clock3,
-                title: "Confirmacao clara",
-                text: isStaff
-                  ? "A reserva entra no fluxo operacional com status e prioridade definidos."
-                  : "Depois do envio, voce acompanha o status da reserva na sua conta.",
-              },
-            ].map((item) => (
-              <article key={item.title} className="luxury-card rounded-[2rem] p-6">
-                <item.icon className="text-[var(--gold)]" size={22} />
-                <h2 className="mt-5 text-2xl font-semibold text-[var(--forest)]">
-                  {item.title}
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
-                  {item.text}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
       </main>
 
       <SiteFooter />

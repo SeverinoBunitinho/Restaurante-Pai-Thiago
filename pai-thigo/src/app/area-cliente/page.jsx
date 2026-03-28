@@ -1,8 +1,6 @@
 import Link from "next/link";
 import {
   CalendarHeart,
-  ChefHat,
-  HeartHandshake,
   Mail,
   ReceiptText,
   ShoppingBag,
@@ -138,33 +136,6 @@ export default async function AreaClientePage({ searchParams }) {
     },
   ];
 
-  const actionCards = [
-    {
-      icon: CalendarHeart,
-      title: "Reservas",
-      text: "Gerencie datas, horarios e ambientes em uma pagina dedicada.",
-      href: "/reservas",
-    },
-    {
-      icon: ReceiptText,
-      title: "Pedidos",
-      text: "Acompanhe status, pagamento e itens em uma aba exclusiva.",
-      href: "/pedidos",
-    },
-    {
-      icon: ChefHat,
-      title: "Cardapio",
-      text: "Explore os pratos ativos e envie novos pedidos para o carrinho.",
-      href: "/cardapio",
-    },
-    {
-      icon: HeartHandshake,
-      title: "Contato",
-      text: "Use os canais oficiais para ajustes de atendimento e ocasioes especiais.",
-      href: "/contato",
-    },
-  ];
-
   return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -282,7 +253,7 @@ export default async function AreaClientePage({ searchParams }) {
                   compact
                 />
 
-                <div className="mt-8 grid gap-4">
+                <div className="mt-8 grid gap-4 sm:grid-cols-2">
                   {relationshipCards.map((card) => (
                     <article
                       key={card.eyebrow}
@@ -317,16 +288,13 @@ export default async function AreaClientePage({ searchParams }) {
                   compact
                 />
 
-                <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                <div className="mt-8 grid gap-4 sm:grid-cols-3">
                   <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                      Pedidos no historico
+                      Pedidos
                     </p>
                     <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
                       {vip.lifetime.orders}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      Base total de pedidos vinculados a sua conta.
                     </p>
                   </article>
                   <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-4">
@@ -336,9 +304,6 @@ export default async function AreaClientePage({ searchParams }) {
                     <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
                       {formatCurrency(Number(vip.lifetime.spent ?? 0))}
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      Total de contas entregues no relacionamento com a casa.
-                    </p>
                   </article>
                   <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-4">
                     <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
@@ -347,44 +312,45 @@ export default async function AreaClientePage({ searchParams }) {
                     <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
                       {formatCurrency(Number(vip.lifetime.avgTicket ?? 0))}
                     </p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      Media por checkout entregue da sua conta.
-                    </p>
-                  </article>
-                  <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                      Reservas no historico
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
-                      {vip.lifetime.reservations}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      Numero total de reservas vinculadas ao seu perfil.
-                    </p>
                   </article>
                 </div>
 
-                <div className="mt-6 rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                    Beneficios ativos
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {(vip.benefits ?? []).length ? (
-                      vip.benefits.map((benefit) => (
-                        <span
-                          key={benefit}
-                          className="rounded-full border border-[rgba(20,35,29,0.12)] px-3 py-1 text-xs font-semibold tracking-[0.12em] text-[var(--forest)]"
-                        >
-                          {benefit}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                        Beneficios aparecem conforme seu nivel evolui.
-                      </span>
-                    )}
+                <details className="mt-6 rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.52)] p-4">
+                  <summary className="cursor-pointer list-none text-sm font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                    Ver detalhes VIP completos
+                  </summary>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <article className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                        Reservas no historico
+                      </p>
+                      <p className="mt-2 text-xl font-semibold text-[var(--forest)]">
+                        {vip.lifetime.reservations}
+                      </p>
+                    </article>
+                    <article className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                        Beneficios ativos
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {(vip.benefits ?? []).length ? (
+                          vip.benefits.map((benefit) => (
+                            <span
+                              key={benefit}
+                              className="rounded-full border border-[rgba(20,35,29,0.12)] px-3 py-1 text-xs font-semibold tracking-[0.12em] text-[var(--forest)]"
+                            >
+                              {benefit}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                            Beneficios aparecem conforme seu nivel evolui.
+                          </span>
+                        )}
+                      </div>
+                    </article>
                   </div>
-                </div>
+                </details>
 
                 <form action={updateCustomerVipPreferenceAction} className="mt-6 grid gap-4 rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.52)] p-4">
                   <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
@@ -423,36 +389,6 @@ export default async function AreaClientePage({ searchParams }) {
           </div>
         </section>
 
-        <section className="shell pt-20">
-          <div className="luxury-card rounded-[2.4rem] p-6 md:p-8">
-            <SectionHeading
-              eyebrow="Atalhos uteis"
-              title="Cada tarefa no lugar certo"
-              description="Abrimos cada fluxo em pagina propria para facilitar a navegacao no celular e no computador."
-              compact
-            />
-
-            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {actionCards.map((item) => (
-                <Link
-                  key={item.title}
-                  href={item.href}
-                  className="staff-feature-link rounded-[1.7rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(182,135,66,0.16)] bg-[rgba(255,255,255,0.72)] text-[var(--gold)]">
-                    <item.icon size={18} />
-                  </div>
-                  <h3 className="mt-4 text-lg font-semibold text-[var(--forest)]">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                    {item.text}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
       </main>
 
       <SiteFooter />

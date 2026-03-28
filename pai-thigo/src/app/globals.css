@@ -777,6 +777,10 @@ textarea {
   white-space: nowrap;
 }
 
+.site-header-menu-dropdown {
+  min-width: 0;
+}
+
 .floating-badge {
   border: 1px solid rgba(182, 135, 66, 0.18);
   background: rgba(255, 252, 247, 0.72);
@@ -2423,6 +2427,10 @@ textarea {
     flex: 1 1 14rem;
   }
 
+  .site-header-actions .site-header-menu-dropdown {
+    flex: 1 1 14rem;
+  }
+
   .site-header-actions .header-search-trigger {
     width: 100%;
     justify-content: flex-start;
@@ -2441,6 +2449,21 @@ textarea {
     text-transform: none;
     letter-spacing: 0.03em;
     font-size: 0.82rem;
+  }
+
+  .site-header-actions .site-header-menu-dropdown > summary {
+    width: 100%;
+    justify-content: flex-start;
+    text-transform: none;
+    letter-spacing: 0.03em;
+    font-size: 0.82rem;
+    min-height: 2.18rem;
+  }
+
+  .site-header-actions .site-header-menu-dropdown .header-dropdown-panel {
+    left: 0;
+    right: auto;
+    width: min(24rem, calc(100vw - 2rem));
   }
 
   .site-header-actions .site-header-logout-form {
@@ -2558,6 +2581,11 @@ textarea {
     order: 2;
   }
 
+  .site-header-menu-dropdown {
+    grid-column: 1 / -1;
+    order: 2;
+  }
+
   .site-header-actions .notification-center {
     grid-column: auto;
     min-width: 0;
@@ -2604,6 +2632,21 @@ textarea {
     font-size: 0.66rem;
     padding: 0.56rem 0.5rem;
     min-height: 2.04rem;
+  }
+
+  .site-header-actions .site-header-menu-dropdown > summary {
+    justify-content: center;
+    font-size: 0.66rem;
+    padding: 0.56rem 0.5rem;
+    min-height: 2.04rem;
+  }
+
+  .site-header-actions .site-header-menu-dropdown .header-dropdown-panel {
+    left: 0;
+    right: 0;
+    width: auto;
+    max-height: min(52vh, 20rem);
+    padding: 0.7rem;
   }
 
   .site-mobile-cart-link {

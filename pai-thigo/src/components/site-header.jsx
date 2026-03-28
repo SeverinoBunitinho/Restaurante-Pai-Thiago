@@ -10,7 +10,9 @@ import {
   LayoutDashboard,
   LogIn,
   LogOut,
+  Mail,
   Shield,
+  ShoppingBag,
   Sparkles,
   UserRound,
   UtensilsCrossed,
@@ -70,6 +72,21 @@ const staffDropdownSectionsTemplate = [
   {
     title: "Conta",
     hrefs: ["/area-funcionario"],
+  },
+];
+
+const customerDropdownSectionsTemplate = [
+  {
+    title: "Principal",
+    hrefs: ["/cardapio", "/pedidos", "/reservas"],
+  },
+  {
+    title: "Experiencia",
+    hrefs: ["/eventos", "/contato"],
+  },
+  {
+    title: "Conta",
+    hrefs: ["/area-cliente", "/carrinho"],
   },
 ];
 
@@ -135,6 +152,89 @@ function buildStaffDropdownSections({ role, notifications }) {
   );
 
   const sections = staffDropdownSectionsTemplate
+    .map((section) => ({
+      title: section.title,
+      items: section.hrefs
+        .map((href) => availableItems.get(href))
+        .filter(Boolean)
+        .map(withBadge),
+    }))
+    .filter((section) => section.items.length);
+
+  const extraItems = Array.from(availableItems.values())
+    .filter((item) => !templateHrefs.has(item.href))
+    .sort((left, right) => left.label.localeCompare(right.label, "pt-BR"))
+    .map(withBadge);
+
+  if (extraItems.length) {
+    sections.push({
+      title: "Outros",
+      items: extraItems,
+    });
+  }
+
+  return sections;
+}
+
+function buildCustomerDropdownSections({ notifications }) {
+  const availableItems = new Map([
+    [
+      "/cardapio",
+      { href: "/cardapio", label: "Cardapio", exact: true, icon: UtensilsCrossed },
+    ],
+    [
+      "/pedidos",
+      { href: "/pedidos", label: "Pedidos", exact: true, icon: ClipboardList },
+    ],
+    [
+      "/reservas",
+      { href: "/reservas", label: "Reservas", exact: true, icon: CalendarRange },
+    ],
+    [
+      "/eventos",
+      { href: "/eventos", label: "Eventos", exact: true, icon: Sparkles },
+    ],
+    [
+      "/contato",
+      { href: "/contato", label: "Contato", exact: true, icon: Mail },
+    ],
+    [
+      "/area-cliente",
+      { href: "/area-cliente", label: "Perfil", exact: true, icon: UserRound },
+    ],
+    [
+      "/carrinho",
+      { href: "/carrinho", label: "Meu carrinho", exact: true, icon: ShoppingBag },
+    ],
+  ]);
+
+  const withBadge = (item) => {
+    if (item.href === "/pedidos") {
+      return {
+        ...item,
+        badgeCount: notifications.orders,
+        badgeKind: "orders",
+        badgeLatestAt: notifications.ordersLatestAt,
+      };
+    }
+
+    if (item.href === "/reservas") {
+      return {
+        ...item,
+        badgeCount: notifications.reservations,
+        badgeKind: "reservations",
+        badgeLatestAt: notifications.reservationsLatestAt,
+      };
+    }
+
+    return item;
+  };
+
+  const templateHrefs = new Set(
+    customerDropdownSectionsTemplate.flatMap((section) => section.hrefs),
+  );
+
+  const sections = customerDropdownSectionsTemplate
     .map((section) => ({
       title: section.title,
       items: section.hrefs
@@ -435,6 +535,21 @@ export async function SiteHeader() {
     (total, section) => total + section.items.length,
     0,
   );
+  const customerSession = session?.role === "customer";
+  const customerDropdownSections = customerSession
+    ? buildCustomerDropdownSections({
+        notifications: {
+          orders: notificationContext.orders,
+          reservations: notificationContext.reservations,
+          ordersLatestAt: notificationContext.ordersLatestAt,
+          reservationsLatestAt: notificationContext.reservationsLatestAt,
+        },
+      })
+    : [];
+  const customerDropdownItemCount = customerDropdownSections.reduce(
+    (total, section) => total + section.items.length,
+    0,
+  );
   const navItems = staffSession
       ? [
         { href: "/painel", label: "Painel", exact: true },
@@ -605,6 +720,59 @@ export async function SiteHeader() {
                       ))}
                     </div>
                   </details>
+                ) : customerSession ? (
+                  <details className="header-dropdown">
+                    <summary className="header-dropdown-trigger">
+                      <span>Menu</span>
+                      <ChevronDown className="header-dropdown-chevron" size={16} />
+                    </summary>
+
+                    <div className="header-dropdown-panel">
+                      <div className="header-dropdown-head">
+                        <p className="header-dropdown-head-eyebrow">navegacao do cliente</p>
+                        <p className="header-dropdown-head-title">
+                          {customerDropdownItemCount} acesso(s) para acompanhar pedidos, reservas e perfil
+                        </p>
+                      </div>
+
+                      {customerDropdownSections.map((section) => (
+                        <section key={section.title} className="header-dropdown-section">
+                          <p className="header-dropdown-section-title">{section.title}</p>
+                          <div className="header-dropdown-section-list">
+                            {section.items.map((item) => (
+                              <ActiveLink
+                                key={item.href}
+                                href={item.href}
+                                exact={item.exact}
+                                className="header-dropdown-link"
+                                activeClassName="header-dropdown-link-active"
+                              >
+                                <span className="header-dropdown-link-main">
+                                  <span className="header-dropdown-link-icon">
+                                    <item.icon size={14} />
+                                  </span>
+                                  <span className="header-dropdown-link-title">{item.label}</span>
+                                </span>
+                                <span className="header-dropdown-link-side">
+                                  {item.badgeCount && item.badgeKind ? (
+                                    <NotificationCountBadge
+                                      count={item.badgeCount}
+                                      latestAt={item.badgeLatestAt}
+                                      kind={item.badgeKind}
+                                      staffSession={staffSession}
+                                      className="nav-link-badge"
+                                      ariaLabel={`${item.badgeCount} notificacoes`}
+                                    />
+                                  ) : null}
+                                  <ChevronRight size={14} className="header-dropdown-link-arrow" />
+                                </span>
+                              </ActiveLink>
+                            ))}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
+                  </details>
                 ) : (
                   <div className="flex items-center gap-2">
                     {navItems.map((item) => (
@@ -641,6 +809,56 @@ export async function SiteHeader() {
                       <>
                         <CartHeaderLink compact className="site-mobile-cart-link" />
                         <CartHeaderLink className="site-desktop-cart-link" />
+                        <details className="header-dropdown site-header-menu-dropdown lg:hidden">
+                          <summary className="header-dropdown-trigger">
+                            <span>Menu</span>
+                            <ChevronDown className="header-dropdown-chevron" size={16} />
+                          </summary>
+                          <div className="header-dropdown-panel">
+                            <div className="header-dropdown-head">
+                              <p className="header-dropdown-head-eyebrow">acesso do cliente</p>
+                              <p className="header-dropdown-head-title">
+                                Navegue por cardapio, pedidos, reservas, contato e perfil.
+                              </p>
+                            </div>
+                            {customerDropdownSections.map((section) => (
+                              <section key={`mobile-${section.title}`} className="header-dropdown-section">
+                                <p className="header-dropdown-section-title">{section.title}</p>
+                                <div className="header-dropdown-section-list">
+                                  {section.items.map((item) => (
+                                    <ActiveLink
+                                      key={`mobile-${item.href}`}
+                                      href={item.href}
+                                      exact={item.exact}
+                                      className="header-dropdown-link"
+                                      activeClassName="header-dropdown-link-active"
+                                    >
+                                      <span className="header-dropdown-link-main">
+                                        <span className="header-dropdown-link-icon">
+                                          <item.icon size={14} />
+                                        </span>
+                                        <span className="header-dropdown-link-title">{item.label}</span>
+                                      </span>
+                                      <span className="header-dropdown-link-side">
+                                        {item.badgeCount && item.badgeKind ? (
+                                          <NotificationCountBadge
+                                            count={item.badgeCount}
+                                            latestAt={item.badgeLatestAt}
+                                            kind={item.badgeKind}
+                                            staffSession={staffSession}
+                                            className="nav-link-badge"
+                                            ariaLabel={`${item.badgeCount} notificacoes`}
+                                          />
+                                        ) : null}
+                                        <ChevronRight size={14} className="header-dropdown-link-arrow" />
+                                      </span>
+                                    </ActiveLink>
+                                  ))}
+                                </div>
+                              </section>
+                            ))}
+                          </div>
+                        </details>
                       </>
                     ) : null}
                     {staffSession ? (

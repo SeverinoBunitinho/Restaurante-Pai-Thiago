@@ -69,53 +69,21 @@ export default async function CardapioPage() {
               </div>
             ) : null}
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              <article className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
-                <p className="text-xs uppercase tracking-[0.24em] text-[rgba(217,185,122,0.92)]">
-                  Itens no menu
-                </p>
-                <p className="mt-3 text-3xl font-semibold text-white">
-                  {totalItems}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                  Catalogo vivo e sincronizado com a disponibilidade da casa.
-                </p>
-              </article>
-
-              <article className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
-                <p className="text-xs uppercase tracking-[0.24em] text-[rgba(217,185,122,0.92)]">
-                  Alergenicos
-                </p>
-                <p className="mt-3 text-2xl font-semibold text-white">
-                  Sinalizados item a item
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                  Leitura mais segura e mais profissional para o cliente.
-                </p>
-              </article>
-
-              <article className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
-                <p className="text-xs uppercase tracking-[0.24em] text-[rgba(217,185,122,0.92)]">
-                  Janela da casa
-                </p>
-                <p className="mt-3 text-2xl font-semibold text-white">
-                  {restaurantInfo.schedule[1]}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                  Janela importante do servico e do atendimento da casa.
-                </p>
-              </article>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <span className="info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
+                {totalItems} itens ativos
+              </span>
+              <span className="info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
+                Alergenicos sinalizados
+              </span>
+              <span className="info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
+                {restaurantInfo.schedule[1]}
+              </span>
             </div>
-
-            {categories.length ? (
-              <p className="mt-8 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
-                As categorias ficam no bloco de navegacao rapida logo abaixo para manter a leitura limpa e objetiva.
-              </p>
-            ) : null}
           </div>
         </section>
 
-        <section className="shell section-frame pt-20">
+        <section className="shell section-frame pt-14">
           <SectionHeading
             eyebrow="Categorias"
             title="Cardapio organizado para uma navegacao clara"
