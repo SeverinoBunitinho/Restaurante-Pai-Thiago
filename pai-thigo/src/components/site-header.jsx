@@ -870,7 +870,7 @@ export async function SiteHeader() {
                         {getStaffRoleLabel(session.role)}
                       </Link>
                     ) : null}
-                    <HeaderSearch staffSession={staffSession} />
+                    {staffSession ? <HeaderSearch staffSession /> : null}
                     <NotificationCenter
                       staffSession={staffSession}
                       ordersCount={notificationContext.orders}
