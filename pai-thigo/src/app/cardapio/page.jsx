@@ -241,49 +241,53 @@ export default async function CardapioPage() {
 
           <div className="mt-10 space-y-6">
             {categories.length ? (
-              categories.map((category) => (
-                <section
+              categories.map((category, index) => (
+                <details
                   key={category.id}
                   id={`categoria-${category.id}`}
-                  className="luxury-card rounded-[2.2rem] p-6 md:p-8"
+                  className="luxury-card rounded-[2.2rem] p-0"
+                  open={index === 0}
                 >
-                  <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                    <div>
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 md:px-8 md:py-6">
+                    <div className="min-w-0">
                       <p className="text-xs uppercase tracking-[0.26em] text-[var(--gold)]">
                         Categoria
                       </p>
-                      <h2 className="display-title page-section-title mt-3 text-[var(--forest)]">
+                      <h2 className="display-title mt-2 text-[2.2rem] leading-[1.02] text-[var(--forest)]">
                         {category.name}
                       </h2>
-                      <p className="mt-4 max-w-2xl text-sm leading-7 text-[rgba(21,35,29,0.72)]">
-                        {category.description}
-                      </p>
                     </div>
-                    <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
+                    <div className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
                       <Sparkles size={16} />
-                      {category.items.length} itens ativos
+                      {category.items.length}
                     </div>
-                  </div>
+                  </summary>
 
-                  <div className="mt-8 grid gap-4 lg:grid-cols-2">
-                    {category.items
-                      .slice(0, maxItemsPerCategory)
-                      .map((item) => renderMenuItemCard(item))}
-                  </div>
+                  <div className="border-t border-[rgba(20,35,29,0.08)] px-6 pb-6 pt-5 md:px-8 md:pb-8">
+                    <p className="max-w-2xl text-sm leading-7 text-[rgba(21,35,29,0.72)]">
+                      {category.description}
+                    </p>
 
-                  {category.items.length > maxItemsPerCategory ? (
-                    <details className="mt-6 rounded-[1.6rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.56)] p-4">
-                      <summary className="cursor-pointer list-none text-sm font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
-                        Ver mais {category.items.length - maxItemsPerCategory} prato(s) de {category.name}
-                      </summary>
-                      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                        {category.items
-                          .slice(maxItemsPerCategory)
-                          .map((item) => renderMenuItemCard(item))}
-                      </div>
-                    </details>
-                  ) : null}
-                </section>
+                    <div className="mt-6 grid gap-4 lg:grid-cols-2">
+                      {category.items
+                        .slice(0, maxItemsPerCategory)
+                        .map((item) => renderMenuItemCard(item))}
+                    </div>
+
+                    {category.items.length > maxItemsPerCategory ? (
+                      <details className="mt-6 rounded-[1.6rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.56)] p-4">
+                        <summary className="cursor-pointer list-none text-sm font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                          Ver mais {category.items.length - maxItemsPerCategory} prato(s) de {category.name}
+                        </summary>
+                        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                          {category.items
+                            .slice(maxItemsPerCategory)
+                            .map((item) => renderMenuItemCard(item))}
+                        </div>
+                      </details>
+                    ) : null}
+                  </div>
+                </details>
               ))
             ) : (
               <section className="luxury-card rounded-[2.2rem] p-6 md:p-8">
