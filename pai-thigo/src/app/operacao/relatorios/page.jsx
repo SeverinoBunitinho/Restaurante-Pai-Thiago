@@ -523,6 +523,229 @@ function WaiterCommissionsChart({
   );
 }
 
+function WaiterDailyPerformanceChart({
+  waiterName = "",
+  dailySeries = [],
+  selectedRate = 10,
+}) {
+  if (!dailySeries.length) {
+    return (
+      <article className="rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-5">
+        <p className="text-base font-semibold text-[var(--forest)]">
+          Sem historico diario deste garcom no periodo
+        </p>
+        <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+          Assim que ele fechar contas, o grafico individual aparece automaticamente.
+        </p>
+      </article>
+    );
+  }
+
+  const entries = dailySeries
+    .slice()
+    .sort((left, right) =>
+      String(left.date).localeCompare(String(right.date), "pt-BR"),
+    )
+    .slice(-14)
+    .map((entry) => ({
+      date: entry.date,
+      revenue: Number(entry.revenue ?? 0),
+      commission: Number(entry.commission ?? 0),
+      closedChecks: Number(entry.closedChecks ?? 0),
+    }));
+  const maxRevenue = Math.max(...entries.map((entry) => entry.revenue), 1);
+  const maxCommission = Math.max(...entries.map((entry) => entry.commission), 1);
+  const totalRevenue = entries.reduce(
+    (accumulator, entry) => accumulator + entry.revenue,
+    0,
+  );
+  const totalCommission = entries.reduce(
+    (accumulator, entry) => accumulator + entry.commission,
+    0,
+  );
+  const totalClosedChecks = entries.reduce(
+    (accumulator, entry) => accumulator + entry.closedChecks,
+    0,
+  );
+  const width = 680;
+  const height = 240;
+  const padding = { top: 22, right: 24, bottom: 36, left: 22 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const baseline = padding.top + chartHeight;
+  const step = entries.length === 1 ? chartWidth : chartWidth / (entries.length - 1);
+  const barWidth = Math.min(24, Math.max(8, step * 0.42));
+
+  const revenuePoints = entries.map((entry, index) => ({
+    x: entries.length === 1 ? padding.left + chartWidth / 2 : padding.left + index * step,
+    y: baseline - (entry.revenue / maxRevenue) * chartHeight,
+    ...entry,
+  }));
+  const commissionPoints = entries.map((entry, index) => ({
+    x: entries.length === 1 ? padding.left + chartWidth / 2 : padding.left + index * step,
+    y: baseline - (entry.commission / maxCommission) * chartHeight,
+    ...entry,
+  }));
+  const commissionPolyline = commissionPoints
+    .map((point) => `${point.x},${point.y}`)
+    .join(" ");
+
+  return (
+    <article className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+            Historico individual
+          </p>
+          <h3 className="mt-2 text-lg font-semibold text-[var(--forest)]">
+            {waiterName}
+          </h3>
+          <p className="mt-1 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+            Receita e comissao diaria no periodo filtrado.
+          </p>
+        </div>
+        <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
+          Regra simulada: {selectedRate}%
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-[1rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.82)] px-3 py-2.5">
+          <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+            Total vendido
+          </p>
+          <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
+            {formatCurrency(totalRevenue)}
+          </p>
+        </div>
+        <div className="rounded-[1rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.82)] px-3 py-2.5">
+          <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+            Comissao acumulada
+          </p>
+          <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
+            {formatCurrency(totalCommission)}
+          </p>
+        </div>
+        <div className="rounded-[1rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.82)] px-3 py-2.5">
+          <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+            Fechamentos
+          </p>
+          <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
+            {totalClosedChecks}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 overflow-x-auto">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="h-[15rem] min-w-[34rem] w-full"
+          role="img"
+          aria-label={`Grafico diario de ${waiterName}`}
+        >
+          <defs>
+            <linearGradient id="waiterRevenueBars" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="rgba(95,123,109,0.92)" />
+              <stop offset="100%" stopColor="rgba(95,123,109,0.35)" />
+            </linearGradient>
+            <linearGradient id="waiterCommissionLine" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stopColor="#b68742" />
+              <stop offset="100%" stopColor="#8a5d3b" />
+            </linearGradient>
+          </defs>
+
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+            const y = padding.top + ratio * chartHeight;
+            return (
+              <line
+                key={`wg-grid-${ratio}`}
+                x1={padding.left}
+                x2={width - padding.right}
+                y1={y}
+                y2={y}
+                stroke="rgba(20,35,29,0.08)"
+                strokeDasharray="4 7"
+              />
+            );
+          })}
+
+          {revenuePoints.map((point) => {
+            const barHeight = Math.max(2, baseline - point.y);
+            return (
+              <rect
+                key={`wg-bar-${point.date}`}
+                x={point.x - barWidth / 2}
+                y={baseline - barHeight}
+                width={barWidth}
+                height={barHeight}
+                rx="6"
+                fill="url(#waiterRevenueBars)"
+              />
+            );
+          })}
+
+          <polyline
+            fill="none"
+            points={commissionPolyline}
+            stroke="url(#waiterCommissionLine)"
+            strokeWidth="3.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {commissionPoints.map((point) => (
+            <circle
+              key={`wg-point-${point.date}`}
+              cx={point.x}
+              cy={point.y}
+              r="3.8"
+              fill="var(--gold)"
+            />
+          ))}
+
+          {revenuePoints.map((point, index) => {
+            if (
+              !(
+                index === 0 ||
+                index === revenuePoints.length - 1 ||
+                index === Math.floor((revenuePoints.length - 1) / 2)
+              )
+            ) {
+              return null;
+            }
+
+            return (
+              <text
+                key={`wg-label-${point.date}`}
+                x={point.x}
+                y={height - 9}
+                textAnchor="middle"
+                fill="rgba(21,35,29,0.72)"
+                fontSize="12"
+                fontWeight="700"
+                letterSpacing="0.08em"
+              >
+                {formatShortDate(point.date)}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs leading-5 text-[rgba(21,35,29,0.64)]">
+        <span className="inline-flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[rgba(95,123,109,0.88)]" />
+          Barras: receita diaria
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-[var(--gold)]" />
+          Linha: comissao diaria
+        </span>
+      </div>
+    </article>
+  );
+}
+
 function WaiterCommissionsList({ waiterCommissions = [] }) {
   if (!waiterCommissions.length) {
     return (
@@ -692,6 +915,13 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
     board.waiterCommissions.find(
       (item) => item.userId === selectedWaiterIdFromQuery,
     ) ?? board.waiterCommissions[0] ?? null;
+  const selectedWaiterSeries = selectedWaiter
+    ? (
+        board.waiterDailySeries.find(
+          (entry) => entry.userId === selectedWaiter.userId,
+        )?.series ?? []
+      )
+    : [];
   const calculatorRate = parseCommissionRate(
     calculatorRateFromQuery,
     board.commissionRate,
@@ -1154,6 +1384,16 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                   </p>
                 </article>
               )}
+
+              {selectedWaiter ? (
+                <div className="mt-6">
+                  <WaiterDailyPerformanceChart
+                    waiterName={selectedWaiter.fullName}
+                    dailySeries={selectedWaiterSeries}
+                    selectedRate={calculatorRate}
+                  />
+                </div>
+              ) : null}
             </div>
 
             <div className="luxury-card rounded-[2.2rem] p-6">

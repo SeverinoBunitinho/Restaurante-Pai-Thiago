@@ -325,6 +325,7 @@ function buildFallbackReportsBoard(period, customStartDate = "", customEndDate =
       },
     ],
     waiterCommissions: [],
+    waiterDailySeries: [],
     tableOccupancy: [],
     financialTimeline: [],
     liveOpenTablesCount: 0,
@@ -501,6 +502,7 @@ export async function getServiceReportsBoard(period = "month", options = {}) {
   const liveOpenTableIds = new Set((openNowResult.data ?? []).map((check) => check.table_id));
 
   const waiterCommissionMap = new Map();
+  const waiterDailySeriesMap = new Map();
 
   for (const check of closedChecks) {
     const waiter = check.opened_by;
@@ -536,6 +538,27 @@ export async function getServiceReportsBoard(period = "month", options = {}) {
     }
 
     waiterCommissionMap.set(waiter.user_id, current);
+
+    const dayKey = getBrazilDayKey(check.closed_at);
+
+    if (dayKey) {
+      const currentWaiterTimeline =
+        waiterDailySeriesMap.get(waiter.user_id) ?? new Map();
+      const currentDay =
+        currentWaiterTimeline.get(dayKey) ?? {
+          date: dayKey,
+          revenue: 0,
+          commission: 0,
+          closedChecks: 0,
+        };
+
+      currentDay.revenue += total;
+      currentDay.commission += commissionAmount;
+      currentDay.closedChecks += 1;
+
+      currentWaiterTimeline.set(dayKey, currentDay);
+      waiterDailySeriesMap.set(waiter.user_id, currentWaiterTimeline);
+    }
   }
 
   const tableOccupancyMap = new Map(
@@ -591,6 +614,14 @@ export async function getServiceReportsBoard(period = "month", options = {}) {
   const waiterCommissions = Array.from(waiterCommissionMap.values()).sort(
     (left, right) => right.grossSales - left.grossSales,
   );
+  const waiterDailySeries = Array.from(waiterDailySeriesMap.entries())
+    .map(([userId, timeline]) => ({
+      userId,
+      series: Array.from(timeline.values()).sort((left, right) =>
+        String(left.date).localeCompare(String(right.date), "pt-BR"),
+      ),
+    }))
+    .sort((left, right) => left.userId.localeCompare(right.userId, "pt-BR"));
   const tableOccupancy = Array.from(tableOccupancyMap.values()).sort((left, right) => {
     if (right.totalAccounts !== left.totalAccounts) {
       return right.totalAccounts - left.totalAccounts;
@@ -671,6 +702,7 @@ export async function getServiceReportsBoard(period = "month", options = {}) {
       },
     ],
     waiterCommissions,
+    waiterDailySeries,
     tableOccupancy,
     financialTimeline,
     liveOpenTablesCount: liveOpenTableIds.size,
