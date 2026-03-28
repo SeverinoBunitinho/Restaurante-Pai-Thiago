@@ -50,9 +50,6 @@ export async function SiteFooter() {
               </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link href="/contato" className="button-primary w-full justify-center sm:w-auto">
-                  Falar com a casa
-                </Link>
                 {showMenuShortcut ? (
                   <Link href="/cardapio" className="button-ghost w-full justify-center sm:w-auto">
                     Ver cardapio
