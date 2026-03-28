@@ -622,28 +622,28 @@ function WaiterDailyPerformanceChart({
         </span>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-[1rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.82)] px-3 py-2.5">
+      <div className="mt-4 grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(9.2rem,1fr))]">
+        <div className="min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.82)] px-3 py-2.5">
           <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
             Total vendido
           </p>
-          <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
+          <p className="mt-1 break-words text-base font-semibold leading-tight text-[var(--forest)] sm:text-lg">
             {formatCurrency(totalRevenue)}
           </p>
         </div>
-        <div className="rounded-[1rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.82)] px-3 py-2.5">
+        <div className="min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.82)] px-3 py-2.5">
           <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
             Comissao acumulada
           </p>
-          <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
+          <p className="mt-1 break-words text-base font-semibold leading-tight text-[var(--forest)] sm:text-lg">
             {formatCurrency(totalCommission)}
           </p>
         </div>
-        <div className="rounded-[1rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.82)] px-3 py-2.5">
+        <div className="min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.82)] px-3 py-2.5">
           <p className="text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
             Fechamentos
           </p>
-          <p className="mt-1 text-lg font-semibold text-[var(--forest)]">
+          <p className="mt-1 break-words text-base font-semibold leading-tight text-[var(--forest)] sm:text-lg">
             {totalClosedChecks}
           </p>
         </div>
@@ -652,7 +652,7 @@ function WaiterDailyPerformanceChart({
       <div className="mt-5 overflow-x-auto">
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="h-[15rem] min-w-[34rem] w-full"
+          className="h-[14rem] w-full min-w-0 sm:h-[15rem]"
           role="img"
           aria-label={`Grafico diario de ${waiterName}`}
         >
