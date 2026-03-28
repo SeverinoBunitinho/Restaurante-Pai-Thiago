@@ -29,37 +29,37 @@ export default async function CardapioPage() {
 
       <main className="pb-16">
         <section className="shell pt-12">
-          <div className="hero-stage luxury-card-dark rounded-[2.4rem] p-7 text-[var(--cream)] md:p-10">
-            <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
+          <div className="hero-stage menu-hero luxury-card-dark rounded-[2.4rem] p-7 text-[var(--cream)] md:p-10">
+            <p className="menu-hero-eyebrow text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
               Cardapio da casa
             </p>
-            <h1 className="display-title page-hero-title mt-4 text-white">
+            <h1 className="display-title page-hero-title menu-hero-title mt-4 text-white">
               Sabores pensados para almoco, jantar e ocasioes especiais
             </h1>
-            <p className="mt-5 max-w-3xl text-base leading-8 text-[rgba(255,247,232,0.74)]">
+            <p className="menu-hero-description mt-5 max-w-3xl text-base leading-8 text-[rgba(255,247,232,0.74)]">
               Esta pagina mostra somente o menu ativo da casa, com categorias,
               precos, preparo e alergenicos para uma escolha clara.
             </p>
 
-            <div className="mt-8 inline-flex max-w-2xl rounded-full border border-[rgba(217,185,122,0.18)] bg-[rgba(255,255,255,0.05)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.22em] text-[rgba(255,247,232,0.8)]">
+            <div className="menu-hero-pill mt-8 inline-flex max-w-2xl rounded-full border border-[rgba(217,185,122,0.18)] bg-[rgba(255,255,255,0.05)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.22em] text-[rgba(255,247,232,0.8)]">
               {canOrder
                 ? "Escolha os pratos e finalize no carrinho"
                 : "Visualizacao oficial do menu com disponibilidade atual"}
             </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
-              <span className="info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
+              <span className="menu-hero-chip info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
                 <Clock3 size={14} />
                 {restaurantInfo.schedule[0]}
               </span>
-              <span className="info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
+              <span className="menu-hero-chip info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
                 <Sparkles size={14} />
                 categorias organizadas para leitura rapida
               </span>
             </div>
 
             {canOrder ? (
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="menu-hero-actions mt-6 flex flex-wrap gap-3">
                 <Link href="/carrinho" className="button-primary w-full justify-center sm:w-auto">
                   Abrir carrinho
                 </Link>
@@ -70,13 +70,13 @@ export default async function CardapioPage() {
             ) : null}
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <span className="info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
+              <span className="menu-hero-chip info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
                 {totalItems} itens ativos
               </span>
-              <span className="info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
+              <span className="menu-hero-chip info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
                 Alergenicos sinalizados
               </span>
-              <span className="info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
+              <span className="menu-hero-chip info-chip border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.08)] text-[rgba(255,247,232,0.84)]">
                 {restaurantInfo.schedule[1]}
               </span>
             </div>
