@@ -102,6 +102,23 @@ function formatShortDate(value) {
   }).format(parsed);
 }
 
+function formatRatePercentage(value) {
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed)) {
+    return "0%";
+  }
+
+  const normalized = Math.max(0, parsed);
+  const hasDecimal = Math.abs(normalized % 1) > 0.0001;
+
+  if (!hasDecimal) {
+    return `${Math.trunc(normalized)}%`;
+  }
+
+  return `${normalized.toFixed(1).replace(".", ",")}%`;
+}
+
 function compactChartItems(items = [], limit = 4, fallbackLabel = "Outros") {
   if (items.length <= limit) {
     return items;
@@ -1058,6 +1075,12 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
     totalCommission > 0 && selectedWaiter
       ? (Number(selectedWaiter.commissionAmount ?? 0) / totalCommission) * 100
       : 0;
+  const commissionSummaryRateLabel = selectedWaiter
+    ? "Taxa em simulacao"
+    : "Taxa padrao da casa";
+  const commissionSummaryRateValue = selectedWaiter
+    ? calculatorRate
+    : Number(board.commissionRate ?? calculatorRate);
   const estimatedNetResult = totalRevenue - totalCommission;
   const averageTicket = totalClosedChecks ? totalRevenue / totalClosedChecks : 0;
   const activeTablesCount = board.tableOccupancy.length;
@@ -1368,10 +1391,15 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                 </article>
                 <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] p-4">
                   <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
-                    Taxa em simulacao
+                    {commissionSummaryRateLabel}
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
-                    {calculatorRate}%
+                    {formatRatePercentage(commissionSummaryRateValue)}
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+                    {selectedWaiter
+                      ? "Taxa aplicada somente para o garcom selecionado."
+                      : "Selecione um garcom para iniciar a simulacao personalizada."}
                   </p>
                 </article>
                 <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] p-4">
