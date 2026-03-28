@@ -556,32 +556,6 @@ export default async function OperacaoMenuPage({ searchParams }) {
                                     ? "ativo"
                                     : "pausado"}
                             </span>
-                            {stockState.stockQuantity != null ? (
-                              <form action={updateMenuItemStockAction}>
-                                <input type="hidden" name="itemId" value={item.id} />
-                                <input
-                                  type="hidden"
-                                  name="lowStockThreshold"
-                                  value={stockState.lowStockThreshold}
-                                />
-                                <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2">
-                                  <input
-                                    name="stockQuantity"
-                                    type="number"
-                                    min="0"
-                                    required
-                                    defaultValue={Math.max(0, Number(stockState.stockQuantity ?? 0))}
-                                    className="w-16 bg-transparent text-xs font-semibold text-[var(--forest)] outline-none"
-                                  />
-                                  <button
-                                    type="submit"
-                                    className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--forest)] transition hover:-translate-y-0.5"
-                                  >
-                                    Salvar estoque
-                                  </button>
-                                </div>
-                              </form>
-                            ) : null}
                             <form action={toggleMenuItemAvailabilityAction}>
                               <input type="hidden" name="itemId" value={item.id} />
                               <input
