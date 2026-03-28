@@ -83,6 +83,95 @@ function buildReportsHref({
   return query ? `/operacao/relatorios?${query}` : "/operacao/relatorios";
 }
 
+function WaiterCommissionsChart({
+  waiterCommissions = [],
+  selectedWaiterId = "",
+}) {
+  if (!waiterCommissions.length) {
+    return (
+      <article className="rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
+        <p className="text-lg font-semibold text-[var(--forest)]">
+          Grafico indisponivel neste periodo
+        </p>
+        <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+          Feche comandas com garcom responsavel para visualizar a comissao em barras.
+        </p>
+      </article>
+    );
+  }
+
+  const sortedWaiters = waiterCommissions
+    .slice()
+    .sort(
+      (left, right) =>
+        Number(right.commissionAmount ?? 0) - Number(left.commissionAmount ?? 0),
+    );
+  const maxCommission = Math.max(
+    ...sortedWaiters.map((waiter) => Number(waiter.commissionAmount ?? 0)),
+    0,
+  );
+  const safeMaxCommission = maxCommission > 0 ? maxCommission : 1;
+  const totalCommission = sortedWaiters.reduce(
+    (accumulator, waiter) =>
+      accumulator + Number(waiter.commissionAmount ?? 0),
+    0,
+  );
+
+  return (
+    <div className="space-y-3">
+      {sortedWaiters.map((waiter) => {
+        const commissionAmount = Number(waiter.commissionAmount ?? 0);
+        const widthRatio = Math.max(
+          0,
+          Math.min(1, commissionAmount / safeMaxCommission),
+        );
+        const barWidthPercent = commissionAmount > 0 ? Math.max(8, widthRatio * 100) : 2;
+        const sharePercent =
+          totalCommission > 0
+            ? (commissionAmount / totalCommission) * 100
+            : 0;
+        const isSelected = waiter.userId === selectedWaiterId;
+
+        return (
+          <article
+            key={`chart-${waiter.userId}`}
+            className={`rounded-[1.4rem] border p-4 ${
+              isSelected
+                ? "border-[rgba(182,135,66,0.28)] bg-[rgba(182,135,66,0.08)]"
+                : "border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)]"
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-[var(--forest)]">
+                {waiter.fullName}
+              </p>
+              <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
+                {formatCurrency(commissionAmount)}
+              </span>
+            </div>
+
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[rgba(20,35,29,0.08)]">
+              <div
+                className={`h-full rounded-full ${
+                  isSelected
+                    ? "bg-gradient-to-r from-[var(--gold)] to-[var(--clay)]"
+                    : "bg-gradient-to-r from-[var(--sage)] to-[var(--gold)]"
+                }`}
+                style={{ width: `${barWidthPercent}%` }}
+              />
+            </div>
+
+            <p className="mt-2 text-xs leading-5 text-[rgba(21,35,29,0.68)]">
+              {waiter.closedChecks} fechamento(s) |{" "}
+              {sharePercent.toFixed(1).replace(".", ",")}% da comissao do periodo
+            </p>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 function WaiterCommissionsList({ waiterCommissions = [] }) {
   if (!waiterCommissions.length) {
     return (
@@ -559,14 +648,30 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
 
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
-                eyebrow="Fechamento por garcom"
-                title="Ranking de comissao no periodo"
-                description="Lista oficial para conferencia de pagamento por desempenho."
+                eyebrow="Grafico de comissoes"
+                title="Comparativo por garcom no periodo"
+                description="Visual rapido para dono e gerente acompanharem quem lidera em comissao."
                 compact
               />
 
               <div className="mt-8">
-                <WaiterCommissionsList waiterCommissions={board.waiterCommissions} />
+                <WaiterCommissionsChart
+                  waiterCommissions={board.waiterCommissions}
+                  selectedWaiterId={selectedWaiter?.userId ?? ""}
+                />
+              </div>
+
+              <details className="mt-6 rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
+                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
+                  Ver lista detalhada
+                </summary>
+                <div className="mt-4">
+                  <WaiterCommissionsList waiterCommissions={board.waiterCommissions} />
+                </div>
+              </details>
+
+              <div className="mt-4 rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-xs leading-6 text-[rgba(21,35,29,0.66)]">
+                Dica: selecione um garcom na calculadora para destacar a barra dele no grafico.
               </div>
             </div>
           </div>
