@@ -803,7 +803,11 @@ export async function SiteHeader() {
                 )}
               </nav>
 
-              <div className="site-header-actions flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-2">
+              <div
+                className={`site-header-actions flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-2${
+                  customerSession ? " site-header-actions-customer" : ""
+                }`}
+              >
                 {session ? (
                   <>
                     {session.role === "customer" ? (
