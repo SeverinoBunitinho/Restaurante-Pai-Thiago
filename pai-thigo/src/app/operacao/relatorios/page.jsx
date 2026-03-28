@@ -727,13 +727,24 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
                 eyebrow="Comissoes"
-                title="Fechamento por garcom"
-                description="Cada valor abaixo considera apenas comandas fechadas e abertas pelo garcom."
+                title="Grafico de comissao por garcom"
+                description="Visual em barras para comparar desempenho de cada garcom no periodo."
                 compact
               />
               <div className="mt-8">
-                <WaiterCommissionsList waiterCommissions={board.waiterCommissions} />
+                <WaiterCommissionsChart
+                  waiterCommissions={board.waiterCommissions}
+                  selectedWaiterId={selectedWaiter?.userId ?? ""}
+                />
               </div>
+              <details className="mt-6 rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
+                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
+                  Ver lista detalhada
+                </summary>
+                <div className="mt-4">
+                  <WaiterCommissionsList waiterCommissions={board.waiterCommissions} />
+                </div>
+              </details>
             </div>
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
