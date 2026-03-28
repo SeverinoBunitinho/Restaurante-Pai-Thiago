@@ -932,6 +932,18 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
   const calculationDelta = selectedWaiter
     ? calculatedCommission - Number(selectedWaiter.commissionAmount ?? 0)
     : 0;
+  const calculationDeltaLabel =
+    calculationDelta === 0
+      ? "Sem diferenca para o valor atual."
+      : calculationDelta > 0
+        ? `Aumento previsto de ${formatCurrency(calculationDelta)} em relacao ao valor atual.`
+        : `Reducao prevista de ${formatCurrency(Math.abs(calculationDelta))} em relacao ao valor atual.`;
+  const calculationDeltaBadgeClass =
+    calculationDelta > 0
+      ? "border-[rgba(182,135,66,0.28)] bg-[rgba(182,135,66,0.1)] text-[var(--gold)]"
+      : calculationDelta < 0
+        ? "border-[rgba(138,93,59,0.26)] bg-[rgba(138,93,59,0.1)] text-[var(--clay)]"
+        : "border-[rgba(95,123,109,0.24)] bg-[rgba(95,123,109,0.1)] text-[var(--sage)]";
   const exportHref =
     board.period === "custom" && board.startDate && board.endDate
       ? `/api/operacao/relatorios/export?period=custom&start=${board.startDate}&end=${board.endDate}`
@@ -1290,12 +1302,29 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
                 eyebrow="Calculadora"
-                title="Calcular comissao por garcom"
-                description="Escolha o profissional e simule a taxa para fechar comissao do periodo."
+                title="Comissao por garcom com calculo por dia, semana, mes e ano"
+                description="Selecione o periodo e o profissional para calcular, comparar e fechar a comissao com leitura clara."
                 compact
               />
 
-              <form method="get" className="mt-8 grid gap-4">
+              <div className="mt-6 rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                  Periodo ativo
+                </p>
+                <p className="mt-2 text-base font-semibold text-[var(--forest)]">
+                  {board.periodLabel}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                  {selectedWaiter
+                    ? `Garcom selecionado: ${selectedWaiter.fullName}`
+                    : "Selecione um garcom para abrir o calculo individual."}
+                </p>
+              </div>
+
+              <form
+                method="get"
+                className="mt-5 grid gap-4 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.56)] p-4 md:grid-cols-2"
+              >
                 <input type="hidden" name="tab" value="commissions" />
                 <input type="hidden" name="period" value={board.period} />
                 {board.period === "custom" && board.startDate && board.endDate ? (
@@ -1338,14 +1367,17 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                     className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
                   />
                 </label>
-                <button type="submit" className="button-primary w-full justify-center">
+                <button
+                  type="submit"
+                  className="button-primary w-full justify-center md:col-span-2"
+                >
                   <Calculator size={16} />
                   Calcular comissao
                 </button>
               </form>
 
               {selectedWaiter ? (
-                <div className="mt-6 grid gap-3">
+                <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
                     <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
                       Base de vendas do garcom
@@ -1369,8 +1401,13 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                     <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
                       {formatCurrency(calculatedCommission)}
                     </p>
+                    <p
+                      className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.16em] ${calculationDeltaBadgeClass}`}
+                    >
+                      Delta: {formatCurrency(calculationDelta)}
+                    </p>
                     <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
-                      Diferenca para o valor atual: {formatCurrency(calculationDelta)}.
+                      {calculationDeltaLabel}
                     </p>
                   </article>
                 </div>
