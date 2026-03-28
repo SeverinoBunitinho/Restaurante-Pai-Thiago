@@ -7,6 +7,7 @@ import {
   MapPin,
   MessageCircle,
   Phone,
+  ShieldCheck,
   Star,
 } from "lucide-react";
 
@@ -18,7 +19,32 @@ export async function SiteFooter() {
     getRestaurantProfile(),
     getCurrentSession(),
   ]);
-  const showMenuShortcut = session ? isStaffRole(session.role) : true;
+  const staffSession = session ? isStaffRole(session.role) : false;
+  const leftHighlights = staffSession
+    ? [
+        {
+          icon: Clock3,
+          title: "Operacao continua",
+          text: "Reservas, pedidos e atendimento interno seguem conectados na mesma base.",
+        },
+        {
+          icon: ShieldCheck,
+          title: "Controle por perfil",
+          text: "Garcom, gerente e dono com acessos organizados por responsabilidade.",
+        },
+      ]
+    : [
+        {
+          icon: Clock3,
+          title: "Fluxo sincronizado",
+          text: "Reservas e pedidos ficam alinhados com a equipe em tempo real.",
+        },
+        {
+          icon: MessageCircle,
+          title: "Atendimento da casa",
+          text: "Canais oficiais reunidos para contato rapido e suporte da experiencia.",
+        },
+      ];
 
   return (
     <footer className="mt-auto pt-20 pb-10">
@@ -49,12 +75,21 @@ export async function SiteFooter() {
                 </span>
               </div>
 
-              <div className="mt-8 flex flex-wrap gap-3">
-                {showMenuShortcut ? (
-                  <Link href="/cardapio" className="button-ghost w-full justify-center sm:w-auto">
-                    Ver cardapio
-                  </Link>
-                ) : null}
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                {leftHighlights.map((item) => (
+                  <article
+                    key={item.title}
+                    className="rounded-[1.5rem] border border-[rgba(217,185,122,0.14)] bg-[rgba(255,255,255,0.04)] px-4 py-4"
+                  >
+                    <item.icon className="text-[var(--gold-soft)]" size={16} />
+                    <p className="mt-3 text-sm font-semibold uppercase tracking-[0.18em] text-[rgba(217,185,122,0.9)]">
+                      {item.title}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.74)]">
+                      {item.text}
+                    </p>
+                  </article>
+                ))}
               </div>
             </div>
 
