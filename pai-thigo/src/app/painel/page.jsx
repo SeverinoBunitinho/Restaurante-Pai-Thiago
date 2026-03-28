@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Radar, ReceiptText, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Radar, ShieldCheck, Sparkles } from "lucide-react";
 
 import { SectionHeading } from "@/components/section-heading";
 import { SiteFooter } from "@/components/site-footer";
@@ -193,13 +193,6 @@ export default async function PainelPage() {
               <h2 className="mt-4 text-3xl font-semibold text-[var(--forest)]">
                 O que merece atencao agora
               </h2>
-              <Link
-                href="/operacao/comandas"
-                className="mt-4 inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.7)] px-4 py-2 text-sm font-semibold text-[var(--forest)] transition hover:-translate-y-0.5"
-              >
-                <ReceiptText size={16} />
-                Abrir pedidos dos clientes
-              </Link>
               <div className="mt-6 space-y-4">
                 {reservationsBoard.reservations.length ? (
                   reservationsBoard.reservations.slice(0, 3).map((reservation) => {

@@ -81,6 +81,14 @@ function buildStaffDropdownSections({ role, notifications }) {
       { href: "/painel", label: "Painel", exact: true, icon: LayoutDashboard },
     ],
     [
+      "/operacao/comandas",
+      {
+        href: "/operacao/comandas",
+        label: "Abrir pedidos dos clientes",
+        icon: ClipboardList,
+      },
+    ],
+    [
       "/operacao",
       { href: "/operacao", label: "Central", exact: true, icon: BriefcaseBusiness },
     ],
