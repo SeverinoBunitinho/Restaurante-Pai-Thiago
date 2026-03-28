@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { Calculator, Download, TrendingUp, WalletCards } from "lucide-react";
+import {
+  Activity,
+  Calculator,
+  Download,
+  TrendingUp,
+  WalletCards,
+} from "lucide-react";
 
 import { SectionHeading } from "@/components/section-heading";
 import { getServiceReportsBoard, reportPeriodOptions } from "@/lib/checks-data";
@@ -81,6 +87,351 @@ function buildReportsHref({
   const query = params.toString();
 
   return query ? `/operacao/relatorios?${query}` : "/operacao/relatorios";
+}
+
+function formatShortDate(value) {
+  const parsed = new Date(value ?? "");
+
+  if (Number.isNaN(parsed.getTime())) {
+    return "--/--";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+  }).format(parsed);
+}
+
+function compactChartItems(items = [], limit = 4, fallbackLabel = "Outros") {
+  if (items.length <= limit) {
+    return items;
+  }
+
+  const pinned = items.slice(0, limit - 1);
+  const overflow = items.slice(limit - 1);
+  const overflowValue = overflow.reduce(
+    (accumulator, entry) => accumulator + Number(entry.value ?? 0),
+    0,
+  );
+
+  return [
+    ...pinned,
+    {
+      label: fallbackLabel,
+      value: overflowValue,
+      tone: "rgba(20,35,29,0.45)",
+    },
+  ];
+}
+
+function RevenueTrendChart({ timeline = [] }) {
+  if (!timeline.length) {
+    return (
+      <article className="rounded-[1.7rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
+        <p className="text-lg font-semibold text-[var(--forest)]">
+          Tendencia indisponivel neste periodo
+        </p>
+        <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+          Assim que houver contas fechadas, o grafico de faturamento diario aparece aqui.
+        </p>
+      </article>
+    );
+  }
+
+  const entries = timeline
+    .slice()
+    .sort((left, right) =>
+      String(left.date).localeCompare(String(right.date), "pt-BR"),
+    )
+    .slice(-14);
+  const values = entries.map((entry) => Number(entry.revenue ?? 0));
+  const maxValue = Math.max(...values, 1);
+  const minValue = Math.min(...values, 0);
+  const range = Math.max(1, maxValue - minValue);
+
+  const width = 700;
+  const height = 260;
+  const padding = { top: 20, right: 26, bottom: 34, left: 16 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const baseline = padding.top + chartHeight;
+
+  const points = entries.map((entry, index) => {
+    const x =
+      entries.length === 1
+        ? padding.left + chartWidth / 2
+        : padding.left + (index / (entries.length - 1)) * chartWidth;
+    const y =
+      baseline - ((Number(entry.revenue ?? 0) - minValue) / range) * chartHeight;
+
+    return {
+      x,
+      y,
+      date: entry.date,
+      revenue: Number(entry.revenue ?? 0),
+      closedChecks: Number(entry.closedChecks ?? 0),
+    };
+  });
+
+  const polylinePoints = points.map((point) => `${point.x},${point.y}`).join(" ");
+  const areaPath = [
+    `M ${points[0].x} ${baseline}`,
+    ...points.map((point) => `L ${point.x} ${point.y}`),
+    `L ${points[points.length - 1].x} ${baseline}`,
+    "Z",
+  ].join(" ");
+
+  const labelIndexes = Array.from(
+    new Set([0, Math.floor((entries.length - 1) / 2), entries.length - 1]),
+  );
+  const peakPoint = points.reduce((currentPeak, point) =>
+    point.revenue > currentPeak.revenue ? point : currentPeak,
+  );
+  const latestPoint = points[points.length - 1];
+
+  return (
+    <article className="rounded-[1.7rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.68)] p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+            Faturamento diario
+          </p>
+          <p className="mt-2 text-xl font-semibold text-[var(--forest)]">
+            {formatCurrency(latestPoint.revenue)} no ultimo dia do periodo
+          </p>
+        </div>
+        <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
+          Pico: {formatCurrency(peakPoint.revenue)}
+        </span>
+      </div>
+
+      <div className="mt-5 overflow-x-auto">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="h-[16.5rem] min-w-[34rem] w-full"
+          role="img"
+          aria-label="Grafico de tendencia de faturamento diario"
+        >
+          <defs>
+            <linearGradient id="reportsTrendFill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="rgba(95,123,109,0.36)" />
+              <stop offset="100%" stopColor="rgba(95,123,109,0.04)" />
+            </linearGradient>
+            <linearGradient id="reportsTrendLine" x1="0" x2="1" y1="0" y2="0">
+              <stop offset="0%" stopColor="#5f7b6d" />
+              <stop offset="65%" stopColor="#b68742" />
+              <stop offset="100%" stopColor="#8a5d3b" />
+            </linearGradient>
+          </defs>
+
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+            const y = padding.top + ratio * chartHeight;
+            return (
+              <line
+                key={`grid-${ratio}`}
+                x1={padding.left}
+                x2={width - padding.right}
+                y1={y}
+                y2={y}
+                stroke="rgba(20,35,29,0.09)"
+                strokeDasharray="4 7"
+              />
+            );
+          })}
+
+          <path d={areaPath} fill="url(#reportsTrendFill)" />
+          <polyline
+            fill="none"
+            points={polylinePoints}
+            stroke="url(#reportsTrendLine)"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {points.map((point, index) => (
+            <circle
+              key={`point-${point.date}`}
+              cx={point.x}
+              cy={point.y}
+              r={index === points.length - 1 ? 6 : 4}
+              fill={index === points.length - 1 ? "var(--gold)" : "var(--forest)"}
+              opacity={index === points.length - 1 ? 1 : 0.68}
+            />
+          ))}
+
+          {labelIndexes.map((index) => (
+            <text
+              key={`label-${points[index].date}`}
+              x={points[index].x}
+              y={height - 8}
+              textAnchor="middle"
+              fill="rgba(21,35,29,0.72)"
+              fontSize="12"
+              fontWeight="700"
+              letterSpacing="0.08em"
+            >
+              {formatShortDate(points[index].date)}
+            </text>
+          ))}
+        </svg>
+      </div>
+    </article>
+  );
+}
+
+function DonutBreakdownCard({
+  title,
+  description,
+  slices = [],
+  centerLabel = "Total",
+}) {
+  const safeSlices = slices.filter((slice) => Number(slice.value ?? 0) > 0);
+  const total = safeSlices.reduce(
+    (accumulator, slice) => accumulator + Number(slice.value ?? 0),
+    0,
+  );
+
+  if (!total) {
+    return (
+      <article className="rounded-[1.7rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-5">
+        <p className="text-base font-semibold text-[var(--forest)]">{title}</p>
+        <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+          Sem dados suficientes para montar o grafico neste periodo.
+        </p>
+      </article>
+    );
+  }
+
+  const gradientStops = safeSlices.map((slice, index) => {
+    const currentValue = Number(slice.value ?? 0);
+    const cumulativeBefore = safeSlices
+      .slice(0, index)
+      .reduce(
+        (accumulator, currentSlice) =>
+          accumulator + Number(currentSlice.value ?? 0),
+        0,
+      );
+    const start = (cumulativeBefore / total) * 100;
+    const end = ((cumulativeBefore + currentValue) / total) * 100;
+
+    return `${slice.tone} ${start}% ${end}%`;
+  });
+
+  return (
+    <article className="rounded-[1.7rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.68)] p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+        {title}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.76)]">
+        {description}
+      </p>
+
+      <div className="mt-5 flex items-center gap-4">
+        <div className="relative h-28 w-28 shrink-0">
+          <div
+            className="absolute inset-0 rounded-full border border-[rgba(20,35,29,0.1)]"
+            style={{ background: `conic-gradient(${gradientStops.join(", ")})` }}
+          />
+          <div className="absolute inset-[20%] flex items-center justify-center rounded-full border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.9)]">
+            <div className="text-center">
+              <p className="text-lg font-semibold text-[var(--forest)]">{total}</p>
+              <p className="text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                {centerLabel}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="min-w-0 flex-1 space-y-2">
+          {safeSlices.map((slice) => {
+            const value = Number(slice.value ?? 0);
+            const share = (value / total) * 100;
+            return (
+              <div key={`${title}-${slice.label}`} className="flex items-center justify-between gap-2 text-sm">
+                <span className="inline-flex items-center gap-2 text-[rgba(21,35,29,0.78)]">
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ background: slice.tone }}
+                  />
+                  <span className="truncate">{slice.label}</span>
+                </span>
+                <span className="shrink-0 font-semibold text-[var(--forest)]">
+                  {share.toFixed(0)}%
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function RankingBarsCard({
+  title,
+  description,
+  items = [],
+  valueFormatter = (value) => String(value),
+  emptyTitle,
+  emptyDescription,
+}) {
+  if (!items.length) {
+    return (
+      <article className="rounded-[1.7rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-5">
+        <p className="text-base font-semibold text-[var(--forest)]">
+          {emptyTitle || title}
+        </p>
+        <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+          {emptyDescription || "Sem base para o ranking neste periodo."}
+        </p>
+      </article>
+    );
+  }
+
+  const maxValue = Math.max(...items.map((item) => Number(item.value ?? 0)), 1);
+
+  return (
+    <article className="rounded-[1.7rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.68)] p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+        {title}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.76)]">
+        {description}
+      </p>
+
+      <div className="mt-5 space-y-4">
+        {items.map((item) => {
+          const rawValue = Number(item.value ?? 0);
+          const widthPercent = rawValue > 0 ? Math.max(10, (rawValue / maxValue) * 100) : 2;
+
+          return (
+            <div key={`${title}-${item.label}`} className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-[var(--forest)]">{item.label}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[rgba(21,35,29,0.68)]">
+                  {valueFormatter(rawValue)}
+                </p>
+              </div>
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-[rgba(20,35,29,0.08)]">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${widthPercent}%`,
+                    background:
+                      item.tone || "linear-gradient(90deg, rgba(95,123,109,0.92), rgba(182,135,66,0.92))",
+                  }}
+                />
+              </div>
+              {item.meta ? (
+                <p className="text-xs leading-5 text-[rgba(21,35,29,0.64)]">{item.meta}</p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </article>
+  );
 }
 
 function WaiterCommissionsChart({
@@ -356,6 +707,165 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
       ? `/api/operacao/relatorios/export?period=custom&start=${board.startDate}&end=${board.endDate}`
       : `/api/operacao/relatorios/export?period=${board.period}`;
   const exportJsonHref = `${exportHref}&format=json`;
+  const chartPalette = [
+    "#5f7b6d",
+    "#1f8b7a",
+    "#b68742",
+    "#8a5d3b",
+    "#7f968b",
+    "#d9b97a",
+  ];
+
+  const timelineRevenue = board.financialTimeline.reduce(
+    (accumulator, entry) => accumulator + Number(entry.revenue ?? 0),
+    0,
+  );
+  const timelineClosedChecks = board.financialTimeline.reduce(
+    (accumulator, entry) => accumulator + Number(entry.closedChecks ?? 0),
+    0,
+  );
+  const waiterGrossSales = board.waiterCommissions.reduce(
+    (accumulator, waiter) => accumulator + Number(waiter.grossSales ?? 0),
+    0,
+  );
+  const waiterClosedChecks = board.waiterCommissions.reduce(
+    (accumulator, waiter) => accumulator + Number(waiter.closedChecks ?? 0),
+    0,
+  );
+  const totalRevenue = timelineRevenue || waiterGrossSales;
+  const totalClosedChecks = timelineClosedChecks || waiterClosedChecks;
+  const totalCommission = board.waiterCommissions.reduce(
+    (accumulator, waiter) => accumulator + Number(waiter.commissionAmount ?? 0),
+    0,
+  );
+  const estimatedNetResult = totalRevenue - totalCommission;
+  const averageTicket = totalClosedChecks ? totalRevenue / totalClosedChecks : 0;
+  const activeTablesCount = board.tableOccupancy.length;
+  const occupiedTablesNow = board.tableOccupancy.filter(
+    (table) => Number(table.openAccounts ?? 0) > 0,
+  ).length;
+  const tablesWithMovement = board.tableOccupancy.filter(
+    (table) => Number(table.totalAccounts ?? 0) > 0,
+  ).length;
+  const idleTables = Math.max(0, activeTablesCount - tablesWithMovement);
+
+  const areaPerformanceMap = new Map();
+  for (const table of board.tableOccupancy) {
+    const areaName = table.area || "Sem area";
+    const current = areaPerformanceMap.get(areaName) ?? {
+      area: areaName,
+      revenue: 0,
+      accounts: 0,
+      openNow: 0,
+      tables: 0,
+    };
+
+    current.revenue += Number(table.grossSales ?? 0);
+    current.accounts += Number(table.totalAccounts ?? 0);
+    current.openNow += Number(table.openAccounts ?? 0);
+    current.tables += 1;
+    areaPerformanceMap.set(areaName, current);
+  }
+
+  const areaPerformance = Array.from(areaPerformanceMap.values()).sort(
+    (left, right) => {
+      if (right.revenue !== left.revenue) {
+        return right.revenue - left.revenue;
+      }
+
+      return right.accounts - left.accounts;
+    },
+  );
+
+  const areaRevenueSlices = compactChartItems(
+    areaPerformance.map((area, index) => ({
+      label: area.area,
+      value: area.revenue,
+      tone: chartPalette[index % chartPalette.length],
+    })),
+    5,
+    "Outras areas",
+  );
+
+  const tableStatusSlices = compactChartItems(
+    [
+      {
+        label: "Ocupadas agora",
+        value: occupiedTablesNow,
+        tone: "#b68742",
+      },
+      {
+        label: "Livres com giro",
+        value: Math.max(0, tablesWithMovement - occupiedTablesNow),
+        tone: "#5f7b6d",
+      },
+      {
+        label: "Sem giro",
+        value: idleTables,
+        tone: "#8a5d3b",
+      },
+    ],
+    4,
+  );
+
+  const waiterCommissionRanking = board.waiterCommissions
+    .slice(0, 6)
+    .map((waiter, index) => ({
+      label: waiter.fullName,
+      value: Number(waiter.commissionAmount ?? 0),
+      meta: `${waiter.closedChecks} fechamento(s)`,
+      tone: `linear-gradient(90deg, ${chartPalette[index % chartPalette.length]}, rgba(20,35,29,0.9))`,
+    }));
+
+  const areaAccountsRanking = areaPerformance
+    .slice()
+    .sort((left, right) => right.accounts - left.accounts)
+    .slice(0, 6)
+    .map((area, index) => ({
+      label: area.area,
+      value: Number(area.accounts ?? 0),
+      meta: `${area.tables} mesa(s) ativa(s) no setor`,
+      tone: `linear-gradient(90deg, ${chartPalette[index % chartPalette.length]}, rgba(20,35,29,0.84))`,
+    }));
+
+  const dashboardHighlights = [
+    {
+      icon: WalletCards,
+      label: "Faturamento",
+      value: formatCurrency(totalRevenue),
+      note: `${totalClosedChecks} conta(s) fechada(s) no periodo`,
+      cardClass:
+        "bg-gradient-to-br from-[rgba(95,123,109,0.9)] to-[rgba(36,58,50,0.96)] text-white border-[rgba(95,123,109,0.3)]",
+      noteClass: "text-[rgba(244,240,232,0.82)]",
+    },
+    {
+      icon: Calculator,
+      label: "Comissao prevista",
+      value: formatCurrency(totalCommission),
+      note: `${board.commissionRate}% de regra atual`,
+      cardClass:
+        "bg-gradient-to-br from-[rgba(182,135,66,0.92)] to-[rgba(138,93,59,0.92)] text-white border-[rgba(182,135,66,0.34)]",
+      noteClass: "text-[rgba(255,247,232,0.86)]",
+    },
+    {
+      icon: TrendingUp,
+      label: "Resultado liquido",
+      value: formatCurrency(estimatedNetResult),
+      note: `Ticket medio: ${formatCurrency(averageTicket)}`,
+      cardClass:
+        "bg-gradient-to-br from-[rgba(20,35,29,0.94)] to-[rgba(42,64,54,0.96)] text-white border-[rgba(217,185,122,0.24)]",
+      noteClass: "text-[rgba(255,247,232,0.82)]",
+    },
+    {
+      icon: Activity,
+      label: "Mesas ocupadas agora",
+      value: `${occupiedTablesNow} / ${activeTablesCount}`,
+      note: `${tablesWithMovement} mesa(s) tiveram giro no periodo`,
+      cardClass:
+        "bg-gradient-to-br from-[rgba(255,255,255,0.88)] to-[rgba(247,239,227,0.92)] text-[var(--forest)] border-[rgba(20,35,29,0.12)]",
+      noteClass: "text-[rgba(21,35,29,0.7)]",
+    },
+  ];
 
   return (
     <>
@@ -678,100 +1188,144 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
         </section>
       ) : null}
 
-      {activeTab === "overview" || activeTab === "occupancy" ? (
+      {activeTab === "overview" ? (
         <section className="pt-14">
           <div className="luxury-card rounded-[2.2rem] p-6">
             <SectionHeading
-              eyebrow="Financeiro diario"
-              title="Linha de faturamento por dia"
-              description="Visao de fechamento para apoiar decisoes de escala, compras e campanhas."
+              eyebrow="Dashboard executivo"
+              title="Painel visual de faturamento, comissao e ocupacao"
+              description="Leitura em estilo dashboard para gerente e dono decidirem rapido sem sair da operacao."
               compact
             />
 
-            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {board.financialTimeline.length ? (
-                board.financialTimeline.slice(-8).map((entry) => (
-                  <article
-                    key={entry.date}
-                    className="rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                  >
-                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                      {entry.date}
-                    </p>
-                    <p className="mt-3 text-2xl font-semibold text-[var(--forest)]">
-                      {formatCurrency(entry.revenue)}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                      {entry.closedChecks} conta(s) fechada(s).
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <article className="rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.52)] p-5 md:col-span-2 xl:col-span-4">
-                  <p className="text-lg font-semibold text-[var(--forest)]">
-                    Sem linha financeira para este periodo
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {dashboardHighlights.map((item) => (
+                <article
+                  key={item.label}
+                  className={`rounded-[1.6rem] border p-5 shadow-[0_14px_30px_rgba(20,35,29,0.08)] ${item.cardClass}`}
+                >
+                  <item.icon size={18} />
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.22em] opacity-90">
+                    {item.label}
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                    O grafico diario aparece conforme as contas forem fechadas no periodo filtrado.
+                  <p className="mt-2 text-[1.75rem] font-semibold leading-tight">
+                    {item.value}
+                  </p>
+                  <p className={`mt-2 text-sm leading-6 ${item.noteClass}`}>
+                    {item.note}
                   </p>
                 </article>
-              )}
+              ))}
             </div>
-          </div>
-        </section>
-      ) : null}
 
-      {activeTab === "overview" ? (
-        <section className="pt-14">
-          <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-            <div className="luxury-card rounded-[2.2rem] p-6">
-              <SectionHeading
-                eyebrow="Comissoes"
-                title="Grafico de comissao por garcom"
-                description="Visual em barras para comparar desempenho de cada garcom no periodo."
-                compact
-              />
-              <div className="mt-8">
-                <WaiterCommissionsChart
-                  waiterCommissions={board.waiterCommissions}
-                  selectedWaiterId={selectedWaiter?.userId ?? ""}
+            <div className="mt-6 grid gap-5 xl:grid-cols-[1.24fr_0.76fr]">
+              <RevenueTrendChart timeline={board.financialTimeline} />
+
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-1">
+                <DonutBreakdownCard
+                  title="Receita por area"
+                  description="Divisao de faturamento entre os setores da casa."
+                  slices={areaRevenueSlices}
+                  centerLabel="setores"
+                />
+                <DonutBreakdownCard
+                  title="Status das mesas"
+                  description="Leitura imediata de ocupacao e giro no periodo."
+                  slices={tableStatusSlices}
+                  centerLabel="mesas"
                 />
               </div>
-              <details className="mt-6 rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
-                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
-                  Ver lista detalhada
-                </summary>
-                <div className="mt-4">
-                  <WaiterCommissionsList waiterCommissions={board.waiterCommissions} />
-                </div>
-              </details>
             </div>
-            <div className="luxury-card rounded-[2.2rem] p-6">
-              <SectionHeading
-                eyebrow="Ocupacao"
-                title="Leitura de giro por mesa"
-                description="Um retrato do salao para perceber quais mesas giram mais e onde a operacao pode melhorar."
-                compact
+
+            <div className="mt-5 grid gap-5 xl:grid-cols-2">
+              <RankingBarsCard
+                title="Comissao por garcom"
+                description="Comparativo por valor acumulado no periodo filtrado."
+                items={waiterCommissionRanking}
+                valueFormatter={(value) => formatCurrency(value)}
+                emptyTitle="Sem comissao para exibir"
+                emptyDescription="Feche comandas com garcom responsavel para montar o grafico."
               />
-              <div className="mt-8">
+              <RankingBarsCard
+                title="Giro de contas por area"
+                description="Quantidade de contas abertas no periodo por setor."
+                items={areaAccountsRanking}
+                valueFormatter={(value) => `${value} conta(s)`}
+                emptyTitle="Sem giro por setor neste periodo"
+                emptyDescription="A leitura por area aparece conforme as contas forem abertas."
+              />
+            </div>
+
+            <details className="mt-6 rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
+                Ver detalhes completos de garcons e mesas
+              </summary>
+              <div className="mt-5 grid gap-5 lg:grid-cols-2">
+                <WaiterCommissionsList waiterCommissions={board.waiterCommissions} />
                 <OccupancyList tableOccupancy={board.tableOccupancy} />
               </div>
-            </div>
+            </details>
           </div>
         </section>
       ) : null}
 
       {activeTab === "occupancy" ? (
         <section className="pt-14">
-          <div className="luxury-card rounded-[2.2rem] p-6">
-            <SectionHeading
-              eyebrow="Ocupacao"
-              title="Leitura de giro por mesa"
-              description="Analise por mesa para tomada de decisao de operacao e capacidade."
-              compact
-            />
-            <div className="mt-8">
-              <OccupancyList tableOccupancy={board.tableOccupancy} />
+          <div className="grid gap-5 xl:grid-cols-[0.86fr_1.14fr]">
+            <div className="luxury-card rounded-[2.2rem] p-6">
+              <SectionHeading
+                eyebrow="Radar de ocupacao"
+                title="Setores, giro e mesas no mesmo painel"
+                description="Visao compacta para enxergar gargalos antes de abrir novas reservas."
+                compact
+              />
+
+              <div className="mt-8 space-y-5">
+                <DonutBreakdownCard
+                  title="Distribuicao de contas por area"
+                  description="Percentual de movimentacao entre os setores."
+                  slices={compactChartItems(
+                    areaPerformance
+                      .slice()
+                      .sort((left, right) => right.accounts - left.accounts)
+                      .map((area, index) => ({
+                        label: area.area,
+                        value: area.accounts,
+                        tone: chartPalette[index % chartPalette.length],
+                      })),
+                    5,
+                    "Outros setores",
+                  )}
+                  centerLabel="contas"
+                />
+                <RankingBarsCard
+                  title="Mesas em giro"
+                  description="Ranking por volume de contas abertas no periodo."
+                  items={board.tableOccupancy.slice(0, 8).map((table, index) => ({
+                    label: `${table.name} (${table.area})`,
+                    value: Number(table.totalAccounts ?? 0),
+                    meta: `${table.closedAccounts} fechada(s) | ${formatCurrency(
+                      Number(table.grossSales ?? 0),
+                    )}`,
+                    tone: `linear-gradient(90deg, ${chartPalette[index % chartPalette.length]}, rgba(20,35,29,0.84))`,
+                  }))}
+                  valueFormatter={(value) => `${value} conta(s)`}
+                  emptyTitle="Sem giro de mesas no periodo"
+                  emptyDescription="As mesas entram no ranking assim que recebem atendimento."
+                />
+              </div>
+            </div>
+
+            <div className="luxury-card rounded-[2.2rem] p-6">
+              <SectionHeading
+                eyebrow="Ocupacao"
+                title="Leitura completa por mesa"
+                description="Analise por mesa para tomada de decisao de operacao e capacidade."
+                compact
+              />
+              <div className="mt-8">
+                <OccupancyList tableOccupancy={board.tableOccupancy} />
+              </div>
             </div>
           </div>
         </section>
