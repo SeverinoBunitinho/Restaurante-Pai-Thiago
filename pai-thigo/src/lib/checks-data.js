@@ -446,7 +446,14 @@ export async function getServiceReportsBoard(period = "month", options = {}) {
 
   const range = resolveReportRange(period, customStartDate, customEndDate);
 
-  const [commissionRate, tablesResult, closedChecksResult, periodChecksResult, openNowResult] =
+  const [
+    commissionRate,
+    tablesResult,
+    closedChecksResult,
+    periodChecksResult,
+    openNowResult,
+    waiterProfilesResult,
+  ] =
     await Promise.all([
       getCommissionRate(supabase),
       supabase
@@ -471,6 +478,11 @@ export async function getServiceReportsBoard(period = "month", options = {}) {
         .from("service_checks")
         .select("id, table_id")
         .eq("status", "open"),
+      supabase
+        .from("profiles")
+        .select("user_id, full_name, email, role")
+        .eq("role", "waiter")
+        .order("full_name", { ascending: true }),
     ]);
 
   if (range.endIso && !closedChecksResult.error) {
@@ -491,7 +503,8 @@ export async function getServiceReportsBoard(period = "month", options = {}) {
     tablesResult.error ||
     closedChecksResult.error ||
     periodChecksResult.error ||
-    openNowResult.error
+    openNowResult.error ||
+    waiterProfilesResult.error
   ) {
     return buildFallbackReportsBoard(period, customStartDate, customEndDate);
   }
@@ -561,6 +574,33 @@ export async function getServiceReportsBoard(period = "month", options = {}) {
     }
   }
 
+  const waiterProfiles = waiterProfilesResult.data ?? [];
+
+  for (const waiter of waiterProfiles) {
+    if (!waiter?.user_id) {
+      continue;
+    }
+
+    const current = waiterCommissionMap.get(waiter.user_id);
+
+    if (!current) {
+      waiterCommissionMap.set(waiter.user_id, {
+        userId: waiter.user_id,
+        fullName: waiter.full_name ?? "Garcom",
+        email: waiter.email ?? "",
+        closedChecks: 0,
+        grossSales: 0,
+        commissionAmount: 0,
+        lastCloseAt: null,
+      });
+      continue;
+    }
+
+    current.fullName = current.fullName || waiter.full_name || "Garcom";
+    current.email = current.email || waiter.email || "";
+    waiterCommissionMap.set(waiter.user_id, current);
+  }
+
   const tableOccupancyMap = new Map(
     activeTables.map((table) => [
       table.id,
@@ -612,7 +652,25 @@ export async function getServiceReportsBoard(period = "month", options = {}) {
   }
 
   const waiterCommissions = Array.from(waiterCommissionMap.values()).sort(
-    (left, right) => right.grossSales - left.grossSales,
+    (left, right) => {
+      const salesDiff = Number(right.grossSales ?? 0) - Number(left.grossSales ?? 0);
+
+      if (salesDiff !== 0) {
+        return salesDiff;
+      }
+
+      const checksDiff =
+        Number(right.closedChecks ?? 0) - Number(left.closedChecks ?? 0);
+
+      if (checksDiff !== 0) {
+        return checksDiff;
+      }
+
+      return String(left.fullName ?? "").localeCompare(
+        String(right.fullName ?? ""),
+        "pt-BR",
+      );
+    },
   );
   const waiterDailySeries = Array.from(waiterDailySeriesMap.entries())
     .map(([userId, timeline]) => ({
