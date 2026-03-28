@@ -1423,12 +1423,12 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
               </div>
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[0.86fr_1.14fr]">
+            <div className="grid gap-5 xl:grid-cols-[0.84fr_1.16fr]">
               <div className="luxury-card rounded-[2.2rem] p-6">
                 <SectionHeading
-                  eyebrow="Calculadora"
-                  title="Calcular comissao individual"
-                  description="Escolha um garcom, ajuste a taxa e veja o impacto antes de fechar pagamento."
+                  eyebrow="1. Busca e calculo"
+                  title="Selecionar garcom e simular comissao"
+                  description="Primeiro filtre o profissional. Depois ajuste a taxa para calcular o valor final."
                   compact
                 />
 
@@ -1444,6 +1444,7 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                       <input type="hidden" name="end" value={board.endDate} />
                     </>
                   ) : null}
+
                   <label className="grid gap-2">
                     <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
                       Buscar garcom
@@ -1455,6 +1456,7 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                       className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
                     />
                   </label>
+
                   <label className="grid gap-2">
                     <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
                       Garcom
@@ -1475,6 +1477,7 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                       )}
                     </select>
                   </label>
+
                   <label className="grid gap-2">
                     <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
                       Taxa de comissao (%)
@@ -1489,6 +1492,7 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                       className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
                     />
                   </label>
+
                   <button type="submit" className="button-primary w-full justify-center">
                     <Calculator size={16} />
                     Buscar e calcular comissao
@@ -1502,9 +1506,18 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                       : `Nenhum garcom encontrado para "${waiterSearch}".`
                     : "Digite no campo de busca para filtrar um garcom especifico e abrir o grafico individual."}
                 </p>
+              </div>
+
+              <div className="luxury-card rounded-[2.2rem] p-6">
+                <SectionHeading
+                  eyebrow="2. Resultado do garcom"
+                  title="Resumo para decisao de pagamento"
+                  description="Apos calcular, o painel mostra valores essenciais e o impacto da simulacao."
+                  compact
+                />
 
                 {selectedWaiter ? (
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-6 space-y-3">
                     <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
@@ -1524,7 +1537,7 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                       </div>
                     </article>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(10.4rem,1fr))]">
                       <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
                         <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
                           Comissao atual
@@ -1577,7 +1590,7 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                     </div>
                   </div>
                 ) : (
-                  <article className="mt-5 rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
+                  <article className="mt-6 rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
                     <p className="text-lg font-semibold text-[var(--forest)]">
                       Ainda sem base para calcular comissao
                     </p>
@@ -1587,59 +1600,59 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                   </article>
                 )}
               </div>
+            </div>
 
-              <div className="luxury-card rounded-[2.2rem] p-6">
-                <SectionHeading
-                  eyebrow="Analise visual"
-                  title="Historico individual e comparativo da equipe"
-                  description="Tudo reunido no mesmo bloco para consulta rapida sem rolagem excessiva."
-                  compact
-                />
+            <div className="luxury-card rounded-[2.2rem] p-6">
+              <SectionHeading
+                eyebrow="3. Analise visual"
+                title="Historico individual e comparativo da equipe"
+                description="Leitura grafica para validar tendencia do garcom e contexto do time no mesmo periodo."
+                compact
+              />
 
-                <div className="mt-6 grid gap-5 2xl:grid-cols-2">
-                  <article className="rounded-[1.5rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.66)] p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
-                      Historico do garcom
-                    </p>
-                    <div className="mt-3">
-                      {selectedWaiter ? (
-                        <WaiterDailyPerformanceChart
-                          waiterName={selectedWaiter.fullName}
-                          dailySeries={selectedWaiterSeries}
-                          selectedRate={calculatorRate}
-                        />
-                      ) : (
-                        <article className="rounded-[1.2rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-4">
-                          <p className="text-sm font-semibold text-[var(--forest)]">
-                            Selecione um garcom para abrir o grafico individual
-                          </p>
-                        </article>
-                      )}
-                    </div>
-                  </article>
-
-                  <article className="rounded-[1.5rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.66)] p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
-                      Ranking da equipe
-                    </p>
-                    <div className="mt-3">
-                      <WaiterCommissionsChart
-                        waiterCommissions={board.waiterCommissions}
-                        selectedWaiterId={selectedWaiter?.userId ?? ""}
+              <div className="mt-6 grid gap-5 2xl:grid-cols-[1.05fr_0.95fr]">
+                <article className="rounded-[1.5rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.66)] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                    Historico do garcom
+                  </p>
+                  <div className="mt-3">
+                    {selectedWaiter ? (
+                      <WaiterDailyPerformanceChart
+                        waiterName={selectedWaiter.fullName}
+                        dailySeries={selectedWaiterSeries}
+                        selectedRate={calculatorRate}
                       />
-                    </div>
-                  </article>
-                </div>
-
-                <details className="mt-5 rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
-                  <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
-                    Ver lista detalhada de comissoes
-                  </summary>
-                  <div className="mt-4">
-                    <WaiterCommissionsList waiterCommissions={board.waiterCommissions} />
+                    ) : (
+                      <article className="rounded-[1.2rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-4">
+                        <p className="text-sm font-semibold text-[var(--forest)]">
+                          Selecione um garcom para abrir o grafico individual
+                        </p>
+                      </article>
+                    )}
                   </div>
-                </details>
+                </article>
+
+                <article className="rounded-[1.5rem] border border-[rgba(20,35,29,0.09)] bg-[rgba(255,255,255,0.66)] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                    Ranking da equipe
+                  </p>
+                  <div className="mt-3">
+                    <WaiterCommissionsChart
+                      waiterCommissions={board.waiterCommissions}
+                      selectedWaiterId={selectedWaiter?.userId ?? ""}
+                    />
+                  </div>
+                </article>
               </div>
+
+              <details className="mt-5 rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
+                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
+                  Ver lista detalhada de comissoes
+                </summary>
+                <div className="mt-4">
+                  <WaiterCommissionsList waiterCommissions={board.waiterCommissions} />
+                </div>
+              </details>
             </div>
           </div>
         </section>
