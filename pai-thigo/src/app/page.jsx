@@ -169,15 +169,17 @@ export default async function Home() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <Link href={voice.primaryHref} className="button-primary w-full justify-center sm:w-auto">
-                  {voice.primaryLabel}
-                  <ArrowRight size={16} />
-                </Link>
-                <Link href={voice.secondaryHref} className="button-secondary w-full justify-center sm:w-auto">
-                  {voice.secondaryLabel}
-                </Link>
-              </div>
+              {isStaffRole(session.role) ? (
+                <div className="flex flex-col gap-4 sm:flex-row">
+                  <Link href={voice.primaryHref} className="button-primary w-full justify-center sm:w-auto">
+                    {voice.primaryLabel}
+                    <ArrowRight size={16} />
+                  </Link>
+                  <Link href={voice.secondaryHref} className="button-secondary w-full justify-center sm:w-auto">
+                    {voice.secondaryLabel}
+                  </Link>
+                </div>
+              ) : null}
 
               <div className="flex flex-wrap gap-3">
                 <span className="info-chip">
