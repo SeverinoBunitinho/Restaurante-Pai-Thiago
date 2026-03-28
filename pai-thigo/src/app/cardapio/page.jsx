@@ -18,10 +18,140 @@ export default async function CardapioPage() {
     getRestaurantProfile(),
   ]);
   const canOrder = session?.role === "customer";
+  const maxItemsPerCategory = 4;
   const totalItems = categories.reduce(
     (sum, category) => sum + category.items.length,
     0,
   );
+
+  function renderMenuItemCard(item) {
+    const hasStockControl =
+      Number.isFinite(Number(item.stockQuantity)) &&
+      Number(item.stockQuantity) >= 0;
+    const stockQuantity = hasStockControl
+      ? Number(item.stockQuantity)
+      : null;
+    const lowStockThreshold =
+      Number.isFinite(Number(item.lowStockThreshold)) &&
+      Number(item.lowStockThreshold) >= 0
+        ? Number(item.lowStockThreshold)
+        : 0;
+    const isOutOfStock = hasStockControl && stockQuantity <= 0;
+    const isLowStock =
+      hasStockControl &&
+      stockQuantity > 0 &&
+      stockQuantity <= Math.max(0, lowStockThreshold);
+
+    return (
+      <article
+        key={item.id}
+        className="group stat-panel overflow-hidden p-0"
+      >
+        <div className="media-frame relative h-44 w-full overflow-hidden">
+          <Image
+            src={item.imageUrl}
+            alt={item.name}
+            fill
+            className="media-image object-cover"
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
+        </div>
+
+        <div className="p-5">
+          <div className="flex items-start justify-between gap-5">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-2xl font-semibold text-[var(--forest)]">
+                  {item.name}
+                </h3>
+                {item.signature ? (
+                  <span className="rounded-full bg-[rgba(182,135,66,0.14)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gold)]">
+                    assinatura da casa
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-3 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
+                {item.description}
+              </p>
+            </div>
+            <span className="text-lg font-semibold text-[var(--forest)]">
+              {formatCurrency(item.price)}
+            </span>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-3 py-2 text-xs font-medium text-[var(--forest)]">
+              <Clock3 size={14} />
+              {item.prepTime}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-3 py-2 text-xs font-medium text-[var(--forest)]">
+              <Flame size={14} />
+              {item.spiceLevel}
+            </span>
+            {item.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full border border-[rgba(20,35,29,0.08)] px-3 py-2 text-xs font-medium text-[var(--sage)]"
+              >
+                {tag}
+              </span>
+            ))}
+            {hasStockControl ? (
+              <span
+                className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] ${
+                  isOutOfStock
+                    ? "border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] text-[var(--clay)]"
+                    : isLowStock
+                      ? "border-[rgba(182,135,66,0.24)] bg-[rgba(182,135,66,0.08)] text-[var(--gold)]"
+                      : "border-[rgba(95,123,109,0.18)] bg-[rgba(95,123,109,0.08)] text-[var(--sage)]"
+                }`}
+              >
+                {isOutOfStock
+                  ? "esgotado"
+                  : `${stockQuantity} unidade(s) disponiveis`}
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-4 rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.5)] px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--gold)]">
+              Informacao de alergia
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {item.allergens?.length ? (
+                item.allergens.map((allergen) => (
+                  <span
+                    key={allergen}
+                    className="rounded-full border border-[rgba(138,93,59,0.16)] bg-[rgba(138,93,59,0.06)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--clay)]"
+                  >
+                    {allergen}
+                  </span>
+                ))
+              ) : (
+                <span className="rounded-full border border-[rgba(95,123,109,0.16)] bg-[rgba(95,123,109,0.06)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                  sem alerta informado
+                </span>
+              )}
+            </div>
+          </div>
+
+          <MenuOrderForm
+            menuItemId={item.id}
+            name={item.name}
+            price={item.price}
+            portionPrices={item.portionPrices}
+            prepTime={item.prepTime}
+            signature={item.signature}
+            canOrder={canOrder}
+            stockQuantity={item.stockQuantity}
+            lowStockThreshold={item.lowStockThreshold}
+          />
+        </div>
+      </article>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -136,137 +266,23 @@ export default async function CardapioPage() {
                   </div>
 
                   <div className="mt-8 grid gap-4 lg:grid-cols-2">
-                    {category.items.map((item) => (
-                      (() => {
-                        const hasStockControl =
-                          Number.isFinite(Number(item.stockQuantity)) &&
-                          Number(item.stockQuantity) >= 0;
-                        const stockQuantity = hasStockControl
-                          ? Number(item.stockQuantity)
-                          : null;
-                        const lowStockThreshold =
-                          Number.isFinite(Number(item.lowStockThreshold)) &&
-                          Number(item.lowStockThreshold) >= 0
-                            ? Number(item.lowStockThreshold)
-                            : 0;
-                        const isOutOfStock = hasStockControl && stockQuantity <= 0;
-                        const isLowStock =
-                          hasStockControl &&
-                          stockQuantity > 0 &&
-                          stockQuantity <= Math.max(0, lowStockThreshold);
-
-                        return (
-                      <article
-                        key={item.id}
-                        className="group stat-panel overflow-hidden p-0"
-                      >
-                        <div className="media-frame relative h-44 w-full overflow-hidden">
-                          <Image
-                            src={item.imageUrl}
-                            alt={item.name}
-                            fill
-                            className="media-image object-cover"
-                            sizes="(max-width: 1024px) 100vw, 50vw"
-                            loading="lazy"
-                            referrerPolicy="no-referrer"
-                          />
-                        </div>
-
-                        <div className="p-5">
-                          <div className="flex items-start justify-between gap-5">
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="text-2xl font-semibold text-[var(--forest)]">
-                                  {item.name}
-                                </h3>
-                                {item.signature ? (
-                                  <span className="rounded-full bg-[rgba(182,135,66,0.14)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--gold)]">
-                                    assinatura da casa
-                                  </span>
-                                ) : null}
-                              </div>
-                              <p className="mt-3 text-sm leading-7 text-[rgba(21,35,29,0.72)]">
-                                {item.description}
-                              </p>
-                            </div>
-                            <span className="text-lg font-semibold text-[var(--forest)]">
-                              {formatCurrency(item.price)}
-                            </span>
-                          </div>
-
-                          <div className="mt-5 flex flex-wrap gap-2">
-                            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-3 py-2 text-xs font-medium text-[var(--forest)]">
-                              <Clock3 size={14} />
-                              {item.prepTime}
-                            </span>
-                            <span className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-3 py-2 text-xs font-medium text-[var(--forest)]">
-                              <Flame size={14} />
-                              {item.spiceLevel}
-                            </span>
-                            {item.tags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="rounded-full border border-[rgba(20,35,29,0.08)] px-3 py-2 text-xs font-medium text-[var(--sage)]"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                            {hasStockControl ? (
-                              <span
-                                className={`rounded-full border px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] ${
-                                  isOutOfStock
-                                    ? "border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] text-[var(--clay)]"
-                                    : isLowStock
-                                      ? "border-[rgba(182,135,66,0.24)] bg-[rgba(182,135,66,0.08)] text-[var(--gold)]"
-                                      : "border-[rgba(95,123,109,0.18)] bg-[rgba(95,123,109,0.08)] text-[var(--sage)]"
-                                }`}
-                              >
-                                {isOutOfStock
-                                  ? "esgotado"
-                                  : `${stockQuantity} unidade(s) disponiveis`}
-                              </span>
-                            ) : null}
-                          </div>
-
-                          <div className="mt-4 rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.5)] px-4 py-3">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--gold)]">
-                              Informacao de alergia
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {item.allergens?.length ? (
-                                item.allergens.map((allergen) => (
-                                  <span
-                                    key={allergen}
-                                    className="rounded-full border border-[rgba(138,93,59,0.16)] bg-[rgba(138,93,59,0.06)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--clay)]"
-                                  >
-                                    {allergen}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="rounded-full border border-[rgba(95,123,109,0.16)] bg-[rgba(95,123,109,0.06)] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
-                                  sem alerta informado
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <MenuOrderForm
-                            menuItemId={item.id}
-                            name={item.name}
-                            price={item.price}
-                            portionPrices={item.portionPrices}
-                            prepTime={item.prepTime}
-                            signature={item.signature}
-                            canOrder={canOrder}
-                            stockQuantity={item.stockQuantity}
-                            lowStockThreshold={item.lowStockThreshold}
-                          />
-                        </div>
-                      </article>
-                        );
-                      })()
-                    ))}
+                    {category.items
+                      .slice(0, maxItemsPerCategory)
+                      .map((item) => renderMenuItemCard(item))}
                   </div>
+
+                  {category.items.length > maxItemsPerCategory ? (
+                    <details className="mt-6 rounded-[1.6rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.56)] p-4">
+                      <summary className="cursor-pointer list-none text-sm font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                        Ver mais {category.items.length - maxItemsPerCategory} prato(s) de {category.name}
+                      </summary>
+                      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                        {category.items
+                          .slice(maxItemsPerCategory)
+                          .map((item) => renderMenuItemCard(item))}
+                      </div>
+                    </details>
+                  ) : null}
                 </section>
               ))
             ) : (
