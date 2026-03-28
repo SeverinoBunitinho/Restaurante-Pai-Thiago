@@ -83,6 +83,54 @@ function getAreaHealth(area) {
   };
 }
 
+function getTableStatusCounters(tables = []) {
+  return tables.reduce(
+    (accumulator, table) => {
+      const stateKey = String(table?.state ?? "").toLowerCase();
+
+      if (!accumulator[stateKey]) {
+        return accumulator;
+      }
+
+      accumulator[stateKey] += 1;
+      return accumulator;
+    },
+    {
+      livre: 0,
+      reservada: 0,
+      ocupada: 0,
+      pausada: 0,
+    },
+  );
+}
+
+function groupTablesByArea(tables = [], preferredAreas = []) {
+  const groupsMap = new Map();
+
+  preferredAreas.forEach((area) => {
+    groupsMap.set(area, []);
+  });
+
+  tables.forEach((table) => {
+    const area = table.area || "Sem area";
+
+    if (!groupsMap.has(area)) {
+      groupsMap.set(area, []);
+    }
+
+    groupsMap.get(area).push(table);
+  });
+
+  return Array.from(groupsMap.entries())
+    .map(([area, groupedTables]) => ({
+      area,
+      tables: groupedTables.sort((left, right) =>
+        String(left.name ?? "").localeCompare(String(right.name ?? ""), "pt-BR"),
+      ),
+    }))
+    .filter((group) => group.tables.length > 0);
+}
+
 export default async function OperacaoMesasPage({ searchParams }) {
   const session = await requireRole(["waiter", "manager", "owner"]);
   const board = await getSeatingBoard();
@@ -103,6 +151,7 @@ export default async function OperacaoMesasPage({ searchParams }) {
   const mesaError = Array.isArray(resolvedSearchParams?.mesaError)
     ? resolvedSearchParams.mesaError[0]
     : resolvedSearchParams?.mesaError;
+  const tablesByArea = groupTablesByArea(board.tables ?? [], areaOptions);
 
   return (
     <>
@@ -528,72 +577,133 @@ export default async function OperacaoMesasPage({ searchParams }) {
             compact
           />
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-            {board.tables.length ? (
-              board.tables.map((table) => (
-                <article
-                  key={table.id}
-                  className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                        {table.area}
-                      </p>
-                      <h3 className="mt-2 text-xl font-semibold text-[var(--forest)]">
-                        {table.name}
-                      </h3>
-                    </div>
-                    <span
-                      className={`pill-wrap-safe rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${tableStateStyles[table.state] ?? tableStateStyles.livre}`}
+          {tablesByArea.length ? (
+            <>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {tablesByArea.map((group) => {
+                  const counters = getTableStatusCounters(group.tables);
+
+                  return (
+                    <article
+                      key={`resume-${group.area}`}
+                      className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.78)] px-4 py-3"
                     >
-                      {table.state}
-                    </span>
-                  </div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+                        {group.area}
+                      </p>
+                      <p className="mt-2 text-lg font-semibold text-[var(--forest)]">
+                        {group.tables.length} mesa(s)
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+                        {counters.livre} livres - {counters.reservada} reservadas -{" "}
+                        {counters.ocupada} ocupadas
+                      </p>
+                    </article>
+                  );
+                })}
+              </div>
 
-                  <p className="content-copy-safe mt-4 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                    Capacidade para {table.capacity} pessoa(s).
-                  </p>
-                  <p className="content-copy-safe mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                    {table.detail}
-                  </p>
+              <div className="mt-6 space-y-4">
+                {tablesByArea.map((group, index) => {
+                  const counters = getTableStatusCounters(group.tables);
 
-                  <div className="mt-5">
-                    {canManageTables ? (
-                      <form action={toggleRestaurantTableActiveAction} className="max-w-full">
-                        <input type="hidden" name="tableId" value={table.id} />
-                        <input
-                          type="hidden"
-                          name="currentActive"
-                          value={String(table.isActive)}
-                        />
-                        <button
-                          type="submit"
-                          className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
-                        >
-                          {table.isActive ? "Pausar mesa" : "Reativar mesa"}
-                        </button>
-                      </form>
-                    ) : (
-                      <span className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[rgba(21,35,29,0.56)]">
-                        Controle do gerente ou dono
-                      </span>
-                    )}
-                  </div>
-                </article>
-              ))
-            ) : (
-              <article className="rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.54)] p-6 sm:col-span-2 2xl:col-span-3">
-                <p className="text-lg font-semibold text-[var(--forest)]">
-                  Nenhuma mesa disponivel para leitura agora
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                  O mapa do salao reaparece aqui assim que a estrutura voltar a
-                  ser sincronizada pelo sistema.
-                </p>
-              </article>
-            )}
-          </div>
+                  return (
+                    <details
+                      key={group.area}
+                      open={index === 0}
+                      className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.62)] p-4"
+                    >
+                      <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+                              Setor
+                            </p>
+                            <h3 className="mt-1 text-xl font-semibold text-[var(--forest)]">
+                              {group.area}
+                            </h3>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--sage)]">
+                              {counters.livre} livres
+                            </span>
+                            <span className="rounded-full border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--gold)]">
+                              {counters.reservada} reservadas
+                            </span>
+                            <span className="rounded-full border border-[rgba(20,35,29,0.14)] bg-[rgba(20,35,29,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--forest)]">
+                              {group.tables.length} no total
+                            </span>
+                          </div>
+                        </div>
+                      </summary>
+
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+                        {group.tables.map((table) => (
+                          <article
+                            key={table.id}
+                            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.78)] p-4"
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <h4 className="text-lg font-semibold text-[var(--forest)]">
+                                  {table.name}
+                                </h4>
+                                <p className="mt-1 text-sm text-[rgba(21,35,29,0.7)]">
+                                  Capacidade para {table.capacity} pessoa(s)
+                                </p>
+                              </div>
+                              <span
+                                className={`pill-wrap-safe rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${tableStateStyles[table.state] ?? tableStateStyles.livre}`}
+                              >
+                                {table.state}
+                              </span>
+                            </div>
+
+                            <p className="content-copy-safe mt-3 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                              {table.detail}
+                            </p>
+
+                            <div className="mt-4">
+                              {canManageTables ? (
+                                <form action={toggleRestaurantTableActiveAction} className="max-w-full">
+                                  <input type="hidden" name="tableId" value={table.id} />
+                                  <input
+                                    type="hidden"
+                                    name="currentActive"
+                                    value={String(table.isActive)}
+                                  />
+                                  <button
+                                    type="submit"
+                                    className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
+                                  >
+                                    {table.isActive ? "Pausar mesa" : "Reativar mesa"}
+                                  </button>
+                                </form>
+                              ) : (
+                                <span className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[rgba(21,35,29,0.56)]">
+                                  Controle do gerente ou dono
+                                </span>
+                              )}
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </details>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <article className="mt-8 rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.54)] p-6">
+              <p className="text-lg font-semibold text-[var(--forest)]">
+                Nenhuma mesa disponivel para leitura agora
+              </p>
+              <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                O mapa do salao reaparece aqui assim que a estrutura voltar a ser
+                sincronizada pelo sistema.
+              </p>
+            </article>
+          )}
         </div>
       </section>
     </>
