@@ -998,6 +998,9 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
   const calculationDelta = selectedWaiter
     ? calculatedCommission - Number(selectedWaiter.commissionAmount ?? 0)
     : 0;
+  const selectedWaiterAverageTicket = selectedWaiter?.closedChecks
+    ? Number(selectedWaiter.grossSales ?? 0) / Number(selectedWaiter.closedChecks ?? 1)
+    : 0;
   const calculationDeltaLabel =
     calculationDelta === 0
       ? "Sem diferenca para o valor atual."
@@ -1046,6 +1049,10 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
     (accumulator, waiter) => accumulator + Number(waiter.commissionAmount ?? 0),
     0,
   );
+  const selectedWaiterCommissionShare =
+    totalCommission > 0 && selectedWaiter
+      ? (Number(selectedWaiter.commissionAmount ?? 0) / totalCommission) * 100
+      : 0;
   const estimatedNetResult = totalRevenue - totalCommission;
   const averageTicket = totalClosedChecks ? totalRevenue / totalClosedChecks : 0;
   const activeTablesCount = board.tableOccupancy.length;
@@ -1178,332 +1185,366 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
   return (
     <>
       <section className="pt-10">
-        <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="luxury-card rounded-[2.2rem] p-6">
-            <SectionHeading
-              eyebrow="Relatorios internos"
-              title="Comissao por garcom com calculo por dia, semana, mes e ano"
-              description="Gerente e dono acompanham desempenho do salao com ferramenta de comissao sem sair da operacao."
-              compact
-            />
+        <div className="luxury-card rounded-[2.2rem] p-6">
+          <SectionHeading
+            eyebrow="Relatorios internos"
+            title="Controles de relatorios e comissoes"
+            description="Tudo centralizado em um unico bloco para navegar por periodo, exportar dados e acessar cada aba sem excesso de rolagem."
+            compact
+          />
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              {reportTabOptions.map((item) => (
-                <Link
-                  key={item.value}
-                  href={buildReportsHref({
-                    tab: item.value,
-                    period: board.period,
-                    startDate: board.startDate,
-                    endDate: board.endDate,
-                    waiterId: selectedWaiter?.userId ?? "",
-                    calculatorRate,
-                  })}
-                  className={`filter-chip ${activeTab === item.value ? "filter-chip-active" : ""}`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+          <div className="mt-6 grid gap-5 xl:grid-cols-[1fr_auto] xl:items-start">
+            <div className="space-y-5">
+              <div className="flex flex-wrap gap-3">
+                {reportTabOptions.map((item) => (
+                  <Link
+                    key={item.value}
+                    href={buildReportsHref({
+                      tab: item.value,
+                      period: board.period,
+                      startDate: board.startDate,
+                      endDate: board.endDate,
+                      waiterId: selectedWaiter?.userId ?? "",
+                      calculatorRate,
+                    })}
+                    className={`filter-chip ${activeTab === item.value ? "filter-chip-active" : ""}`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                {reportPeriodOptions.map((option) => (
+                  <Link
+                    key={option.value}
+                    href={
+                      option.value === "custom"
+                        ? buildReportsHref({
+                            tab: activeTab,
+                            period: "custom",
+                            startDate: board.startDate,
+                            endDate: board.endDate,
+                            waiterId: selectedWaiter?.userId ?? "",
+                            calculatorRate,
+                          })
+                        : buildReportsHref({
+                            tab: activeTab,
+                            period: option.value,
+                            waiterId: selectedWaiter?.userId ?? "",
+                            calculatorRate,
+                          })
+                    }
+                    className={`filter-chip ${
+                      board.period === option.value ? "filter-chip-active" : ""
+                    }`}
+                  >
+                    {option.label}
+                  </Link>
+                ))}
+              </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
-              {reportPeriodOptions.map((option) => (
-                <Link
-                  key={option.value}
-                  href={
-                    option.value === "custom"
-                      ? buildReportsHref({
-                          tab: activeTab,
-                          period: "custom",
-                          startDate: board.startDate,
-                          endDate: board.endDate,
-                          waiterId: selectedWaiter?.userId ?? "",
-                          calculatorRate,
-                        })
-                      : buildReportsHref({
-                          tab: activeTab,
-                          period: option.value,
-                          waiterId: selectedWaiter?.userId ?? "",
-                          calculatorRate,
-                        })
-                  }
-                  className={`filter-chip ${
-                    board.period === option.value ? "filter-chip-active" : ""
-                  }`}
-                >
-                  {option.label}
-                </Link>
-              ))}
-            </div>
-
-            <form method="get" className="mt-5 grid gap-3 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.56)] p-4 sm:grid-cols-[1fr_1fr_auto]">
-              <input type="hidden" name="tab" value={activeTab} />
-              <input type="hidden" name="period" value="custom" />
-              {selectedWaiter ? (
-                <input type="hidden" name="waiter" value={selectedWaiter.userId} />
-              ) : null}
-              <input type="hidden" name="rate" value={calculatorRate} />
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
-                Inicio
-                <input
-                  type="date"
-                  name="start"
-                  defaultValue={board.startDate || ""}
-                  className="rounded-xl border border-[rgba(20,35,29,0.12)] bg-white px-3 py-2 text-sm normal-case tracking-normal text-[var(--forest)] outline-none"
-                />
-              </label>
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
-                Fim
-                <input
-                  type="date"
-                  name="end"
-                  defaultValue={board.endDate || ""}
-                  className="rounded-xl border border-[rgba(20,35,29,0.12)] bg-white px-3 py-2 text-sm normal-case tracking-normal text-[var(--forest)] outline-none"
-                />
-              </label>
-              <button type="submit" className="button-secondary self-end">
-                Aplicar
-              </button>
-            </form>
-
-            <div className="mt-5 flex flex-wrap gap-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
               <a
                 href={exportHref}
-                className="button-primary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                className="button-primary inline-flex w-full items-center justify-center gap-2"
               >
                 <Download size={16} />
                 Exportar CSV
               </a>
               <a
                 href={exportJsonHref}
-                className="button-secondary inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                className="button-secondary inline-flex w-full items-center justify-center gap-2"
               >
                 <Download size={16} />
                 Exportar JSON
               </a>
             </div>
-
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              {board.summary.map((item) => {
-                const numericValue = Number(item.value);
-                const formattedValue = item.label.includes("Faturamento") ||
-                  item.label.includes("Comissao") ||
-                  item.label.includes("Ticket") ||
-                  item.label.includes("Resultado") ||
-                  item.label.includes("Lucro")
-                  ? formatCurrency(numericValue)
-                  : item.value;
-
-                return (
-                  <article
-                    key={item.label}
-                    className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.58)] p-5"
-                  >
-                    <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                      {item.label}
-                    </p>
-                    <p className="mt-3 text-3xl font-semibold text-[var(--forest)]">
-                      {formattedValue}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
-                      {item.description}
-                    </p>
-                  </article>
-                );
-              })}
-            </div>
           </div>
 
-          <div className="luxury-card-dark rounded-[2.2rem] p-6 text-[var(--cream)]">
-            <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-              Leitura do periodo
-            </p>
-            <h2 className="display-title page-section-title mt-4 text-white">
-              {board.periodLabel} com regra atual de {board.commissionRate}% para comissao
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-[rgba(255,247,232,0.74)]">
-              A aba de comissao usa contas fechadas por garcom no periodo filtrado.
-              O calculo pode ser ajustado com taxa manual para simular cenarios de pagamento.
-            </p>
+          <form
+            method="get"
+            className="mt-5 grid gap-3 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.56)] p-4 sm:grid-cols-[1fr_1fr_auto]"
+          >
+            <input type="hidden" name="tab" value={activeTab} />
+            <input type="hidden" name="period" value="custom" />
+            {selectedWaiter ? (
+              <input type="hidden" name="waiter" value={selectedWaiter.userId} />
+            ) : null}
+            <input type="hidden" name="rate" value={calculatorRate} />
+            <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+              Inicio
+              <input
+                type="date"
+                name="start"
+                defaultValue={board.startDate || ""}
+                className="rounded-xl border border-[rgba(20,35,29,0.12)] bg-white px-3 py-2 text-sm normal-case tracking-normal text-[var(--forest)] outline-none"
+              />
+            </label>
+            <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+              Fim
+              <input
+                type="date"
+                name="end"
+                defaultValue={board.endDate || ""}
+                className="rounded-xl border border-[rgba(20,35,29,0.12)] bg-white px-3 py-2 text-sm normal-case tracking-normal text-[var(--forest)] outline-none"
+              />
+            </label>
+            <button type="submit" className="button-secondary self-end">
+              Aplicar periodo
+            </button>
+          </form>
 
-            <div className="mt-8 grid gap-4">
-              {[
-                {
-                  icon: WalletCards,
-                  title: "Comissao por periodo",
-                  text: "Filtre por dia, semana, mes ou ano para pagar a equipe com mais precisao.",
-                },
-                {
-                  icon: Calculator,
-                  title: "Calculadora integrada",
-                  text: "Escolha o garcom, ajuste a taxa e compare comissao atual x simulada na hora.",
-                },
-                {
-                  icon: TrendingUp,
-                  title: "Leitura executiva rapida",
-                  text: "Gerente e dono acompanham venda, comissao e ocupacao no mesmo painel.",
-                },
-              ].map((item) => (
-                <article
-                  key={item.title}
-                  className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5"
-                >
-                  <item.icon className="text-[var(--gold-soft)]" size={18} />
-                  <h3 className="mt-4 text-lg font-semibold text-white">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                    {item.text}
-                  </p>
-                </article>
-              ))}
-            </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <article className="rounded-[1.2rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] px-3.5 py-3">
+              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                Periodo ativo
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
+                {board.periodLabel}
+              </p>
+            </article>
+            <article className="rounded-[1.2rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] px-3.5 py-3">
+              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                Regra de comissao
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
+                {board.commissionRate}% da casa
+              </p>
+            </article>
+            <article className="rounded-[1.2rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] px-3.5 py-3">
+              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                Garcons com fechamento
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
+                {board.waiterCommissions.length} profissional(is)
+              </p>
+            </article>
+            <article className="rounded-[1.2rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] px-3.5 py-3">
+              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                Faturamento no periodo
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
+                {formatCurrency(totalRevenue)}
+              </p>
+            </article>
           </div>
         </div>
       </section>
 
       {activeTab === "commissions" ? (
         <section className="pt-14">
-          <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
+          <div className="grid gap-5">
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
-                eyebrow="Calculadora"
-                title="Comissao por garcom com calculo por dia, semana, mes e ano"
-                description="Selecione o periodo e o profissional para calcular, comparar e fechar a comissao com leitura clara."
+                eyebrow="Comissoes"
+                title="Resumo rapido da equipe no periodo"
+                description="Visao direta para o gerente e o dono saberem quanto cada fechamento impacta na comissao."
                 compact
               />
 
-              <div className="mt-6 rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
-                  Periodo ativo
-                </p>
-                <p className="mt-2 text-base font-semibold text-[var(--forest)]">
-                  {board.periodLabel}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
-                  {selectedWaiter
-                    ? `Garcom selecionado: ${selectedWaiter.fullName}`
-                    : "Selecione um garcom para abrir o calculo individual."}
-                </p>
-              </div>
-
-              <form
-                method="get"
-                className="mt-5 grid gap-4 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.56)] p-4 md:grid-cols-2"
-              >
-                <input type="hidden" name="tab" value="commissions" />
-                <input type="hidden" name="period" value={board.period} />
-                {board.period === "custom" && board.startDate && board.endDate ? (
-                  <>
-                    <input type="hidden" name="start" value={board.startDate} />
-                    <input type="hidden" name="end" value={board.endDate} />
-                  </>
-                ) : null}
-                <label className="grid gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
-                    Garcom
-                  </span>
-                  <select
-                    name="waiter"
-                    defaultValue={selectedWaiter?.userId ?? ""}
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
-                  >
-                    {board.waiterCommissions.length ? (
-                      board.waiterCommissions.map((waiter) => (
-                        <option key={waiter.userId} value={waiter.userId}>
-                          {waiter.fullName}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="">Sem garcom no periodo</option>
-                    )}
-                  </select>
-                </label>
-                <label className="grid gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
-                    Taxa de comissao (%)
-                  </span>
-                  <input
-                    name="rate"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    defaultValue={calculatorRate}
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className="button-primary w-full justify-center md:col-span-2"
-                >
-                  <Calculator size={16} />
-                  Calcular comissao
-                </button>
-              </form>
-
-              {selectedWaiter ? (
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
-                    <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                      Base de vendas do garcom
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
-                      {formatCurrency(selectedWaiter.grossSales)}
-                    </p>
-                  </article>
-                  <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
-                    <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                      Comissao atual no sistema
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
-                      {formatCurrency(selectedWaiter.commissionAmount)}
-                    </p>
-                  </article>
-                  <article className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
-                    <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                      Comissao calculada ({calculatorRate}%)
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
-                      {formatCurrency(calculatedCommission)}
-                    </p>
-                    <p
-                      className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.16em] ${calculationDeltaBadgeClass}`}
-                    >
-                      Delta: {formatCurrency(calculationDelta)}
-                    </p>
-                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
-                      {calculationDeltaLabel}
-                    </p>
-                  </article>
-                </div>
-              ) : (
-                <article className="mt-6 rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
-                  <p className="text-lg font-semibold text-[var(--forest)]">
-                    Ainda sem base para calcular comissao
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] p-4">
+                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                    Comissao total
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                    Feche comandas com garcom responsavel para habilitar os calculos.
+                  <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                    {formatCurrency(totalCommission)}
                   </p>
                 </article>
-              )}
+                <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] p-4">
+                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                    Garcons com fechamento
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                    {board.waiterCommissions.length}
+                  </p>
+                </article>
+                <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] p-4">
+                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                    Taxa em simulacao
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                    {calculatorRate}%
+                  </p>
+                </article>
+                <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] p-4">
+                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                    Fechamentos no periodo
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                    {totalClosedChecks}
+                  </p>
+                </article>
+              </div>
+            </div>
 
-              {selectedWaiter ? (
+            <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+              <div className="luxury-card rounded-[2.2rem] p-6">
+                <SectionHeading
+                  eyebrow="Calculadora"
+                  title="Calcular comissao individual"
+                  description="Escolha um garcom, ajuste a taxa e veja o impacto antes de fechar pagamento."
+                  compact
+                />
+
+                <form
+                  method="get"
+                  className="mt-6 grid gap-4 rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.56)] p-4"
+                >
+                  <input type="hidden" name="tab" value="commissions" />
+                  <input type="hidden" name="period" value={board.period} />
+                  {board.period === "custom" && board.startDate && board.endDate ? (
+                    <>
+                      <input type="hidden" name="start" value={board.startDate} />
+                      <input type="hidden" name="end" value={board.endDate} />
+                    </>
+                  ) : null}
+                  <label className="grid gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
+                      Garcom
+                    </span>
+                    <select
+                      name="waiter"
+                      defaultValue={selectedWaiter?.userId ?? ""}
+                      className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
+                    >
+                      {board.waiterCommissions.length ? (
+                        board.waiterCommissions.map((waiter) => (
+                          <option key={waiter.userId} value={waiter.userId}>
+                            {waiter.fullName}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="">Sem garcom no periodo</option>
+                      )}
+                    </select>
+                  </label>
+                  <label className="grid gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--sage)]">
+                      Taxa de comissao (%)
+                    </span>
+                    <input
+                      name="rate"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      defaultValue={calculatorRate}
+                      className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
+                    />
+                  </label>
+                  <button type="submit" className="button-primary w-full justify-center">
+                    <Calculator size={16} />
+                    Recalcular comissao
+                  </button>
+                </form>
+
+                {selectedWaiter ? (
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
+                      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                        Garcom selecionado
+                      </p>
+                      <p className="mt-1 text-base font-semibold text-[var(--forest)]">
+                        {selectedWaiter.fullName}
+                      </p>
+                      <p className="mt-2 text-sm text-[rgba(21,35,29,0.68)]">
+                        {selectedWaiter.email}
+                      </p>
+                    </article>
+                    <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
+                      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                        Participacao no total
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                        {selectedWaiterCommissionShare.toFixed(1).replace(".", ",")}%
+                      </p>
+                      <p className="mt-2 text-sm text-[rgba(21,35,29,0.68)]">
+                        da comissao total do periodo
+                      </p>
+                    </article>
+                    <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
+                      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                        Comissao atual
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                        {formatCurrency(selectedWaiter.commissionAmount)}
+                      </p>
+                    </article>
+                    <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
+                      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                        Comissao simulada
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                        {formatCurrency(calculatedCommission)}
+                      </p>
+                    </article>
+                    <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
+                      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                        Ticket medio do garcom
+                      </p>
+                      <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
+                        {formatCurrency(selectedWaiterAverageTicket)}
+                      </p>
+                    </article>
+                    <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-4">
+                      <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[var(--sage)]">
+                        Delta da simulacao
+                      </p>
+                      <p
+                        className={`mt-2 inline-flex rounded-full border px-2.5 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.16em] ${calculationDeltaBadgeClass}`}
+                      >
+                        {formatCurrency(calculationDelta)}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                        {calculationDeltaLabel}
+                      </p>
+                    </article>
+                  </div>
+                ) : (
+                  <article className="mt-5 rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
+                    <p className="text-lg font-semibold text-[var(--forest)]">
+                      Ainda sem base para calcular comissao
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                      Feche comandas com garcom responsavel para habilitar os calculos.
+                    </p>
+                  </article>
+                )}
+              </div>
+
+              <div className="luxury-card rounded-[2.2rem] p-6">
+                <SectionHeading
+                  eyebrow="Historico individual"
+                  title="Linha diaria do garcom selecionado"
+                  description="Visual de receita e comissao para avaliar tendencia antes de aprovar pagamento."
+                  compact
+                />
                 <div className="mt-6">
-                  <WaiterDailyPerformanceChart
-                    waiterName={selectedWaiter.fullName}
-                    dailySeries={selectedWaiterSeries}
-                    selectedRate={calculatorRate}
-                  />
+                  {selectedWaiter ? (
+                    <WaiterDailyPerformanceChart
+                      waiterName={selectedWaiter.fullName}
+                      dailySeries={selectedWaiterSeries}
+                      selectedRate={calculatorRate}
+                    />
+                  ) : (
+                    <article className="rounded-[1.6rem] border border-dashed border-[rgba(20,35,29,0.16)] bg-[rgba(255,255,255,0.5)] p-6">
+                      <p className="text-lg font-semibold text-[var(--forest)]">
+                        Selecione um garcom para abrir o grafico individual
+                      </p>
+                    </article>
+                  )}
                 </div>
-              ) : null}
+              </div>
             </div>
 
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
-                eyebrow="Grafico de comissoes"
-                title="Comparativo por garcom no periodo"
-                description="Visual rapido para dono e gerente acompanharem quem lidera em comissao."
+                eyebrow="Comparativo da equipe"
+                title="Grafico de comissao por garcom no periodo"
+                description="Ranking em barras para enxergar quem lidera e qual o peso de cada profissional."
                 compact
               />
 
@@ -1516,16 +1557,12 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
 
               <details className="mt-6 rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
                 <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
-                  Ver lista detalhada
+                  Ver lista detalhada de comissoes
                 </summary>
                 <div className="mt-4">
                   <WaiterCommissionsList waiterCommissions={board.waiterCommissions} />
                 </div>
               </details>
-
-              <div className="mt-4 rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-xs leading-6 text-[rgba(21,35,29,0.66)]">
-                Dica: selecione um garcom na calculadora para destacar a barra dele no grafico.
-              </div>
             </div>
           </div>
         </section>
