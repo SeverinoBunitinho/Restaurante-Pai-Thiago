@@ -1237,6 +1237,7 @@ export async function getOperationalChecklistBoard() {
 
   const latestStateMap = new Map();
   const latestEvents = [];
+  const latestEventKeys = new Set();
 
   for (const row of logsResult.data ?? []) {
     const metadata = row.metadata ?? {};
@@ -1258,7 +1259,8 @@ export async function getOperationalChecklistBoard() {
       });
     }
 
-    if (latestEvents.length < 8) {
+    if (latestEvents.length < 8 && !latestEventKeys.has(mapKey)) {
+      latestEventKeys.add(mapKey);
       latestEvents.push({
         id: row.id,
         shift,

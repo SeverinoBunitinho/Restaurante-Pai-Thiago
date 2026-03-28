@@ -106,6 +106,17 @@ export default async function OperacaoChecklistsPage({ searchParams }) {
             compact
           />
 
+          <article className="mt-6 rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
+              Como funciona
+            </p>
+            <div className="mt-3 grid gap-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+              <p>1. Marque cada item da abertura quando a tarefa for concluida.</p>
+              <p>2. No fim do turno, marque os itens de fechamento.</p>
+              <p>3. Se clicar por engano, use Reabrir item para voltar.</p>
+            </div>
+          </article>
+
           {checklistError ? (
             <div className="mt-6 rounded-[1.3rem] border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-4 py-3 text-sm leading-6 text-[var(--clay)]">
               {checklistError}
@@ -136,8 +147,8 @@ export default async function OperacaoChecklistsPage({ searchParams }) {
         <div className="luxury-card rounded-[2.2rem] p-6">
           <SectionHeading
             eyebrow="Ultimos registros"
-            title="Rastro mais recente do checklist"
-            description="Ajuda gerente e dono a validar disciplina operacional do dia."
+            title="Ultima atualizacao por item do checklist"
+            description="Mostra somente a ultima mudanca de cada item para evitar repeticao."
             compact
           />
 
@@ -157,7 +168,7 @@ export default async function OperacaoChecklistsPage({ searchParams }) {
                         {event.itemLabel}
                       </p>
                       <p className="mt-1 text-sm text-[rgba(21,35,29,0.68)]">
-                        {event.actorName} ({event.actorRole})
+                        {event.actorName} ({event.actorRole}) - {formatMoment(event.createdAt)}
                       </p>
                     </div>
                     <span className="rounded-full border border-[rgba(20,35,29,0.12)] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
