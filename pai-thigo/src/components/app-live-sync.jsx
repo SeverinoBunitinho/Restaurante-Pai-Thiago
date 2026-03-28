@@ -17,26 +17,42 @@ const STATIC_NON_REALTIME_ROUTES = new Set([
   "/cancelamentos",
 ]);
 
-const CUSTOMER_BASE_TABLES = [
-  "orders",
-  "reservations",
-  "restaurant_tables",
-  "menu_items",
-  "menu_categories",
+const HOME_TABLES = [
   "restaurant_settings",
-  "delivery_zones",
-  "profiles",
+  "menu_categories",
+  "menu_items",
   "customer_testimonials",
 ];
 
-const STAFF_BASE_TABLES = [
-  "orders",
+const CUSTOMER_CARDAPIO_TABLES = [
+  "menu_categories",
+  "menu_items",
+  "restaurant_settings",
+];
+
+const CUSTOMER_RESERVAS_TABLES = [
   "reservations",
   "restaurant_tables",
+];
+
+const CUSTOMER_PEDIDOS_TABLES = [
+  "orders",
+];
+
+const CUSTOMER_CARRINHO_TABLES = [
+  "menu_items",
+  "menu_categories",
+  "delivery_zones",
+  "restaurant_settings",
+];
+
+const STAFF_DASHBOARD_TABLES = [
+  "orders",
+  "reservations",
   "service_checks",
   "service_check_items",
-  "profiles",
-  "operation_audit_logs",
+  "restaurant_tables",
+  "staff_directory",
 ];
 
 function getRealtimeTables(pathname) {
@@ -54,43 +70,43 @@ function getRealtimeTables(pathname) {
   }
 
   if (pathname === "/") {
-    addTables(...CUSTOMER_BASE_TABLES);
+    addTables(...HOME_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/area-cliente") {
-    addTables(...CUSTOMER_BASE_TABLES);
+    addTables(...CUSTOMER_PEDIDOS_TABLES, ...CUSTOMER_RESERVAS_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/pedidos") {
-    addTables(...CUSTOMER_BASE_TABLES);
+    addTables(...CUSTOMER_PEDIDOS_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/reservas") {
-    addTables(...CUSTOMER_BASE_TABLES);
+    addTables(...CUSTOMER_RESERVAS_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/cardapio") {
-    addTables(...CUSTOMER_BASE_TABLES);
+    addTables(...CUSTOMER_CARDAPIO_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/carrinho") {
-    addTables(...CUSTOMER_BASE_TABLES);
+    addTables(...CUSTOMER_CARRINHO_TABLES);
     return Array.from(tables);
   }
 
   if (pathname === "/eventos" || pathname === "/contato") {
-    addTables(...CUSTOMER_BASE_TABLES);
+    addTables("restaurant_settings");
     return Array.from(tables);
   }
 
   if (pathname === "/area-funcionario") {
     addTables(
-      ...STAFF_BASE_TABLES,
+      ...STAFF_DASHBOARD_TABLES,
       "staff_directory",
       "staff_shifts",
       "menu_items",
@@ -105,7 +121,7 @@ function getRealtimeTables(pathname) {
 
   if (pathname === "/painel") {
     addTables(
-      ...STAFF_BASE_TABLES,
+      ...STAFF_DASHBOARD_TABLES,
       "staff_directory",
       "staff_shifts",
       "menu_items",
@@ -129,7 +145,7 @@ function getRealtimeTables(pathname) {
   }
 
   if (pathname.startsWith("/operacao/reservas")) {
-    addTables("reservations", "orders", "restaurant_tables");
+    addTables("reservations", "restaurant_tables");
     return Array.from(tables);
   }
 
@@ -139,28 +155,26 @@ function getRealtimeTables(pathname) {
   }
 
   if (pathname.startsWith("/operacao/menu")) {
-    addTables("menu_items", "menu_categories", "reservations", "orders");
+    addTables("menu_items", "menu_categories");
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/equipe")) {
     addTables(
-      ...STAFF_BASE_TABLES,
       "staff_directory",
       "staff_shifts",
-      "menu_items",
-      "menu_categories",
+      "profiles",
     );
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/escala")) {
-    addTables(...STAFF_BASE_TABLES, "staff_shifts", "staff_directory");
+    addTables("staff_shifts", "staff_directory");
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/campanhas")) {
-    addTables(...STAFF_BASE_TABLES, "marketing_campaigns", "marketing_coupons");
+    addTables("marketing_campaigns", "marketing_coupons");
     return Array.from(tables);
   }
 
@@ -180,7 +194,7 @@ function getRealtimeTables(pathname) {
   }
 
   if (pathname.startsWith("/operacao/previsao")) {
-    addTables(...STAFF_BASE_TABLES, "menu_items");
+    addTables("orders", "reservations", "service_checks", "menu_items");
     return Array.from(tables);
   }
 
@@ -199,7 +213,6 @@ function getRealtimeTables(pathname) {
 
   if (pathname.startsWith("/operacao/configuracoes")) {
     addTables(
-      ...STAFF_BASE_TABLES,
       "restaurant_settings",
       "delivery_zones",
       "menu_categories",
@@ -208,13 +221,17 @@ function getRealtimeTables(pathname) {
       "marketing_campaigns",
       "marketing_coupons",
       "staff_directory",
+      "profiles",
     );
     return Array.from(tables);
   }
 
   if (pathname.startsWith("/operacao/executivo")) {
     addTables(
-      ...STAFF_BASE_TABLES,
+      "orders",
+      "reservations",
+      "service_checks",
+      "restaurant_tables",
       "staff_directory",
       "staff_shifts",
       "menu_items",
@@ -227,7 +244,7 @@ function getRealtimeTables(pathname) {
 
   if (pathname.startsWith("/operacao")) {
     addTables(
-      ...STAFF_BASE_TABLES,
+      ...STAFF_DASHBOARD_TABLES,
       "staff_directory",
       "staff_shifts",
       "menu_items",
