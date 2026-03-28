@@ -359,30 +359,30 @@ export default async function OperacaoMenuPage({ searchParams }) {
               />
             </label>
 
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
                 Estoque
                 <input
                   name="stockQuantity"
                   type="number"
                   min="0"
                   defaultValue={item.stockQuantity ?? ""}
-                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
                 />
               </label>
 
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+              <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
                 Alerta
                 <input
                   name="lowStockThreshold"
                   type="number"
                   min="0"
                   defaultValue={item.lowStockThreshold ?? 0}
-                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
                 />
               </label>
 
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+              <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
                 P
                 <input
                   name="portionSmallPrice"
@@ -390,11 +390,11 @@ export default async function OperacaoMenuPage({ searchParams }) {
                   min="0"
                   step="0.01"
                   defaultValue={item.portionPrices?.small ?? ""}
-                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
                 />
               </label>
 
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+              <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
                 M
                 <input
                   name="portionMediumPrice"
@@ -402,11 +402,11 @@ export default async function OperacaoMenuPage({ searchParams }) {
                   min="0"
                   step="0.01"
                   defaultValue={item.portionPrices?.medium ?? item.price}
-                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
                 />
               </label>
 
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+              <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
                 G
                 <input
                   name="portionLargePrice"
@@ -414,7 +414,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
                   min="0"
                   step="0.01"
                   defaultValue={item.portionPrices?.large ?? ""}
-                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
                 />
               </label>
             </div>
