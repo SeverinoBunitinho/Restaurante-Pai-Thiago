@@ -1071,6 +1071,9 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
     (accumulator, waiter) => accumulator + Number(waiter.commissionAmount ?? 0),
     0,
   );
+  const waitersWithClosedChecksCount = board.waiterCommissions.filter(
+    (waiter) => Number(waiter.closedChecks ?? 0) > 0,
+  ).length;
   const selectedWaiterCommissionShare =
     totalCommission > 0 && selectedWaiter
       ? (Number(selectedWaiter.commissionAmount ?? 0) / totalCommission) * 100
@@ -1346,7 +1349,7 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                 Garcons com fechamento
               </p>
               <p className="mt-1 text-sm font-semibold text-[var(--forest)]">
-                {board.waiterCommissions.length} profissional(is)
+                {waitersWithClosedChecksCount} profissional(is)
               </p>
             </article>
             <article className="rounded-[1.2rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] px-3.5 py-3">
@@ -1386,7 +1389,7 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                     Garcons com fechamento
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-[var(--forest)]">
-                    {board.waiterCommissions.length}
+                    {waitersWithClosedChecksCount}
                   </p>
                 </article>
                 <article className="rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.72)] p-4">
