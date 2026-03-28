@@ -639,6 +639,7 @@ export async function SiteHeader() {
         { href: "/reservas", label: "Reservas", exact: true, icon: CalendarRange },
         { href: "/login", label: "Entrar", exact: true, icon: LogIn },
       ];
+  const showMobileBottomNav = !customerSession;
 
   const dashboardHref = session ? getRouteForRole(session.role) : "/login";
 
@@ -940,35 +941,39 @@ export async function SiteHeader() {
         </div>
       </header>
 
-      <nav className="mobile-bottom-nav lg:hidden" aria-label="Navegacao rapida no celular">
-        {mobileDockItems.map((item) => (
-          <ActiveLink
-            key={item.href}
-            href={item.href}
-            exact={item.exact}
-            className="mobile-bottom-nav-link"
-            activeClassName="mobile-bottom-nav-link-active"
-          >
-            <span className="mobile-bottom-nav-icon">
-              <item.icon size={15} />
-            </span>
-            <span className="mobile-bottom-nav-label">{item.label}</span>
-            {item.badgeCount && item.badgeKind ? (
-              <NotificationCountBadge
-                count={item.badgeCount}
-                latestAt={item.badgeLatestAt}
-                kind={item.badgeKind}
-                staffSession={staffSession}
-                className="mobile-bottom-nav-badge"
-                ariaLabel={`${item.badgeCount} notificacoes`}
-              />
-            ) : null}
-          </ActiveLink>
-        ))}
-      </nav>
+      {showMobileBottomNav ? (
+        <nav className="mobile-bottom-nav lg:hidden" aria-label="Navegacao rapida no celular">
+          {mobileDockItems.map((item) => (
+            <ActiveLink
+              key={item.href}
+              href={item.href}
+              exact={item.exact}
+              className="mobile-bottom-nav-link"
+              activeClassName="mobile-bottom-nav-link-active"
+            >
+              <span className="mobile-bottom-nav-icon">
+                <item.icon size={15} />
+              </span>
+              <span className="mobile-bottom-nav-label">{item.label}</span>
+              {item.badgeCount && item.badgeKind ? (
+                <NotificationCountBadge
+                  count={item.badgeCount}
+                  latestAt={item.badgeLatestAt}
+                  kind={item.badgeKind}
+                  staffSession={staffSession}
+                  className="mobile-bottom-nav-badge"
+                  ariaLabel={`${item.badgeCount} notificacoes`}
+                />
+              ) : null}
+            </ActiveLink>
+          ))}
+        </nav>
+      ) : null}
 
       <div aria-hidden className="site-header-offset" />
-      <div aria-hidden className="mobile-bottom-nav-spacer lg:hidden" />
+      {showMobileBottomNav ? (
+        <div aria-hidden className="mobile-bottom-nav-spacer lg:hidden" />
+      ) : null}
     </>
   );
 }
