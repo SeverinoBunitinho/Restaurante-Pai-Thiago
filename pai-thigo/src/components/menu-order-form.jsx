@@ -142,14 +142,14 @@ export function MenuOrderForm({
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-[132px_1fr_150px]">
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+      <div className="grid gap-4 md:grid-cols-[120px_minmax(0,1fr)_minmax(0,210px)]">
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Quantidade
           <select
             value={quantity}
             onChange={(event) => setQuantity(event.target.value)}
             disabled={maxSelectableQuantity <= 0}
-            className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="w-full min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           >
             {quantityOptions.length ? (
               quantityOptions.map((value) => (
@@ -163,12 +163,12 @@ export function MenuOrderForm({
           </select>
         </label>
 
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Porcao
           <select
             value={portionSize}
             onChange={(event) => setPortionSize(event.target.value)}
-            className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="w-full min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           >
             <option value="small">
               Pequena - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.small)}
@@ -182,13 +182,13 @@ export function MenuOrderForm({
           </select>
         </label>
 
-        <label className="grid gap-2 text-sm font-medium text-[var(--forest)]">
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Observacao para a equipe
           <input
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             placeholder="Ex.: sem pimenta, ponto da carne para menos..."
-            className="rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            className="w-full min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
       </div>
