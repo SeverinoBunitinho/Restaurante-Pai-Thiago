@@ -13,6 +13,7 @@ export function MenuOrderForm({
   price,
   portionPrices,
   flavorOptions = [],
+  isDrinkItem = false,
   prepTime,
   signature = false,
   canOrder = true,
@@ -47,11 +48,11 @@ export function MenuOrderForm({
   const selectedUnitPrice = hasPortionOptions
     ? pricing[portionSize] ?? pricing.medium
     : pricing.medium;
-  const hasFlavorOptions = flavorOptions.length > 0;
+  const hasFlavorOptions = flavorOptions.length > 1;
   const portionLabels = {
-    small: "Pequena",
-    medium: "Media",
-    large: "Grande",
+    small: isDrinkItem ? "350ml" : "Pequena",
+    medium: isDrinkItem ? "1L" : "Media",
+    large: isDrinkItem ? "2L" : "Grande",
   };
   const hasStockControl =
     Number.isFinite(Number(stockQuantity)) && Number(stockQuantity) >= 0;
@@ -214,13 +215,13 @@ export function MenuOrderForm({
               className="w-full min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
             >
               <option value="small">
-                Pequeno - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.small)}
+                {portionLabels.small} - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.small)}
               </option>
               <option value="medium">
-                Medio - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.medium)}
+                {portionLabels.medium} - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.medium)}
               </option>
               <option value="large">
-                Grande - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.large)}
+                {portionLabels.large} - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.large)}
               </option>
             </select>
           </label>
