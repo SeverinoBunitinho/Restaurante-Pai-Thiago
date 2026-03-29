@@ -875,7 +875,9 @@ export async function SiteHeader() {
                         {getStaffRoleLabel(session.role)}
                       </Link>
                     ) : null}
-                    {staffSession ? <HeaderSearch staffSession /> : null}
+                    {staffSession && session.role === "waiter" ? (
+                      <HeaderSearch staffSession />
+                    ) : null}
                     <NotificationCenter
                       staffSession={staffSession}
                       ordersCount={notificationContext.orders}
