@@ -265,25 +265,6 @@ export default async function CardapioPage() {
             description="Cada categoria reflete a oferta ativa do restaurante, com pratos disponiveis e informacoes objetivas."
           />
 
-          {categories.length ? (
-            <div className="sticky top-[10.9rem] z-30 mt-8 rounded-[1.5rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-3 shadow-[0_14px_30px_rgba(39,30,18,0.08)] backdrop-blur md:top-[8.8rem]">
-              <p className="px-2 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
-                Navegacao rapida
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {categories.map((category) => (
-                  <a
-                    key={`quick-${category.id}`}
-                    href={`#categoria-${category.id}`}
-                    className="rounded-full border border-[rgba(20,35,29,0.12)] bg-white px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]"
-                  >
-                    {category.name}
-                  </a>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
           <div className="mt-10 space-y-6">
             {categories.length ? (
               categories.map((category, index) => (
