@@ -319,7 +319,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
               />
             </label>
 
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
                 Preco
                 <input
@@ -338,15 +338,6 @@ export default async function OperacaoMenuPage({ searchParams }) {
                 <input
                   name="prepTime"
                   defaultValue={item.prepTime ?? ""}
-                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                />
-              </label>
-
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Intensidade
-                <input
-                  name="spiceLevel"
-                  defaultValue={item.spiceLevel ?? ""}
                   className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
                 />
               </label>
