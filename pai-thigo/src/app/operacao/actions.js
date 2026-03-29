@@ -1966,7 +1966,7 @@ export async function createMenuItemAction(_previousState, formData) {
 
   const portionPrices = hasPortionPricing
     ? buildPortionPricing(resolvedPrice, definedPortionPrices)
-    : null;
+    : {};
 
   const insertPayload = {
     category_id: categoryId,
@@ -2186,7 +2186,7 @@ export async function updateMenuItemAction(formData) {
 
   const portionPrices = hasPortionPricing
     ? buildPortionPricing(resolvedPrice, definedPortionPrices)
-    : null;
+    : {};
 
   const updatePayload = {
     category_id: categoryId,
