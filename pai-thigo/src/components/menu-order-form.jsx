@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ShoppingBag } from "lucide-react";
 
 import { useCart } from "@/components/cart-provider";
@@ -17,6 +17,7 @@ export function MenuOrderForm({
   prepTime,
   signature = false,
   canOrder = true,
+  isPriceAvailable = true,
   stockQuantity = null,
   lowStockThreshold = 0,
 }) {
@@ -29,25 +30,42 @@ export function MenuOrderForm({
   const [status, setStatus] = useState("idle");
   const { addItem, getItemQuantity } = useCart();
   const currentQuantity = getItemQuantity(menuItemId);
-  const hasPortionOptions = Boolean(
-    portionPrices &&
-      typeof portionPrices === "object" &&
-      ["small", "medium", "large"].some((size) =>
-        Number.isFinite(Number(portionPrices[size] ?? NaN)),
-      ),
+  const normalizedPortionEntries = useMemo(
+    () =>
+      portionPrices && typeof portionPrices === "object"
+        ? ["small", "medium", "large"]
+            .map((size) => [size, Number(portionPrices[size] ?? NaN)])
+            .filter(([, value]) => Number.isFinite(value) && value > 0)
+        : [],
+    [portionPrices],
   );
-  const pricing = hasPortionOptions
-    ? {
-        small: Number(portionPrices?.small ?? price * 0.8),
-        medium: Number(portionPrices?.medium ?? price),
-        large: Number(portionPrices?.large ?? price * 1.35),
-      }
-    : {
-        medium: Number(price),
-      };
-  const selectedUnitPrice = hasPortionOptions
-    ? pricing[portionSize] ?? pricing.medium
-    : pricing.medium;
+  const hasPortionOptions = normalizedPortionEntries.length > 0;
+  const basePrice = Number(price ?? NaN);
+  const hasBasePrice = Number.isFinite(basePrice) && basePrice > 0;
+  const pricing = useMemo(
+    () =>
+      hasPortionOptions
+        ? Object.fromEntries(normalizedPortionEntries)
+        : hasBasePrice
+          ? { medium: Number(basePrice.toFixed(2)) }
+          : {},
+    [basePrice, hasBasePrice, hasPortionOptions, normalizedPortionEntries],
+  );
+  const availablePortionSizes = useMemo(
+    () =>
+      hasPortionOptions
+        ? ["small", "medium", "large"].filter((size) =>
+            Number.isFinite(Number(pricing[size] ?? NaN)),
+          )
+        : ["medium"],
+    [hasPortionOptions, pricing],
+  );
+  const selectedSize = availablePortionSizes.includes(portionSize)
+    ? portionSize
+    : availablePortionSizes[0] ?? "medium";
+  const selectedUnitPrice = Number(pricing[selectedSize] ?? NaN);
+  const hasValidPricing =
+    Number.isFinite(selectedUnitPrice) && selectedUnitPrice > 0;
   const hasFlavorOptions = flavorOptions.length > 1;
   const portionLabels = {
     small: isDrinkItem ? "350ml" : "Pequena",
@@ -78,6 +96,16 @@ export function MenuOrderForm({
   }, [flavorOptions]);
 
   useEffect(() => {
+    if (!availablePortionSizes.length) {
+      return;
+    }
+
+    if (!availablePortionSizes.includes(portionSize)) {
+      setPortionSize(availablePortionSizes[0]);
+    }
+  }, [availablePortionSizes, portionSize]);
+
+  useEffect(() => {
     if (maxSelectableQuantity <= 0) {
       return;
     }
@@ -94,6 +122,15 @@ export function MenuOrderForm({
     }
   }, [maxSelectableQuantity, quantity]);
 
+  if (!isPriceAvailable) {
+    return (
+      <div className="mt-5 rounded-[1.4rem] border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-4 py-3 text-sm leading-6 text-[var(--clay)]">
+        Este item esta sem preco valido no momento. A equipe ja pode ajustar no
+        cardapio interno.
+      </div>
+    );
+  }
+
   if (!canOrder) {
     return (
       <div className="mt-5 rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-sm leading-6 text-[rgba(21,35,29,0.66)]">
@@ -104,6 +141,11 @@ export function MenuOrderForm({
   }
 
   function handleAddToCart() {
+    if (!hasValidPricing) {
+      setStatus("invalid-price");
+      return;
+    }
+
     if (hasStockControl && maxSelectableQuantity <= 0) {
       setStatus("stock-limit");
       return;
@@ -129,7 +171,7 @@ export function MenuOrderForm({
       menuItemId,
       name,
       price: selectedUnitPrice,
-      portionSize: hasPortionOptions ? portionSize : "medium",
+      portionSize: hasPortionOptions ? selectedSize : "medium",
       variantKey: hasFlavorOptions ? selectedFlavor : "",
       hasPortionOptions,
       prepTime,
@@ -210,19 +252,15 @@ export function MenuOrderForm({
           <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
             Tamanho
             <select
-              value={portionSize}
+              value={selectedSize}
               onChange={(event) => setPortionSize(event.target.value)}
               className="w-full min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
             >
-              <option value="small">
-                {portionLabels.small} - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.small)}
-              </option>
-              <option value="medium">
-                {portionLabels.medium} - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.medium)}
-              </option>
-              <option value="large">
-                {portionLabels.large} - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.large)}
-              </option>
+              {availablePortionSizes.map((size) => (
+                <option key={size} value={size}>
+                  {portionLabels[size]} - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing[size])}
+                </option>
+              ))}
             </select>
           </label>
         ) : null}
@@ -260,7 +298,7 @@ export function MenuOrderForm({
           <button
             type="button"
             onClick={handleAddToCart}
-            disabled={maxSelectableQuantity <= 0}
+            disabled={maxSelectableQuantity <= 0 || !hasValidPricing}
             className="button-primary justify-center sm:w-auto"
           >
             <ShoppingBag size={16} />
@@ -272,14 +310,16 @@ export function MenuOrderForm({
         </div>
         <p className="max-w-md text-sm leading-6 text-[rgba(21,35,29,0.66)]">
           {hasPortionOptions
-            ? `${portionLabels[portionSize]} selecionada por ${Intl.NumberFormat("pt-BR", {
+            ? `${portionLabels[selectedSize]} selecionada por ${Intl.NumberFormat("pt-BR", {
                 style: "currency",
                 currency: "BRL",
               }).format(selectedUnitPrice)}${hasFlavorOptions && selectedFlavor ? ` | sabor: ${selectedFlavor}` : ""}.`
-            : `Preco unitario: ${Intl.NumberFormat("pt-BR", {
+            : hasValidPricing
+              ? `Preco unitario: ${Intl.NumberFormat("pt-BR", {
                 style: "currency",
                 currency: "BRL",
-              }).format(selectedUnitPrice)}.`}
+              }).format(selectedUnitPrice)}.`
+              : "Preco em ajuste. Este item fica indisponivel ate a equipe configurar um valor valido."}
         </p>
       </div>
 
@@ -315,6 +355,10 @@ export function MenuOrderForm({
           ) : status === "missing-flavor" ? (
             <span className="font-semibold">
               Selecione um sabor para adicionar esta bebida ao carrinho.
+            </span>
+          ) : status === "invalid-price" ? (
+            <span className="font-semibold">
+              Este item esta sem preco valido. Aguarde a equipe atualizar o cardapio.
             </span>
           ) : (
             <span className="font-semibold">

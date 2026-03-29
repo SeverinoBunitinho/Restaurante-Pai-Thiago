@@ -163,7 +163,7 @@ export function MenuItemComposer({ categories = [] }) {
           <input
             name="price"
             type="number"
-            min="0"
+            min="0.01"
             step="0.01"
             required={!isDrinkPreset}
             placeholder="79.90"
@@ -227,7 +227,7 @@ export function MenuItemComposer({ categories = [] }) {
           <input
             name="portionSmallPrice"
             type="number"
-            min="0"
+            min="0.01"
             step="0.01"
             placeholder={selectedSizePresetCopy.smallPlaceholder}
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
@@ -239,7 +239,7 @@ export function MenuItemComposer({ categories = [] }) {
           <input
             name="portionMediumPrice"
             type="number"
-            min="0"
+            min="0.01"
             step="0.01"
             placeholder={selectedSizePresetCopy.mediumPlaceholder}
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
@@ -251,7 +251,7 @@ export function MenuItemComposer({ categories = [] }) {
           <input
             name="portionLargePrice"
             type="number"
-            min="0"
+            min="0.01"
             step="0.01"
             placeholder={selectedSizePresetCopy.largePlaceholder}
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"

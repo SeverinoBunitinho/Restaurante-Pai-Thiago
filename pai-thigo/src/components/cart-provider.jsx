@@ -67,6 +67,7 @@ function sanitizeCartItems(value) {
         item.menuItemId &&
         item.name &&
         Number.isFinite(item.price) &&
+        item.price > 0 &&
         Number.isFinite(item.quantity) &&
         item.quantity >= 1 &&
         item.quantity <= 20 &&

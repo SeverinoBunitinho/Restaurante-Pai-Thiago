@@ -34,11 +34,6 @@ const ANY_AREA_PREFERENCE_VALUES = new Set([
 const DEFAULT_MENU_ITEM_IMAGE = "/images/menu-placeholder.svg";
 const RESERVATION_CONFIRMATION_PREFIX = "RSV";
 const portionSizeOptions = ["small", "medium", "large"];
-const defaultPortionMultiplierBySize = {
-  small: 0.8,
-  medium: 1,
-  large: 1.35,
-};
 
 function sanitizeMenuItemImageUrl(value) {
   const rawValue = String(value ?? "").trim();
@@ -104,6 +99,11 @@ function normalizePortionSize(value) {
   return portionSizeOptions.includes(normalized) ? normalized : "medium";
 }
 
+function isPositivePrice(value) {
+  const amount = Number(value ?? NaN);
+  return Number.isFinite(amount) && amount > 0;
+}
+
 function getPortionLabel(size) {
   if (size === "small") {
     return "Pequena";
@@ -123,24 +123,21 @@ function hasDefinedPortionPricing(portionPricesInput) {
 
   return portionSizeOptions.some((size) => {
     const inputPrice = Number(portionPricesInput[size] ?? NaN);
-    return Number.isFinite(inputPrice) && inputPrice >= 0;
+    return isPositivePrice(inputPrice);
   });
 }
 
 function buildPortionPricing(basePrice, portionPricesInput = {}) {
-  const parsedBasePrice = Number(basePrice ?? 0);
-  const safeBasePrice =
-    Number.isFinite(parsedBasePrice) && parsedBasePrice >= 0 ? parsedBasePrice : 0;
   const payload = {};
 
   for (const size of portionSizeOptions) {
     const inputPrice = Number(portionPricesInput[size] ?? NaN);
-    const fallbackPrice = safeBasePrice * defaultPortionMultiplierBySize[size];
-    const resolvedPrice = Number.isFinite(inputPrice) && inputPrice >= 0
-      ? inputPrice
-      : fallbackPrice;
 
-    payload[size] = Number(resolvedPrice.toFixed(2));
+    if (!isPositivePrice(inputPrice)) {
+      continue;
+    }
+
+    payload[size] = Number(inputPrice.toFixed(2));
   }
 
   return payload;
@@ -149,7 +146,30 @@ function buildPortionPricing(basePrice, portionPricesInput = {}) {
 function resolvePortionUnitPrice(basePrice, portionPrices, portionSize) {
   const normalizedPortion = normalizePortionSize(portionSize);
   const pricing = buildPortionPricing(basePrice, portionPrices ?? {});
-  return pricing[normalizedPortion] ?? pricing.medium ?? Number(basePrice ?? 0);
+  const selectedPrice = Number(pricing[normalizedPortion] ?? NaN);
+  const mediumPrice = Number(pricing.medium ?? NaN);
+  const firstDefinedPrice = portionSizeOptions
+    .map((size) => Number(pricing[size] ?? NaN))
+    .find((value) => isPositivePrice(value));
+  const normalizedBasePrice = Number(basePrice ?? NaN);
+
+  if (isPositivePrice(selectedPrice)) {
+    return selectedPrice;
+  }
+
+  if (isPositivePrice(mediumPrice)) {
+    return mediumPrice;
+  }
+
+  if (isPositivePrice(normalizedBasePrice)) {
+    return normalizedBasePrice;
+  }
+
+  if (isPositivePrice(firstDefinedPrice)) {
+    return Number(firstDefinedPrice);
+  }
+
+  return NaN;
 }
 
 function normalizeReservationArea(value) {
@@ -508,15 +528,28 @@ function mapMenuCategory(category, includeUnavailable = false) {
       .filter((item) => includeUnavailable || item.is_available)
       .sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0))
       .map((item) => {
-        const hasPortionOptions = hasDefinedPortionPricing(item.portion_prices);
+        const normalizedPortionPrices = buildPortionPricing(
+          item.price,
+          item.portion_prices ?? {},
+        );
+        const hasPortionOptions = hasDefinedPortionPricing(normalizedPortionPrices);
+        const basePrice = Number(item.price ?? NaN);
+        const fallbackPriceFromPortions = portionSizeOptions
+          .map((size) => Number(normalizedPortionPrices[size] ?? NaN))
+          .find((value) => isPositivePrice(value));
+        const resolvedBasePrice = isPositivePrice(basePrice)
+          ? basePrice
+          : Number(fallbackPriceFromPortions ?? 0);
 
         return {
           id: item.id,
           name: item.name,
           description: item.description,
-          price: Number(item.price),
+          price: isPositivePrice(resolvedBasePrice)
+            ? Number(resolvedBasePrice.toFixed(2))
+            : 0,
           portionPrices: hasPortionOptions
-            ? buildPortionPricing(item.price, item.portion_prices ?? {})
+            ? normalizedPortionPrices
             : null,
           hasPortionOptions,
           imageUrl: resolveMenuItemImage(item.id, item.name, item.image_url),
@@ -1611,6 +1644,13 @@ export async function createOrder(input) {
     menuItem.portion_prices,
     selectedPortionSize,
   );
+  if (!isPositivePrice(unitPrice)) {
+    return {
+      ok: false,
+      message:
+        "Este item esta sem preco valido no sistema. A equipe precisa ajustar o cardapio antes de receber pedido.",
+    };
+  }
   const totalPrice = unitPrice * quantity;
   const itemName =
     selectedPortionSize === "medium"
@@ -1919,6 +1959,13 @@ export async function createCartOrder(input) {
       menuItem.portion_prices,
       selectedPortionSize,
     );
+    if (!isPositivePrice(unitPrice)) {
+      return {
+        ok: false,
+        message:
+          `O item ${menuItem.name} esta sem preco valido no sistema. Ajuste o cardapio antes de finalizar o carrinho.`,
+      };
+    }
     const totalPrice = unitPrice * cartItem.quantity;
     itemsSubtotal += totalPrice;
     const itemName =

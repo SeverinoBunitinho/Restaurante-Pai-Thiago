@@ -63,6 +63,24 @@ function extractFlavorOptions(item) {
   return Array.from(new Set(options)).slice(0, 30);
 }
 
+function getResolvedCustomerPrice(item) {
+  const basePrice = Number(item?.price ?? NaN);
+
+  if (Number.isFinite(basePrice) && basePrice > 0) {
+    return basePrice;
+  }
+
+  if (!item?.portionPrices || typeof item.portionPrices !== "object") {
+    return NaN;
+  }
+
+  const firstPortionPrice = ["small", "medium", "large"]
+    .map((size) => Number(item.portionPrices?.[size] ?? NaN))
+    .find((value) => Number.isFinite(value) && value > 0);
+
+  return Number.isFinite(firstPortionPrice) ? Number(firstPortionPrice) : NaN;
+}
+
 export default async function CardapioPage() {
   const session = await getCurrentSession();
   const [categories, restaurantInfo] = await Promise.all([
@@ -95,6 +113,8 @@ export default async function CardapioPage() {
       stockQuantity <= Math.max(0, lowStockThreshold);
 
     const flavorOptions = extractFlavorOptions(item);
+    const resolvedCustomerPrice = getResolvedCustomerPrice(item);
+    const hasValidPrice = Number.isFinite(resolvedCustomerPrice) && resolvedCustomerPrice > 0;
 
     return (
       <article
@@ -131,7 +151,7 @@ export default async function CardapioPage() {
               </p>
             </div>
             <span className="text-lg font-semibold text-[var(--forest)]">
-              {formatCurrency(item.price)}
+              {hasValidPrice ? formatCurrency(resolvedCustomerPrice) : "Preco em ajuste"}
             </span>
           </div>
 
@@ -194,13 +214,14 @@ export default async function CardapioPage() {
           <MenuOrderForm
             menuItemId={item.id}
             name={item.name}
-            price={item.price}
+            price={resolvedCustomerPrice}
             portionPrices={item.portionPrices}
             flavorOptions={flavorOptions}
             isDrinkItem={isDrinkItem(item)}
             prepTime={item.prepTime}
             signature={item.signature}
             canOrder={canOrder}
+            isPriceAvailable={hasValidPrice}
             stockQuantity={item.stockQuantity}
             lowStockThreshold={item.lowStockThreshold}
           />

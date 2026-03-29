@@ -216,8 +216,15 @@ export default async function OperacaoMenuPage({ searchParams }) {
             <span className="font-semibold text-[var(--forest)]">
               Tamanhos:
             </span>{" "}
-            {Object.entries(item.portionPrices ?? {}).length
+            {Object.entries(item.portionPrices ?? {}).filter(([, value]) => {
+              const parsed = Number(value ?? NaN);
+              return Number.isFinite(parsed) && parsed > 0;
+            }).length
               ? Object.entries(item.portionPrices ?? {})
+                  .filter(([, value]) => {
+                    const parsed = Number(value ?? NaN);
+                    return Number.isFinite(parsed) && parsed > 0;
+                  })
                   .map(
                     ([size, value]) =>
                       `${formatPortionLabelForItem(size, item, categoryName)} ${formatCurrency(value)}`,
@@ -325,7 +332,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
                 <input
                   name="price"
                   type="number"
-                  min="0"
+                  min="0.01"
                   step="0.01"
                   required
                   defaultValue={item.price}
@@ -381,7 +388,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
                 <input
                   name="portionSmallPrice"
                   type="number"
-                  min="0"
+                  min="0.01"
                   step="0.01"
                   defaultValue={item.portionPrices?.small ?? ""}
                   className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
@@ -393,7 +400,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
                 <input
                   name="portionMediumPrice"
                   type="number"
-                  min="0"
+                  min="0.01"
                   step="0.01"
                   defaultValue={item.portionPrices?.medium ?? ""}
                   className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
@@ -405,7 +412,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
                 <input
                   name="portionLargePrice"
                   type="number"
-                  min="0"
+                  min="0.01"
                   step="0.01"
                   defaultValue={item.portionPrices?.large ?? ""}
                   className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"

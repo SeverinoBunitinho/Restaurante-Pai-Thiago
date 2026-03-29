@@ -59,11 +59,6 @@ const MENU_IMAGE_ALLOWED_MIME_TYPES = [
   "image/avif",
 ];
 const portionSizeOptions = ["small", "medium", "large"];
-const defaultPortionMultiplierBySize = {
-  small: 0.8,
-  medium: 1,
-  large: 1.35,
-};
 
 function normalizeLines(value) {
   return String(value ?? "")
@@ -90,6 +85,11 @@ function parseCurrencyValue(value) {
   return Number.isFinite(amount) ? amount : NaN;
 }
 
+function isPositivePrice(value) {
+  const amount = Number(value ?? NaN);
+  return Number.isFinite(amount) && amount > 0;
+}
+
 function parseNonNegativeInteger(value) {
   const normalized = String(value ?? "").trim();
 
@@ -107,7 +107,7 @@ function parseNonNegativeInteger(value) {
 }
 
 function resolveBasePriceFromSizes(basePrice, portionPricesInput = {}) {
-  if (Number.isFinite(basePrice) && basePrice >= 0) {
+  if (isPositivePrice(basePrice)) {
     return Number(basePrice);
   }
 
@@ -116,7 +116,7 @@ function resolveBasePriceFromSizes(basePrice, portionPricesInput = {}) {
   for (const size of fallbackOrder) {
     const candidatePrice = Number(portionPricesInput[size] ?? NaN);
 
-    if (Number.isFinite(candidatePrice) && candidatePrice >= 0) {
+    if (isPositivePrice(candidatePrice)) {
       return Number(candidatePrice);
     }
   }
@@ -171,7 +171,7 @@ function normalizeDefinedPortionPricing(portionPricesInput = {}) {
   for (const size of portionSizeOptions) {
     const inputPrice = Number(portionPricesInput[size] ?? NaN);
 
-    if (!Number.isFinite(inputPrice) || inputPrice < 0) {
+    if (!isPositivePrice(inputPrice)) {
       continue;
     }
 
@@ -188,33 +188,41 @@ function hasDefinedPortionPricing(portionPricesInput) {
 
   return portionSizeOptions.some((size) => {
     const inputPrice = Number(portionPricesInput[size] ?? NaN);
-    return Number.isFinite(inputPrice) && inputPrice >= 0;
+    return isPositivePrice(inputPrice);
   });
 }
 
 function buildPortionPricing(basePrice, portionPricesInput = {}) {
-  const parsedBasePrice = Number(basePrice ?? 0);
-  const safeBasePrice =
-    Number.isFinite(parsedBasePrice) && parsedBasePrice >= 0 ? parsedBasePrice : 0;
-  const payload = {};
-
-  for (const size of portionSizeOptions) {
-    const inputPrice = Number(portionPricesInput[size] ?? NaN);
-    const fallbackPrice = safeBasePrice * defaultPortionMultiplierBySize[size];
-    const resolvedPrice = Number.isFinite(inputPrice) && inputPrice >= 0
-      ? inputPrice
-      : fallbackPrice;
-
-    payload[size] = Number(resolvedPrice.toFixed(2));
-  }
-
-  return payload;
+  return normalizeDefinedPortionPricing(portionPricesInput ?? {});
 }
 
 function resolvePortionUnitPrice(basePrice, portionPrices, portionSize) {
   const normalizedPortion = normalizePortionSize(portionSize);
-  const pricing = buildPortionPricing(basePrice, portionPrices ?? {});
-  return pricing[normalizedPortion] ?? pricing.medium ?? Number(basePrice ?? 0);
+  const pricing = normalizeDefinedPortionPricing(portionPrices ?? {});
+  const selectedPrice = Number(pricing[normalizedPortion] ?? NaN);
+  const mediumPrice = Number(pricing.medium ?? NaN);
+  const firstDefinedPrice = portionSizeOptions
+    .map((size) => Number(pricing[size] ?? NaN))
+    .find((value) => isPositivePrice(value));
+  const normalizedBasePrice = Number(basePrice ?? NaN);
+
+  if (isPositivePrice(selectedPrice)) {
+    return selectedPrice;
+  }
+
+  if (isPositivePrice(mediumPrice)) {
+    return mediumPrice;
+  }
+
+  if (isPositivePrice(normalizedBasePrice)) {
+    return normalizedBasePrice;
+  }
+
+  if (isPositivePrice(firstDefinedPrice)) {
+    return Number(firstDefinedPrice);
+  }
+
+  return NaN;
 }
 
 function normalizeMenuImageUrl(value) {
@@ -1350,6 +1358,14 @@ export async function addServiceCheckItemAction(formData) {
     menuItem.portion_prices,
     selectedPortionSize,
   );
+  if (!isPositivePrice(unitPrice)) {
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError:
+          "Este item esta sem preco valido no cadastro. Atualize o valor antes de lancar na conta.",
+      }),
+    );
+  }
   const totalPrice = unitPrice * quantity;
   const itemName =
     selectedPortionSize === "medium"
@@ -1835,13 +1851,13 @@ export async function createMenuItemAction(_previousState, formData) {
   const isAvailable = formData.has("isAvailable");
   const price = parseCurrencyValue(formData.get("price"));
   const definedPortionPrices = normalizeDefinedPortionPricing({
-    small: Number.isFinite(portionSmallPrice) && portionSmallPrice >= 0
+    small: Number.isFinite(portionSmallPrice) && portionSmallPrice > 0
       ? portionSmallPrice
       : undefined,
-    medium: Number.isFinite(portionMediumPrice) && portionMediumPrice >= 0
+    medium: Number.isFinite(portionMediumPrice) && portionMediumPrice > 0
       ? portionMediumPrice
       : undefined,
-    large: Number.isFinite(portionLargePrice) && portionLargePrice >= 0
+    large: Number.isFinite(portionLargePrice) && portionLargePrice > 0
       ? portionLargePrice
       : undefined,
   });
@@ -1855,11 +1871,11 @@ export async function createMenuItemAction(_previousState, formData) {
     };
   }
 
-  if (!Number.isFinite(resolvedPrice) || resolvedPrice < 0) {
+  if (!Number.isFinite(resolvedPrice) || resolvedPrice <= 0) {
     return {
       status: "error",
       message:
-        "Informe um preco base valido ou preencha ao menos um valor de tamanho (P/M/G).",
+        "Informe um preco base maior que zero ou preencha ao menos um valor de tamanho (P/M/G) maior que zero.",
     };
   }
 
@@ -2070,13 +2086,13 @@ export async function updateMenuItemAction(formData) {
   const isAvailable = formData.has("isAvailable");
   const price = parseCurrencyValue(formData.get("price"));
   const definedPortionPrices = normalizeDefinedPortionPricing({
-    small: Number.isFinite(portionSmallPrice) && portionSmallPrice >= 0
+    small: Number.isFinite(portionSmallPrice) && portionSmallPrice > 0
       ? portionSmallPrice
       : undefined,
-    medium: Number.isFinite(portionMediumPrice) && portionMediumPrice >= 0
+    medium: Number.isFinite(portionMediumPrice) && portionMediumPrice > 0
       ? portionMediumPrice
       : undefined,
-    large: Number.isFinite(portionLargePrice) && portionLargePrice >= 0
+    large: Number.isFinite(portionLargePrice) && portionLargePrice > 0
       ? portionLargePrice
       : undefined,
   });
@@ -2099,11 +2115,11 @@ export async function updateMenuItemAction(formData) {
     );
   }
 
-  if (!Number.isFinite(resolvedPrice) || resolvedPrice < 0) {
+  if (!Number.isFinite(resolvedPrice) || resolvedPrice <= 0) {
     redirect(
       buildMenuRedirectPath({
         menuError:
-          "Informe um preco base valido ou preencha ao menos um valor de tamanho (P/M/G).",
+          "Informe um preco base maior que zero ou preencha ao menos um valor de tamanho (P/M/G) maior que zero.",
       }),
     );
   }
