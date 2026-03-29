@@ -26,6 +26,52 @@ function formatPortionLabel(size) {
   return "M";
 }
 
+function normalizePortionLabelSource(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function isDrinkContext({ categoryName, tags = [] }) {
+  const source = [
+    normalizePortionLabelSource(categoryName),
+    ...tags.map((tag) => normalizePortionLabelSource(tag)),
+  ].join(" ");
+
+  return (
+    source.includes("bebida") ||
+    source.includes("refrigerante") ||
+    source.includes("suco") ||
+    source.includes("drink")
+  );
+}
+
+function formatPortionLabelForItem(size, item, categoryName) {
+  const drinkContext = isDrinkContext({
+    categoryName,
+    tags: item?.tags ?? [],
+  });
+
+  if (!drinkContext) {
+    return formatPortionLabel(size);
+  }
+
+  if (size === "small") {
+    return "350ml";
+  }
+
+  if (size === "medium") {
+    return "1L";
+  }
+
+  if (size === "large") {
+    return "2L";
+  }
+
+  return formatPortionLabel(size);
+}
+
 function getStockState(item) {
   const hasStockControl =
     Number.isFinite(Number(item.stockQuantity)) && Number(item.stockQuantity) >= 0;
@@ -93,7 +139,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
   const lowStockCount = stockAlerts.length - outOfStockCount;
   const maxVisibleOperationalItems = 4;
 
-  function renderOperationalItem(item, categoryId) {
+  function renderOperationalItem(item, categoryId, categoryName) {
     const stockState = getStockState(item);
 
     return (
@@ -174,7 +220,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
               ? Object.entries(item.portionPrices ?? {})
                   .map(
                     ([size, value]) =>
-                      `${formatPortionLabel(size)} ${formatCurrency(value)}`,
+                      `${formatPortionLabelForItem(size, item, categoryName)} ${formatCurrency(value)}`,
                   )
                   .join(" | ")
               : "Preco unico (sem tamanhos)"}
@@ -660,9 +706,9 @@ export default async function OperacaoMenuPage({ searchParams }) {
                       {category.items.length ? (
                         <>
                           <div className="grid gap-4 lg:grid-cols-2">
-                            {visibleItems.map((item) =>
-                              renderOperationalItem(item, category.id),
-                            )}
+                          {visibleItems.map((item) =>
+                            renderOperationalItem(item, category.id, category.name),
+                          )}
                           </div>
 
                           {hiddenItems.length ? (
@@ -671,9 +717,9 @@ export default async function OperacaoMenuPage({ searchParams }) {
                                 Ver mais {hiddenItems.length} item(ns)
                               </summary>
                               <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                                {hiddenItems.map((item) =>
-                                  renderOperationalItem(item, category.id),
-                                )}
+                                  {hiddenItems.map((item) =>
+                                    renderOperationalItem(item, category.id, category.name),
+                                  )}
                               </div>
                             </details>
                           ) : null}
