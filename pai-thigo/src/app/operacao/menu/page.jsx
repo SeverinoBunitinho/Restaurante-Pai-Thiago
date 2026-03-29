@@ -576,77 +576,83 @@ export default async function OperacaoMenuPage({ searchParams }) {
               </div>
             </div>
 
-            {stockAlerts.length ? (
-              <div className="luxury-card rounded-[2.2rem] p-6">
-                <SectionHeading
-                  eyebrow="Controle de estoque"
-                  title="Alertas rapidos da reposicao"
-                  description="Painel compacto para ver itens em alerta e ajustar estoque na edicao de cada prato."
-                  compact
-                />
+            <div className="luxury-card rounded-[2.2rem] p-6">
+              <SectionHeading
+                eyebrow="Controle de estoque"
+                title="Alertas rapidos da reposicao"
+                description="Painel compacto para ver itens em alerta e ajustar estoque na edicao de cada prato."
+                compact
+              />
 
-                <div className="mt-5 flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--clay)]">
-                    {outOfStockCount} esgotado(s)
-                  </span>
-                  <span className="rounded-full border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--gold)]">
-                    {lowStockCount} em alerta
-                  </span>
-                  <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--forest)]">
-                    {stockAlerts.length} no total
-                  </span>
-                </div>
-
-                <div className="mt-5 max-h-[18rem] space-y-3 overflow-y-auto pr-1">
-                  {visibleStockAlerts.map((alertItem) => {
-                    const currentStock = Math.max(0, Number(alertItem.stockQuantity ?? 0));
-                    const alertLimit = Math.max(0, Number(alertItem.lowStockThreshold ?? 0));
-                    const isOutOfStock = currentStock <= 0;
-
-                    return (
-                      <article
-                        key={`stock-alert-inline-${alertItem.id}`}
-                        className="rounded-[1.2rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.78)] px-4 py-3"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--sage)]">
-                              {alertItem.categoryName || "Sem categoria"}
-                            </p>
-                            <h4 className="mt-1 text-sm font-semibold text-[var(--forest)] break-words">
-                              {alertItem.name}
-                            </h4>
-                            <p className="mt-1 text-xs leading-5 text-[rgba(21,35,29,0.72)]">
-                              Estoque:{" "}
-                              <span className="font-semibold text-[var(--forest)]">
-                                {currentStock}
-                              </span>
-                              {isOutOfStock ? " | reposicao urgente." : ` | alerta em ${alertLimit}.`}
-                            </p>
-                          </div>
-                          <span
-                            className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
-                              isOutOfStock
-                                ? "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]"
-                                : "bg-[rgba(182,135,66,0.12)] text-[var(--gold)]"
-                            }`}
-                          >
-                            <AlertTriangle size={12} />
-                            {isOutOfStock ? "Esgotado" : "Baixo"}
-                          </span>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-
-                {stockAlerts.length > visibleStockAlerts.length ? (
-                  <p className="mt-4 text-xs text-[rgba(21,35,29,0.68)]">
-                    +{stockAlerts.length - visibleStockAlerts.length} alerta(s) adicional(is) na fila.
-                  </p>
-                ) : null}
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <span className="rounded-full border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--clay)]">
+                  {outOfStockCount} esgotado(s)
+                </span>
+                <span className="rounded-full border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--gold)]">
+                  {lowStockCount} em alerta
+                </span>
+                <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--forest)]">
+                  {stockAlerts.length} no total
+                </span>
               </div>
-            ) : null}
+
+              {stockAlerts.length ? (
+                <>
+                  <div className="mt-5 max-h-[18rem] space-y-3 overflow-y-auto pr-1">
+                    {visibleStockAlerts.map((alertItem) => {
+                      const currentStock = Math.max(0, Number(alertItem.stockQuantity ?? 0));
+                      const alertLimit = Math.max(0, Number(alertItem.lowStockThreshold ?? 0));
+                      const isOutOfStock = currentStock <= 0;
+
+                      return (
+                        <article
+                          key={`stock-alert-inline-${alertItem.id}`}
+                          className="rounded-[1.2rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.78)] px-4 py-3"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--sage)]">
+                                {alertItem.categoryName || "Sem categoria"}
+                              </p>
+                              <h4 className="mt-1 text-sm font-semibold text-[var(--forest)] break-words">
+                                {alertItem.name}
+                              </h4>
+                              <p className="mt-1 text-xs leading-5 text-[rgba(21,35,29,0.72)]">
+                                Estoque:{" "}
+                                <span className="font-semibold text-[var(--forest)]">
+                                  {currentStock}
+                                </span>
+                                {isOutOfStock ? " | reposicao urgente." : ` | alerta em ${alertLimit}.`}
+                              </p>
+                            </div>
+                            <span
+                              className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                                isOutOfStock
+                                  ? "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]"
+                                  : "bg-[rgba(182,135,66,0.12)] text-[var(--gold)]"
+                              }`}
+                            >
+                              <AlertTriangle size={12} />
+                              {isOutOfStock ? "Esgotado" : "Baixo"}
+                            </span>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+
+                  {stockAlerts.length > visibleStockAlerts.length ? (
+                    <p className="mt-4 text-xs text-[rgba(21,35,29,0.68)]">
+                      +{stockAlerts.length - visibleStockAlerts.length} alerta(s) adicional(is) na fila.
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <div className="mt-5 rounded-[1.2rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.78)] px-4 py-4 text-sm text-[rgba(21,35,29,0.72)]">
+                  Sem alerta de estoque no momento. Assim que algum item entrar em risco, ele aparece aqui automaticamente.
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-5">
