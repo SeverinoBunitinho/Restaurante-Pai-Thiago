@@ -18,36 +18,46 @@ function normalizeText(value) {
     .trim();
 }
 
-function isJuiceItem(item) {
+function isDrinkItem(item) {
   const name = normalizeText(item?.name);
   const tags = Array.isArray(item?.tags)
     ? item.tags.map((tag) => normalizeText(tag)).join(" ")
     : "";
 
-  return name.includes("suco") || tags.includes("suco");
+  return (
+    name.includes("suco") ||
+    name.includes("fanta") ||
+    tags.includes("suco") ||
+    tags.includes("bebida") ||
+    tags.includes("refrigerante")
+  );
 }
 
-function extractJuiceFlavors(item) {
-  if (!isJuiceItem(item)) {
+function extractFlavorOptions(item) {
+  if (!isDrinkItem(item)) {
     return [];
   }
 
-  const rawDescription = String(item?.description ?? "")
-    .replace(/\r?\n/g, ",")
-    .trim();
+  const description = String(item?.description ?? "").replace(/\r?\n/g, " ").trim();
 
-  if (!rawDescription) {
+  if (!description) {
     return [];
   }
 
-  const options = rawDescription
+  const explicitFlavorsMatch = description.match(/sabores?\s*:\s*([^.!?]+)/i);
+  const source = explicitFlavorsMatch ? explicitFlavorsMatch[1] : description;
+
+  const options = source
+    .replace(/\s+e\s+/gi, ",")
+    .replace(/[|/]/g, ",")
     .split(/[;,]/)
     .map((entry) => entry.trim())
     .filter(
       (entry) =>
         entry.length >= 2 &&
         entry.length <= 40 &&
-        !/^\d+$/.test(entry),
+        !/^\d+$/.test(entry) &&
+        entry.split(/\s+/).length <= 4,
     );
 
   return Array.from(new Set(options)).slice(0, 30);
@@ -84,7 +94,7 @@ export default async function CardapioPage() {
       stockQuantity > 0 &&
       stockQuantity <= Math.max(0, lowStockThreshold);
 
-    const flavorOptions = extractJuiceFlavors(item);
+    const flavorOptions = extractFlavorOptions(item);
 
     return (
       <article

@@ -228,7 +228,7 @@ export function MenuOrderForm({
 
         {hasFlavorOptions ? (
           <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
-            Sabor do suco
+            Sabor da bebida
             <select
               value={selectedFlavor}
               onChange={(event) => setSelectedFlavor(event.target.value)}
@@ -313,7 +313,7 @@ export function MenuOrderForm({
             </span>
           ) : status === "missing-flavor" ? (
             <span className="font-semibold">
-              Selecione um sabor para adicionar este suco ao carrinho.
+              Selecione um sabor para adicionar esta bebida ao carrinho.
             </span>
           ) : (
             <span className="font-semibold">
