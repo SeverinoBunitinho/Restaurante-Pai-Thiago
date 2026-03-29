@@ -137,6 +137,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
     (item) => Number(item.stockQuantity ?? 0) <= 0,
   ).length;
   const lowStockCount = stockAlerts.length - outOfStockCount;
+  const visibleStockAlerts = stockAlerts.slice(0, 8);
   const maxVisibleOperationalItems = 4;
 
   function renderOperationalItem(item, categoryId, categoryName) {
@@ -501,147 +502,151 @@ export default async function OperacaoMenuPage({ searchParams }) {
         <MenuFeedbackBanner notice={menuNotice} error={menuError} />
       </section>
 
-      {stockAlerts.length ? (
-        <section className="pt-8">
-          <div className="luxury-card rounded-[2.2rem] p-6">
-            <SectionHeading
-              eyebrow="Controle de estoque"
-              title="Avisos de estoque baixo em tempo real"
-              description="Ajuste de estoque segue na edicao do item abaixo. Aqui fica apenas o alerta rapido."
-              compact
-            />
-
-            <div className="mt-6 flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--clay)]">
-                {outOfStockCount} esgotado(s)
-              </span>
-              <span className="rounded-full border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--gold)]">
-                {lowStockCount} em alerta
-              </span>
-              <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--forest)]">
-                {stockAlerts.length} no total
-              </span>
-            </div>
-
-            <div className="mt-5 max-h-[22rem] overflow-y-auto pr-1">
-              <div className="space-y-3">
-                {stockAlerts.map((alertItem) => {
-                  const currentStock = Math.max(0, Number(alertItem.stockQuantity ?? 0));
-                  const alertLimit = Math.max(0, Number(alertItem.lowStockThreshold ?? 0));
-                  const isOutOfStock = currentStock <= 0;
-
-                  return (
-                    <article
-                      key={`stock-alert-${alertItem.id}`}
-                      className="rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.78)] px-4 py-3"
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--sage)]">
-                            {alertItem.categoryName || "Sem categoria"}
-                          </p>
-                          <h4 className="mt-1 text-base font-semibold text-[var(--forest)] break-words">
-                            {alertItem.name}
-                          </h4>
-                          <p className="mt-1 text-sm text-[rgba(21,35,29,0.72)]">
-                            Estoque atual:{" "}
-                            <span className="font-semibold text-[var(--forest)]">
-                              {currentStock}
-                            </span>
-                            {isOutOfStock ? " | reposicao urgente." : ` | alerta em ${alertLimit}.`}
-                          </p>
-                        </div>
-                        <span
-                          className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] ${
-                            isOutOfStock
-                              ? "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]"
-                              : "bg-[rgba(182,135,66,0.12)] text-[var(--gold)]"
-                          }`}
-                        >
-                          <AlertTriangle size={14} />
-                          {isOutOfStock ? "Esgotado" : "Estoque baixo"}
-                        </span>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
       <section className="pt-14">
         <div className="grid auto-rows-min items-start gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="luxury-card-dark h-fit self-start rounded-[2.2rem] p-6 text-[var(--cream)]">
-            <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-              Edicao do cardapio
-            </p>
-            <h2 className="display-title page-section-title mt-4 text-white">
-              Adicione pratos com padrao de casa e retire itens quando o turno pedir
-            </h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-[rgba(255,247,232,0.76)]">
-              Esta camada foi desenhada para gerente e dono atualizarem o
-              catalogo sem sair da operacao. O que entra aqui reflete no
-              cardapio do cliente em fluxo real.
-            </p>
+          <div className="grid auto-rows-min gap-5">
+            <div className="luxury-card-dark h-fit self-start rounded-[2.2rem] p-6 text-[var(--cream)]">
+              <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
+                Edicao do cardapio
+              </p>
+              <h2 className="display-title page-section-title mt-4 text-white">
+                Adicione pratos com padrao de casa e retire itens quando o turno pedir
+              </h2>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-[rgba(255,247,232,0.76)]">
+                Esta camada foi desenhada para gerente e dono atualizarem o
+                catalogo sem sair da operacao. O que entra aqui reflete no
+                cardapio do cliente em fluxo real.
+              </p>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <article className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
-                <p className="text-xs uppercase tracking-[0.24em] text-[rgba(217,185,122,0.92)]">
-                  Estrutura viva
-                </p>
-                <p className="mt-3 text-3xl font-semibold text-white">
-                  {totalItems}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                  Itens monitorados nesta central de cardapio.
-                </p>
-              </article>
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                <article className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
+                  <p className="text-xs uppercase tracking-[0.24em] text-[rgba(217,185,122,0.92)]">
+                    Estrutura viva
+                  </p>
+                  <p className="mt-3 text-3xl font-semibold text-white">
+                    {totalItems}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
+                    Itens monitorados nesta central de cardapio.
+                  </p>
+                </article>
 
-              <article className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
-                <p className="text-xs uppercase tracking-[0.24em] text-[rgba(217,185,122,0.92)]">
-                  Controle fino
-                </p>
-                <p className="mt-3 text-lg font-semibold text-white">
-                  Ativar, pausar e remover
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                  O catalogo fica mais coerente com a cozinha, estoque e ritmo
-                  da casa.
-                </p>
-              </article>
-            </div>
+                <article className="rounded-[1.6rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] p-5">
+                  <p className="text-xs uppercase tracking-[0.24em] text-[rgba(217,185,122,0.92)]">
+                    Controle fino
+                  </p>
+                  <p className="mt-3 text-lg font-semibold text-white">
+                    Ativar, pausar e remover
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
+                    O catalogo fica mais coerente com a cozinha, estoque e ritmo
+                    da casa.
+                  </p>
+                </article>
+              </div>
 
-            <div className="mt-8 grid content-start gap-3">
-              {board.categories.length ? (
-                <div className="max-h-[26rem] space-y-3 overflow-y-auto pr-1">
-                  {board.categories.map((category) => (
-                    <div
-                      key={category.id}
-                      className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-3"
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-white">
-                            {category.name}
-                          </p>
-                          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[rgba(255,247,232,0.64)]">
-                            {category.items.length} item(ns)
-                          </p>
+              <div className="mt-8 grid content-start gap-3">
+                {board.categories.length ? (
+                  <div className="max-h-[26rem] space-y-3 overflow-y-auto pr-1">
+                    {board.categories.map((category) => (
+                      <div
+                        key={category.id}
+                        className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-3"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-white">
+                              {category.name}
+                            </p>
+                            <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[rgba(255,247,232,0.64)]">
+                              {category.items.length} item(ns)
+                            </p>
+                          </div>
+                          <Sparkles className="text-[var(--gold-soft)]" size={16} />
                         </div>
-                        <Sparkles className="text-[var(--gold-soft)]" size={16} />
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-[1.4rem] border border-dashed border-[rgba(217,185,122,0.18)] bg-[rgba(255,255,255,0.04)] px-4 py-4 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
-                  O cardapio interno fica visivel aqui assim que a leitura do
-                  banco for retomada.
-                </div>
-              )}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-[1.4rem] border border-dashed border-[rgba(217,185,122,0.18)] bg-[rgba(255,255,255,0.04)] px-4 py-4 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
+                    O cardapio interno fica visivel aqui assim que a leitura do
+                    banco for retomada.
+                  </div>
+                )}
+              </div>
             </div>
+
+            {stockAlerts.length ? (
+              <div className="luxury-card rounded-[2.2rem] p-6">
+                <SectionHeading
+                  eyebrow="Controle de estoque"
+                  title="Alertas rapidos da reposicao"
+                  description="Painel compacto para ver itens em alerta e ajustar estoque na edicao de cada prato."
+                  compact
+                />
+
+                <div className="mt-5 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--clay)]">
+                    {outOfStockCount} esgotado(s)
+                  </span>
+                  <span className="rounded-full border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--gold)]">
+                    {lowStockCount} em alerta
+                  </span>
+                  <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--forest)]">
+                    {stockAlerts.length} no total
+                  </span>
+                </div>
+
+                <div className="mt-5 max-h-[18rem] space-y-3 overflow-y-auto pr-1">
+                  {visibleStockAlerts.map((alertItem) => {
+                    const currentStock = Math.max(0, Number(alertItem.stockQuantity ?? 0));
+                    const alertLimit = Math.max(0, Number(alertItem.lowStockThreshold ?? 0));
+                    const isOutOfStock = currentStock <= 0;
+
+                    return (
+                      <article
+                        key={`stock-alert-inline-${alertItem.id}`}
+                        className="rounded-[1.2rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.78)] px-4 py-3"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--sage)]">
+                              {alertItem.categoryName || "Sem categoria"}
+                            </p>
+                            <h4 className="mt-1 text-sm font-semibold text-[var(--forest)] break-words">
+                              {alertItem.name}
+                            </h4>
+                            <p className="mt-1 text-xs leading-5 text-[rgba(21,35,29,0.72)]">
+                              Estoque:{" "}
+                              <span className="font-semibold text-[var(--forest)]">
+                                {currentStock}
+                              </span>
+                              {isOutOfStock ? " | reposicao urgente." : ` | alerta em ${alertLimit}.`}
+                            </p>
+                          </div>
+                          <span
+                            className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                              isOutOfStock
+                                ? "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]"
+                                : "bg-[rgba(182,135,66,0.12)] text-[var(--gold)]"
+                            }`}
+                          >
+                            <AlertTriangle size={12} />
+                            {isOutOfStock ? "Esgotado" : "Baixo"}
+                          </span>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+
+                {stockAlerts.length > visibleStockAlerts.length ? (
+                  <p className="mt-4 text-xs text-[rgba(21,35,29,0.68)]">
+                    +{stockAlerts.length - visibleStockAlerts.length} alerta(s) adicional(is) na fila.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="grid gap-5">
