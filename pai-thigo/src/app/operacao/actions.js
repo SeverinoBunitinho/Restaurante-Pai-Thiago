@@ -1264,6 +1264,7 @@ export async function addServiceCheckItemAction(formData) {
       }),
     );
   }
+  const stockWriter = getSupabaseAdminClient() ?? supabase;
 
   const checkResult = await supabase
     .from("service_checks")
@@ -1342,18 +1343,22 @@ export async function addServiceCheckItemAction(formData) {
   ]
     .filter(Boolean)
     .join(" | ");
-  const insertResult = await supabase.from("service_check_items").insert({
-    check_id: checkId,
-    menu_item_id: menuItem.id,
-    created_by_user_id: session.profile.user_id,
-    item_name: itemName,
-    quantity,
-    unit_price: unitPrice,
-    total_price: totalPrice,
-    notes: normalizedNotes || null,
-  });
+  const insertResult = await supabase
+    .from("service_check_items")
+    .insert({
+      check_id: checkId,
+      menu_item_id: menuItem.id,
+      created_by_user_id: session.profile.user_id,
+      item_name: itemName,
+      quantity,
+      unit_price: unitPrice,
+      total_price: totalPrice,
+      notes: normalizedNotes || null,
+    })
+    .select("id")
+    .maybeSingle();
 
-  if (insertResult.error) {
+  if (insertResult.error || !insertResult.data?.id) {
     redirect(
       getComandasRedirect(tableName, {
         comandaError: "Nao foi possivel associar o produto a conta agora.",
@@ -1363,13 +1368,31 @@ export async function addServiceCheckItemAction(formData) {
 
   if (hasStockControl) {
     const nextStock = Math.max(0, stockQuantity - quantity);
-    await supabase
+    const stockUpdateResult = await stockWriter
       .from("menu_items")
       .update({
         stock_quantity: nextStock,
         is_available: nextStock > 0 ? menuItem.is_available : false,
       })
-      .eq("id", menuItem.id);
+      .eq("id", menuItem.id)
+      .eq("stock_quantity", stockQuantity)
+      .select("id")
+      .maybeSingle();
+
+    const stockUpdateFailed = Boolean(stockUpdateResult.error) || !stockUpdateResult.data;
+
+    if (stockUpdateFailed) {
+      await stockWriter.from("service_check_items").delete().eq("id", insertResult.data.id);
+
+      redirect(
+        getComandasRedirect(tableName, {
+          comandaError:
+            !stockUpdateResult.error && !stockUpdateResult.data
+              ? "O estoque deste item mudou durante o lancamento. Tente novamente."
+              : "Nao foi possivel atualizar o estoque agora. O item nao ficou associado para evitar divergencia.",
+        }),
+      );
+    }
   }
 
   const totals = await syncServiceCheckTotals(supabase, checkId);
@@ -1428,6 +1451,7 @@ export async function removeServiceCheckItemAction(formData) {
       }),
     );
   }
+  const stockWriter = getSupabaseAdminClient() ?? supabase;
 
   const [checkResult, checkItemResult] = await Promise.all([
     supabase
@@ -1464,23 +1488,12 @@ export async function removeServiceCheckItemAction(formData) {
 
   const checkItem = checkItemResult.data;
 
-  const removeResult = await supabase
-    .from("service_check_items")
-    .delete()
-    .eq("id", checkItemId);
-
-  if (removeResult.error) {
-    redirect(
-      getComandasRedirect(tableName, {
-        comandaError: "Nao foi possivel remover o item desta conta agora.",
-      }),
-    );
-  }
+  let stockAdjustment = null;
 
   if (checkItem.menu_item_id) {
-    let menuItemResult = await supabase
+    let menuItemResult = await stockWriter
       .from("menu_items")
-      .select("id, stock_quantity")
+      .select("id, stock_quantity, is_available")
       .eq("id", checkItem.menu_item_id)
       .maybeSingle();
 
@@ -1497,11 +1510,65 @@ export async function removeServiceCheckItemAction(formData) {
     const hasStockControl = Number.isFinite(stockQuantity) && stockQuantity >= 0;
 
     if (hasStockControl) {
-      await supabase
+      const nextStock = stockQuantity + Number(checkItem.quantity ?? 0);
+      const stockUpdateResult = await stockWriter
         .from("menu_items")
-        .update({ stock_quantity: stockQuantity + Number(checkItem.quantity ?? 0) })
-        .eq("id", checkItem.menu_item_id);
+        .update({
+          stock_quantity: nextStock,
+          is_available:
+            nextStock > 0
+              ? Boolean(menuItemResult.data?.is_available) || stockQuantity <= 0
+              : Boolean(menuItemResult.data?.is_available),
+        })
+        .eq("id", checkItem.menu_item_id)
+        .eq("stock_quantity", stockQuantity)
+        .select("id")
+        .maybeSingle();
+
+      const stockUpdateFailed = Boolean(stockUpdateResult.error) || !stockUpdateResult.data;
+
+      if (stockUpdateFailed) {
+        redirect(
+          getComandasRedirect(tableName, {
+            comandaError:
+              !stockUpdateResult.error && !stockUpdateResult.data
+                ? "O estoque foi alterado por outro atendimento. Tente remover o item novamente."
+                : "Nao foi possivel atualizar o estoque para remover o item.",
+          }),
+        );
+      }
+
+      stockAdjustment = {
+        itemId: checkItem.menu_item_id,
+        previousStock: stockQuantity,
+        nextStock,
+        previousAvailable: Boolean(menuItemResult.data?.is_available),
+      };
     }
+  }
+
+  const removeResult = await stockWriter
+    .from("service_check_items")
+    .delete()
+    .eq("id", checkItemId);
+
+  if (removeResult.error) {
+    if (stockAdjustment) {
+      await stockWriter
+        .from("menu_items")
+        .update({
+          stock_quantity: stockAdjustment.previousStock,
+          is_available: stockAdjustment.previousAvailable,
+        })
+        .eq("id", stockAdjustment.itemId)
+        .eq("stock_quantity", stockAdjustment.nextStock);
+    }
+
+    redirect(
+      getComandasRedirect(tableName, {
+        comandaError: "Nao foi possivel remover o item desta conta agora.",
+      }),
+    );
   }
 
   const totals = await syncServiceCheckTotals(supabase, checkId);

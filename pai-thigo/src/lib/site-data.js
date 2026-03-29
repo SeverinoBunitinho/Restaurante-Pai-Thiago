@@ -1655,12 +1655,21 @@ export async function createOrder(input) {
   }
 
   if (hasStockControl) {
+    const nextStockQuantity = Math.max(0, stockQuantity - quantity);
     const stockUpdateResult = await stockWriter
       .from("menu_items")
-      .update({ stock_quantity: Math.max(0, stockQuantity - quantity) })
-      .eq("id", menuItem.id);
+      .update({
+        stock_quantity: nextStockQuantity,
+        is_available: nextStockQuantity > 0 ? Boolean(menuItem.is_available) : false,
+      })
+      .eq("id", menuItem.id)
+      .eq("stock_quantity", stockQuantity)
+      .select("id")
+      .maybeSingle();
 
-    if (stockUpdateResult.error) {
+    const stockUpdateFailed = Boolean(stockUpdateResult.error) || !stockUpdateResult.data;
+
+    if (stockUpdateFailed) {
       if (insertedOrder?.id) {
         await stockWriter.from("orders").delete().eq("id", insertedOrder.id);
       }
@@ -1668,7 +1677,9 @@ export async function createOrder(input) {
       return {
         ok: false,
         message:
-          "Nao foi possivel atualizar o estoque agora. O pedido nao foi concluido para evitar inconsistencia.",
+          !stockUpdateResult.error && !stockUpdateResult.data
+            ? "O estoque foi atualizado por outro atendimento agora. Tente finalizar o pedido novamente."
+            : "Nao foi possivel atualizar o estoque agora. O pedido nao foi concluido para evitar inconsistencia.",
       };
     }
   }
@@ -1964,6 +1975,8 @@ export async function createCartOrder(input) {
     };
   }
 
+  const appliedStockUpdates = [];
+
   for (const [itemId, totalQuantity] of quantityByItemId.entries()) {
     const menuItem = menuMap.get(itemId);
     const stockQuantity = Number(menuItem?.stock_quantity ?? NaN);
@@ -1980,9 +1993,25 @@ export async function createCartOrder(input) {
         stock_quantity: nextStockQuantity,
         is_available: nextStockQuantity > 0 ? Boolean(menuItem.is_available) : false,
       })
-      .eq("id", itemId);
+      .eq("id", itemId)
+      .eq("stock_quantity", stockQuantity)
+      .select("id")
+      .maybeSingle();
 
-    if (stockUpdateResult.error) {
+    const stockUpdateFailed = Boolean(stockUpdateResult.error) || !stockUpdateResult.data;
+
+    if (stockUpdateFailed) {
+      for (const rollback of [...appliedStockUpdates].reverse()) {
+        await stockWriter
+          .from("menu_items")
+          .update({
+            stock_quantity: rollback.previousStockQuantity,
+            is_available: rollback.previousAvailability,
+          })
+          .eq("id", rollback.itemId)
+          .eq("stock_quantity", rollback.nextStockQuantity);
+      }
+
       await stockWriter
         .from("orders")
         .delete()
@@ -1992,9 +2021,18 @@ export async function createCartOrder(input) {
       return {
         ok: false,
         message:
-          "Nao foi possivel atualizar o estoque do pedido. O checkout foi revertido para evitar divergencia.",
+          !stockUpdateResult.error && !stockUpdateResult.data
+            ? "O estoque de um item foi alterado por outro atendimento. O checkout foi revertido para evitar divergencia. Tente novamente."
+            : "Nao foi possivel atualizar o estoque do pedido. O checkout foi revertido para evitar divergencia.",
       };
     }
+
+    appliedStockUpdates.push({
+      itemId,
+      previousStockQuantity: stockQuantity,
+      nextStockQuantity,
+      previousAvailability: Boolean(menuItem.is_available),
+    });
   }
 
   return {
