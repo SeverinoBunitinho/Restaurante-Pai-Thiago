@@ -24,12 +24,25 @@ export function MenuOrderForm({
   const [status, setStatus] = useState("idle");
   const { addItem, getItemQuantity } = useCart();
   const currentQuantity = getItemQuantity(menuItemId);
-  const pricing = {
-    small: Number(portionPrices?.small ?? price * 0.8),
-    medium: Number(portionPrices?.medium ?? price),
-    large: Number(portionPrices?.large ?? price * 1.35),
-  };
-  const selectedUnitPrice = pricing[portionSize] ?? pricing.medium;
+  const hasPortionOptions = Boolean(
+    portionPrices &&
+      typeof portionPrices === "object" &&
+      ["small", "medium", "large"].some((size) =>
+        Number.isFinite(Number(portionPrices[size] ?? NaN)),
+      ),
+  );
+  const pricing = hasPortionOptions
+    ? {
+        small: Number(portionPrices?.small ?? price * 0.8),
+        medium: Number(portionPrices?.medium ?? price),
+        large: Number(portionPrices?.large ?? price * 1.35),
+      }
+    : {
+        medium: Number(price),
+      };
+  const selectedUnitPrice = hasPortionOptions
+    ? pricing[portionSize] ?? pricing.medium
+    : pricing.medium;
   const portionLabels = {
     small: "Pequena",
     medium: "Media",
@@ -97,7 +110,8 @@ export function MenuOrderForm({
       menuItemId,
       name,
       price: selectedUnitPrice,
-      portionSize,
+      portionSize: hasPortionOptions ? portionSize : "medium",
+      hasPortionOptions,
       prepTime,
       signature,
       quantity: quantityToAdd,
@@ -142,7 +156,14 @@ export function MenuOrderForm({
         </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-[120px_minmax(0,1fr)_minmax(0,210px)]">
+      <div
+        className={cn(
+          "grid gap-4",
+          hasPortionOptions
+            ? "md:grid-cols-[120px_minmax(0,1fr)_minmax(0,210px)]"
+            : "md:grid-cols-[120px_minmax(0,1fr)]",
+        )}
+      >
         <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Quantidade
           <select
@@ -163,24 +184,26 @@ export function MenuOrderForm({
           </select>
         </label>
 
-        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
-          Porcao
-          <select
-            value={portionSize}
-            onChange={(event) => setPortionSize(event.target.value)}
-            className="w-full min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
-          >
-            <option value="small">
-              Pequena - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.small)}
-            </option>
-            <option value="medium">
-              Media - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.medium)}
-            </option>
-            <option value="large">
-              Grande - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.large)}
-            </option>
-          </select>
-        </label>
+        {hasPortionOptions ? (
+          <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
+            Tamanho
+            <select
+              value={portionSize}
+              onChange={(event) => setPortionSize(event.target.value)}
+              className="w-full min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            >
+              <option value="small">
+                Pequeno - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.small)}
+              </option>
+              <option value="medium">
+                Medio - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.medium)}
+              </option>
+              <option value="large">
+                Grande - {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(pricing.large)}
+              </option>
+            </select>
+          </label>
+        ) : null}
 
         <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Observacao para a equipe
@@ -209,8 +232,15 @@ export function MenuOrderForm({
           </Link>
         </div>
         <p className="max-w-md text-sm leading-6 text-[rgba(21,35,29,0.66)]">
-          {portionLabels[portionSize]} selecionada por{" "}
-          {Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(selectedUnitPrice)}.
+          {hasPortionOptions
+            ? `${portionLabels[portionSize]} selecionada por ${Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              }).format(selectedUnitPrice)}.`
+            : `Preco unitario: ${Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              }).format(selectedUnitPrice)}.`}
         </p>
       </div>
 

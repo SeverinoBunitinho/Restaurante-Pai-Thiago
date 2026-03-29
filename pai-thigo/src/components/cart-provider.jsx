@@ -38,6 +38,9 @@ function sanitizeCartItems(value) {
         prepTime: String(item.prepTime ?? "").trim(),
         signature: Boolean(item.signature),
         portionSize: normalizePortionSize(item.portionSize),
+        hasPortionOptions: Boolean(
+          item.hasPortionOptions ?? normalizePortionSize(item.portionSize) !== "medium",
+        ),
         quantity: Number(item.quantity ?? 1),
         notes: String(item.notes ?? "").trim(),
         stockQuantity:
@@ -185,6 +188,7 @@ export function CartProvider({ children }) {
                       maxAllowedForCurrentLine,
                     ),
                     notes: normalizedItem.notes || currentItem.notes,
+                    hasPortionOptions: normalizedItem.hasPortionOptions,
                     stockQuantity: normalizedItem.stockQuantity,
                     lowStockThreshold: normalizedItem.lowStockThreshold,
                   }

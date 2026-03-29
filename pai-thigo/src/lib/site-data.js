@@ -116,6 +116,17 @@ function getPortionLabel(size) {
   return "Media";
 }
 
+function hasDefinedPortionPricing(portionPricesInput) {
+  if (!portionPricesInput || typeof portionPricesInput !== "object") {
+    return false;
+  }
+
+  return portionSizeOptions.some((size) => {
+    const inputPrice = Number(portionPricesInput[size] ?? NaN);
+    return Number.isFinite(inputPrice) && inputPrice >= 0;
+  });
+}
+
 function buildPortionPricing(basePrice, portionPricesInput = {}) {
   const parsedBasePrice = Number(basePrice ?? 0);
   const safeBasePrice =
@@ -496,30 +507,37 @@ function mapMenuCategory(category, includeUnavailable = false) {
     items: (category.menu_items ?? [])
       .filter((item) => includeUnavailable || item.is_available)
       .sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0))
-      .map((item) => ({
-        id: item.id,
-        name: item.name,
-        description: item.description,
-        price: Number(item.price),
-        portionPrices: buildPortionPricing(item.price, item.portion_prices ?? {}),
-        imageUrl: resolveMenuItemImage(item.id, item.name, item.image_url),
-        prepTime: item.prep_time ?? "12 min",
-        spiceLevel: item.spice_level ?? "suave",
-        tags: item.tags ?? [],
-        allergens: item.allergens ?? [],
-        signature: Boolean(item.is_signature),
-        available: item.is_available ?? true,
-        stockQuantity:
-          Number.isFinite(Number(item.stock_quantity)) &&
-          Number(item.stock_quantity) >= 0
-            ? Number(item.stock_quantity)
+      .map((item) => {
+        const hasPortionOptions = hasDefinedPortionPricing(item.portion_prices);
+
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          price: Number(item.price),
+          portionPrices: hasPortionOptions
+            ? buildPortionPricing(item.price, item.portion_prices ?? {})
             : null,
-        lowStockThreshold:
-          Number.isFinite(Number(item.low_stock_threshold)) &&
-          Number(item.low_stock_threshold) >= 0
-            ? Number(item.low_stock_threshold)
-            : 0,
-      })),
+          hasPortionOptions,
+          imageUrl: resolveMenuItemImage(item.id, item.name, item.image_url),
+          prepTime: item.prep_time ?? "12 min",
+          spiceLevel: item.spice_level ?? "suave",
+          tags: item.tags ?? [],
+          allergens: item.allergens ?? [],
+          signature: Boolean(item.is_signature),
+          available: item.is_available ?? true,
+          stockQuantity:
+            Number.isFinite(Number(item.stock_quantity)) &&
+            Number(item.stock_quantity) >= 0
+              ? Number(item.stock_quantity)
+              : null,
+          lowStockThreshold:
+            Number.isFinite(Number(item.low_stock_threshold)) &&
+            Number(item.low_stock_threshold) >= 0
+              ? Number(item.low_stock_threshold)
+              : 0,
+        };
+      }),
   };
 }
 
@@ -1584,18 +1602,23 @@ export async function createOrder(input) {
     };
   }
 
-  const portionLabel = getPortionLabel(portionSize);
+  const hasPortionPricing = hasDefinedPortionPricing(menuItem.portion_prices);
+  const selectedPortionSize = hasPortionPricing ? portionSize : "medium";
+  const portionLabel = getPortionLabel(selectedPortionSize);
   const unitPrice = resolvePortionUnitPrice(
     Number(menuItem.price),
     menuItem.portion_prices,
-    portionSize,
+    selectedPortionSize,
   );
   const totalPrice = unitPrice * quantity;
   const itemName =
-    portionSize === "medium"
+    selectedPortionSize === "medium"
       ? menuItem.name
       : `${menuItem.name} (${portionLabel})`;
-  const normalizedNotes = [notes, portionSize !== "medium" ? `Porcao: ${portionLabel}` : ""]
+  const normalizedNotes = [
+    notes,
+    selectedPortionSize !== "medium" ? `Porcao: ${portionLabel}` : "",
+  ]
     .filter(Boolean)
     .join(" | ");
 
@@ -1856,21 +1879,25 @@ export async function createCartOrder(input) {
       };
     }
 
-    const portionLabel = getPortionLabel(cartItem.portionSize);
+    const hasPortionPricing = hasDefinedPortionPricing(menuItem.portion_prices);
+    const selectedPortionSize = hasPortionPricing
+      ? normalizePortionSize(cartItem.portionSize)
+      : "medium";
+    const portionLabel = getPortionLabel(selectedPortionSize);
     const unitPrice = resolvePortionUnitPrice(
       Number(menuItem.price),
       menuItem.portion_prices,
-      cartItem.portionSize,
+      selectedPortionSize,
     );
     const totalPrice = unitPrice * cartItem.quantity;
     itemsSubtotal += totalPrice;
     const itemName =
-      cartItem.portionSize === "medium"
+      selectedPortionSize === "medium"
         ? menuItem.name
         : `${menuItem.name} (${portionLabel})`;
     const normalizedNotes = [
       cartItem.notes,
-      cartItem.portionSize !== "medium" ? `Porcao: ${portionLabel}` : "",
+      selectedPortionSize !== "medium" ? `Porcao: ${portionLabel}` : "",
     ]
       .filter(Boolean)
       .join(" | ");

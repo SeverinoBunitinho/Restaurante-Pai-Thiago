@@ -882,7 +882,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
                     </div>
 
                     <p className="text-sm leading-6 text-[rgba(21,35,29,0.68)]">
-                      O preco final respeita a porcao escolhida e o estoque atual do item.
+                      O preco final respeita o tamanho quando configurado no item, com validacao de estoque em tempo real.
                     </p>
 
                     <button type="submit" className="button-primary w-full">

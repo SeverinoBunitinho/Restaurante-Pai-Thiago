@@ -147,6 +147,33 @@ function getPortionLabel(size) {
   return "Media";
 }
 
+function normalizeDefinedPortionPricing(portionPricesInput = {}) {
+  const payload = {};
+
+  for (const size of portionSizeOptions) {
+    const inputPrice = Number(portionPricesInput[size] ?? NaN);
+
+    if (!Number.isFinite(inputPrice) || inputPrice < 0) {
+      continue;
+    }
+
+    payload[size] = Number(inputPrice.toFixed(2));
+  }
+
+  return payload;
+}
+
+function hasDefinedPortionPricing(portionPricesInput) {
+  if (!portionPricesInput || typeof portionPricesInput !== "object") {
+    return false;
+  }
+
+  return portionSizeOptions.some((size) => {
+    const inputPrice = Number(portionPricesInput[size] ?? NaN);
+    return Number.isFinite(inputPrice) && inputPrice >= 0;
+  });
+}
+
 function buildPortionPricing(basePrice, portionPricesInput = {}) {
   const parsedBasePrice = Number(basePrice ?? 0);
   const safeBasePrice =
@@ -1296,18 +1323,23 @@ export async function addServiceCheckItemAction(formData) {
     );
   }
 
-  const portionLabel = getPortionLabel(portionSize);
+  const hasPortionPricing = hasDefinedPortionPricing(menuItem.portion_prices);
+  const selectedPortionSize = hasPortionPricing ? portionSize : "medium";
+  const portionLabel = getPortionLabel(selectedPortionSize);
   const unitPrice = resolvePortionUnitPrice(
     Number(menuItem.price),
     menuItem.portion_prices,
-    portionSize,
+    selectedPortionSize,
   );
   const totalPrice = unitPrice * quantity;
   const itemName =
-    portionSize === "medium"
+    selectedPortionSize === "medium"
       ? menuItem.name
       : `${menuItem.name} (${portionLabel})`;
-  const normalizedNotes = [notes, portionSize !== "medium" ? `Porcao: ${portionLabel}` : ""]
+  const normalizedNotes = [
+    notes,
+    selectedPortionSize !== "medium" ? `Porcao: ${portionLabel}` : "",
+  ]
     .filter(Boolean)
     .join(" | ");
   const insertResult = await supabase.from("service_check_items").insert({
@@ -1359,7 +1391,7 @@ export async function addServiceCheckItemAction(formData) {
     metadata: {
       menuItemId,
       quantity,
-      portionSize,
+      portionSize: selectedPortionSize,
       unitPrice,
     },
   });
@@ -1817,7 +1849,7 @@ export async function createMenuItemAction(_previousState, formData) {
     uploadedImagePath = uploadResult.path;
   }
 
-  const portionPrices = buildPortionPricing(price, {
+  const definedPortionPrices = normalizeDefinedPortionPricing({
     small: Number.isFinite(portionSmallPrice) && portionSmallPrice >= 0
       ? portionSmallPrice
       : undefined,
@@ -1828,6 +1860,9 @@ export async function createMenuItemAction(_previousState, formData) {
       ? portionLargePrice
       : undefined,
   });
+  const portionPrices = hasDefinedPortionPricing(definedPortionPrices)
+    ? buildPortionPricing(price, definedPortionPrices)
+    : null;
 
   const insertPayload = {
     category_id: categoryId,
@@ -2031,7 +2066,7 @@ export async function updateMenuItemAction(formData) {
     );
   }
 
-  const portionPrices = buildPortionPricing(price, {
+  const definedPortionPrices = normalizeDefinedPortionPricing({
     small: Number.isFinite(portionSmallPrice) && portionSmallPrice >= 0
       ? portionSmallPrice
       : undefined,
@@ -2042,6 +2077,9 @@ export async function updateMenuItemAction(formData) {
       ? portionLargePrice
       : undefined,
   });
+  const portionPrices = hasDefinedPortionPricing(definedPortionPrices)
+    ? buildPortionPricing(price, definedPortionPrices)
+    : null;
 
   const updatePayload = {
     category_id: categoryId,

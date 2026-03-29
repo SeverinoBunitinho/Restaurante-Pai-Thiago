@@ -213,14 +213,16 @@ export default async function OperacaoMenuPage({ searchParams }) {
           ) : null}
           <p>
             <span className="font-semibold text-[var(--forest)]">
-              Porcoes:
+              Tamanhos:
             </span>{" "}
-            {Object.entries(item.portionPrices ?? {})
-              .map(
-                ([size, value]) =>
-                  `${formatPortionLabel(size)} ${formatCurrency(value)}`,
-              )
-              .join(" | ")}
+            {Object.entries(item.portionPrices ?? {}).length
+              ? Object.entries(item.portionPrices ?? {})
+                  .map(
+                    ([size, value]) =>
+                      `${formatPortionLabel(size)} ${formatCurrency(value)}`,
+                  )
+                  .join(" | ")
+              : "Preco unico (sem tamanhos)"}
           </p>
         </div>
 
@@ -383,7 +385,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
               </label>
 
               <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                P
+                Pequeno (opcional)
                 <input
                   name="portionSmallPrice"
                   type="number"
@@ -395,19 +397,19 @@ export default async function OperacaoMenuPage({ searchParams }) {
               </label>
 
               <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                M
+                Medio (opcional)
                 <input
                   name="portionMediumPrice"
                   type="number"
                   min="0"
                   step="0.01"
-                  defaultValue={item.portionPrices?.medium ?? item.price}
+                  defaultValue={item.portionPrices?.medium ?? ""}
                   className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
                 />
               </label>
 
               <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                G
+                Grande (opcional)
                 <input
                   name="portionLargePrice"
                   type="number"
@@ -418,6 +420,10 @@ export default async function OperacaoMenuPage({ searchParams }) {
                 />
               </label>
             </div>
+
+            <p className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+              Para bebida ou item com preco unico, deixe os campos de tamanho em branco.
+            </p>
 
             <div className="grid gap-3 md:grid-cols-2">
               <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">

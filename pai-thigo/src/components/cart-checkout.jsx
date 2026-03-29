@@ -290,14 +290,16 @@ export function CartCheckout({ customerName, restaurantInfo }) {
                     <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
                       Preparo medio: {item.prepTime || "sob consulta"}
                     </p>
-                    <p className="mt-1 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
-                      Porcao:{" "}
-                      {item.portionSize === "small"
-                        ? "Pequena"
-                        : item.portionSize === "large"
-                          ? "Grande"
-                          : "Media"}
-                    </p>
+                    {item.hasPortionOptions ? (
+                      <p className="mt-1 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                        Tamanho:{" "}
+                        {item.portionSize === "small"
+                          ? "Pequeno"
+                          : item.portionSize === "large"
+                            ? "Grande"
+                            : "Medio"}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="text-right">
                     <p className="text-sm uppercase tracking-[0.18em] text-[var(--sage)]">

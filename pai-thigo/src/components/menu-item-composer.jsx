@@ -49,7 +49,7 @@ export function MenuItemComposer({ categories = [] }) {
       <div className="rounded-[1.6rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.64)] p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
-            Categoria do prato
+            Categoria do item
           </p>
           <button
             type="button"
@@ -88,11 +88,11 @@ export function MenuItemComposer({ categories = [] }) {
           </label>
 
           <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
-            Nome do prato
+            Nome do item
             <input
               name="name"
               required
-              placeholder="Ex.: Ravioli de cordeiro"
+              placeholder="Ex.: Ravioli de cordeiro ou Soda italiana"
               className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
             />
           </label>
@@ -104,22 +104,22 @@ export function MenuItemComposer({ categories = [] }) {
             name="description"
             rows={4}
             required
-            placeholder="Descreva composicao, tecnica e acabamento do prato."
+            placeholder="Descreva composicao, tecnica e acabamento do item."
             className="w-full min-w-0 rounded-[1.6rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
 
         <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
-          Imagem do prato (URL)
+          Imagem do item (URL)
           <input
             name="imageUrl"
-            placeholder="https://... ou /images/seu-prato.jpg"
+            placeholder="https://... ou /images/seu-item.jpg"
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
 
         <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
-          Imagem do prato (arquivo do computador)
+          Imagem do item (arquivo do computador)
           <input
             name="imageFile"
             type="file"
@@ -188,41 +188,45 @@ export function MenuItemComposer({ categories = [] }) {
         </label>
 
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
-          Porcao pequena
+          Tamanho pequeno (opcional)
           <input
             name="portionSmallPrice"
             type="number"
             min="0"
             step="0.01"
-            placeholder="10.90"
+            placeholder="Ex.: 10.90"
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
 
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
-          Porcao media
+          Tamanho medio (opcional)
           <input
             name="portionMediumPrice"
             type="number"
             min="0"
             step="0.01"
-            placeholder="Preco base"
+            placeholder="Ex.: 14.90"
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
 
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
-          Porcao grande
+          Tamanho grande (opcional)
           <input
             name="portionLargePrice"
             type="number"
             min="0"
             step="0.01"
-            placeholder="15.90"
+            placeholder="Ex.: 18.90"
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
         </div>
+
+        <p className="text-xs leading-6 text-[rgba(21,35,29,0.66)]">
+          Se for bebida ou item com preco unico, deixe os tres campos de tamanho em branco.
+        </p>
 
         <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Tags
@@ -245,7 +249,7 @@ export function MenuItemComposer({ categories = [] }) {
         <div className="flex flex-wrap gap-3">
         <label className="inline-flex items-center gap-3 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-sm font-medium text-[var(--forest)]">
           <input type="checkbox" name="isSignature" className="accent-[var(--gold)]" />
-          Prato assinatura
+          Item assinatura
         </label>
         <label className="inline-flex items-center gap-3 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.72)] px-4 py-3 text-sm font-medium text-[var(--forest)]">
           <input
@@ -260,8 +264,8 @@ export function MenuItemComposer({ categories = [] }) {
 
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <SubmitButton
-            idleLabel="Adicionar prato"
-            pendingLabel="Salvando prato..."
+            idleLabel="Adicionar item"
+            pendingLabel="Salvando item..."
             className="xl:w-auto"
           />
           <p className="max-w-xl text-sm leading-6 text-[rgba(21,35,29,0.68)]">
