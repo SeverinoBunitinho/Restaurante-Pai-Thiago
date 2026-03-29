@@ -1503,6 +1503,7 @@ export async function createReservation(input) {
 
 export async function createOrder(input) {
   const supabase = await getSupabaseServerClient();
+  const stockWriter = getSupabaseAdminClient() ?? supabase;
 
   if (!supabase) {
     return {
@@ -1622,7 +1623,9 @@ export async function createOrder(input) {
     .filter(Boolean)
     .join(" | ");
 
-  const { error } = await supabase.from("orders").insert({
+  const orderInsertResult = await supabase
+    .from("orders")
+    .insert({
     user_id: user.id,
     menu_item_id: menuItem.id,
     guest_name: profile.full_name,
@@ -1638,7 +1641,10 @@ export async function createOrder(input) {
     payment_method: "pix",
     status: "received",
     source: "customer",
-  });
+    })
+    .select("id")
+    .maybeSingle();
+  const { data: insertedOrder, error } = orderInsertResult;
 
   if (error) {
     return {
@@ -1649,10 +1655,22 @@ export async function createOrder(input) {
   }
 
   if (hasStockControl) {
-    await supabase
+    const stockUpdateResult = await stockWriter
       .from("menu_items")
       .update({ stock_quantity: Math.max(0, stockQuantity - quantity) })
       .eq("id", menuItem.id);
+
+    if (stockUpdateResult.error) {
+      if (insertedOrder?.id) {
+        await stockWriter.from("orders").delete().eq("id", insertedOrder.id);
+      }
+
+      return {
+        ok: false,
+        message:
+          "Nao foi possivel atualizar o estoque agora. O pedido nao foi concluido para evitar inconsistencia.",
+      };
+    }
   }
 
   return {
@@ -1664,6 +1682,7 @@ export async function createOrder(input) {
 
 export async function createCartOrder(input) {
   const supabase = await getSupabaseServerClient();
+  const stockWriter = getSupabaseAdminClient() ?? supabase;
 
   if (!supabase) {
     return {
@@ -1955,13 +1974,27 @@ export async function createCartOrder(input) {
     }
 
     const nextStockQuantity = Math.max(0, stockQuantity - totalQuantity);
-    await supabase
+    const stockUpdateResult = await stockWriter
       .from("menu_items")
       .update({
         stock_quantity: nextStockQuantity,
         is_available: nextStockQuantity > 0 ? Boolean(menuItem.is_available) : false,
       })
       .eq("id", itemId);
+
+    if (stockUpdateResult.error) {
+      await stockWriter
+        .from("orders")
+        .delete()
+        .eq("checkout_reference", checkoutReference)
+        .eq("source", "customer");
+
+      return {
+        ok: false,
+        message:
+          "Nao foi possivel atualizar o estoque do pedido. O checkout foi revertido para evitar divergencia.",
+      };
+    }
   }
 
   return {
