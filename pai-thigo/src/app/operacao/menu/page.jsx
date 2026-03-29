@@ -385,7 +385,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
               </label>
 
               <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Pequeno (opcional)
+                Pequeno / 350ml (opcional)
                 <input
                   name="portionSmallPrice"
                   type="number"
@@ -397,7 +397,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
               </label>
 
               <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Medio (opcional)
+                Medio / 1000ml (opcional)
                 <input
                   name="portionMediumPrice"
                   type="number"
@@ -409,7 +409,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
               </label>
 
               <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Grande (opcional)
+                Grande / 2000ml (opcional)
                 <input
                   name="portionLargePrice"
                   type="number"

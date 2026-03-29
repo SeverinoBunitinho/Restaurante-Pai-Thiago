@@ -14,6 +14,31 @@ export function MenuItemComposer({ categories = [] }) {
     initialMenuItemState,
   );
   const [isCategoryComposerOpen, setIsCategoryComposerOpen] = useState(false);
+  const [sizePreset, setSizePreset] = useState("default");
+
+  const sizePresetCopy = {
+    default: {
+      smallLabel: "Tamanho pequeno (opcional)",
+      mediumLabel: "Tamanho medio (opcional)",
+      largeLabel: "Tamanho grande (opcional)",
+      smallPlaceholder: "Ex.: 10.90",
+      mediumPlaceholder: "Ex.: 14.90",
+      largePlaceholder: "Ex.: 18.90",
+      helper: "Use para prato, lanche e porcoes da casa.",
+    },
+    drink: {
+      smallLabel: "350 ml (opcional)",
+      mediumLabel: "1000 ml / 1L (opcional)",
+      largeLabel: "2000 ml / 2L (opcional)",
+      smallPlaceholder: "Ex.: 6.90",
+      mediumPlaceholder: "Ex.: 12.90",
+      largePlaceholder: "Ex.: 19.90",
+      helper: "Use para bebida em volume (350ml, 1L e 2L).",
+    },
+  };
+
+  const selectedSizePresetCopy =
+    sizePresetCopy[sizePreset] ?? sizePresetCopy.default;
 
   if (!categories.length) {
     return (
@@ -164,6 +189,18 @@ export function MenuItemComposer({ categories = [] }) {
         </label>
         </div>
 
+        <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
+          Modelo de tamanho
+          <select
+            value={sizePreset}
+            onChange={(event) => setSizePreset(event.target.value)}
+            className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+          >
+            <option value="default">Padrao (pequeno/medio/grande)</option>
+            <option value="drink">Bebida (350ml/1000ml/2000ml)</option>
+          </select>
+        </label>
+
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
           Estoque (opcional)
@@ -188,44 +225,45 @@ export function MenuItemComposer({ categories = [] }) {
         </label>
 
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
-          Tamanho pequeno (opcional)
+          {selectedSizePresetCopy.smallLabel}
           <input
             name="portionSmallPrice"
             type="number"
             min="0"
             step="0.01"
-            placeholder="Ex.: 10.90"
+            placeholder={selectedSizePresetCopy.smallPlaceholder}
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
 
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
-          Tamanho medio (opcional)
+          {selectedSizePresetCopy.mediumLabel}
           <input
             name="portionMediumPrice"
             type="number"
             min="0"
             step="0.01"
-            placeholder="Ex.: 14.90"
+            placeholder={selectedSizePresetCopy.mediumPlaceholder}
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
 
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
-          Tamanho grande (opcional)
+          {selectedSizePresetCopy.largeLabel}
           <input
             name="portionLargePrice"
             type="number"
             min="0"
             step="0.01"
-            placeholder="Ex.: 18.90"
+            placeholder={selectedSizePresetCopy.largePlaceholder}
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
         </label>
         </div>
 
         <p className="text-xs leading-6 text-[rgba(21,35,29,0.66)]">
-          Se for bebida ou item com preco unico, deixe os tres campos de tamanho em branco.
+          {selectedSizePresetCopy.helper} Se for item com preco unico, deixe os
+          tres campos de tamanho em branco.
         </p>
 
         <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
@@ -269,7 +307,7 @@ export function MenuItemComposer({ categories = [] }) {
             className="xl:w-auto"
           />
           <p className="max-w-xl text-sm leading-6 text-[rgba(21,35,29,0.68)]">
-            O prato entra no Supabase e aparece no cardapio do cliente sem
+            O item entra no Supabase e aparece no cardapio do cliente sem
             precisar atualizar manualmente a pagina.
           </p>
         </div>
