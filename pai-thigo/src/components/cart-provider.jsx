@@ -17,8 +17,8 @@ function normalizePortionSize(value) {
   return ["small", "medium", "large"].includes(normalized) ? normalized : "medium";
 }
 
-function buildCartLineId(menuItemId, portionSize) {
-  return `${menuItemId}::${portionSize}`;
+function buildCartLineId(menuItemId, portionSize, variantKey = "") {
+  return `${menuItemId}::${portionSize}::${String(variantKey ?? "").trim().toLowerCase()}`;
 }
 
 function sanitizeCartItems(value) {
@@ -41,6 +41,7 @@ function sanitizeCartItems(value) {
         hasPortionOptions: Boolean(
           item.hasPortionOptions ?? normalizePortionSize(item.portionSize) !== "medium",
         ),
+        variantKey: String(item.variantKey ?? "").trim(),
         quantity: Number(item.quantity ?? 1),
         notes: String(item.notes ?? "").trim(),
         stockQuantity:
@@ -55,7 +56,11 @@ function sanitizeCartItems(value) {
     })
     .map((item) => ({
       ...item,
-      lineId: buildCartLineId(item.menuItemId, item.portionSize),
+      lineId: buildCartLineId(
+        item.menuItemId,
+        item.portionSize,
+        item.variantKey,
+      ),
     }))
     .filter(
       (item) =>

@@ -10,6 +10,49 @@ import { getRestaurantProfile } from "@/lib/restaurant-profile";
 import { getMenuCategories } from "@/lib/site-data";
 import { formatCurrency } from "@/lib/utils";
 
+function normalizeText(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function isJuiceItem(item) {
+  const name = normalizeText(item?.name);
+  const tags = Array.isArray(item?.tags)
+    ? item.tags.map((tag) => normalizeText(tag)).join(" ")
+    : "";
+
+  return name.includes("suco") || tags.includes("suco");
+}
+
+function extractJuiceFlavors(item) {
+  if (!isJuiceItem(item)) {
+    return [];
+  }
+
+  const rawDescription = String(item?.description ?? "")
+    .replace(/\r?\n/g, ",")
+    .trim();
+
+  if (!rawDescription) {
+    return [];
+  }
+
+  const options = rawDescription
+    .split(/[;,]/)
+    .map((entry) => entry.trim())
+    .filter(
+      (entry) =>
+        entry.length >= 2 &&
+        entry.length <= 40 &&
+        !/^\d+$/.test(entry),
+    );
+
+  return Array.from(new Set(options)).slice(0, 30);
+}
+
 export default async function CardapioPage() {
   const session = await getCurrentSession();
   const [categories, restaurantInfo] = await Promise.all([
@@ -40,6 +83,8 @@ export default async function CardapioPage() {
       hasStockControl &&
       stockQuantity > 0 &&
       stockQuantity <= Math.max(0, lowStockThreshold);
+
+    const flavorOptions = extractJuiceFlavors(item);
 
     return (
       <article
@@ -141,6 +186,7 @@ export default async function CardapioPage() {
             name={item.name}
             price={item.price}
             portionPrices={item.portionPrices}
+            flavorOptions={flavorOptions}
             prepTime={item.prepTime}
             signature={item.signature}
             canOrder={canOrder}

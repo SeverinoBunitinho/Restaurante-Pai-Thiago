@@ -12,6 +12,7 @@ export function MenuOrderForm({
   name,
   price,
   portionPrices,
+  flavorOptions = [],
   prepTime,
   signature = false,
   canOrder = true,
@@ -20,6 +21,9 @@ export function MenuOrderForm({
 }) {
   const [quantity, setQuantity] = useState("1");
   const [portionSize, setPortionSize] = useState("medium");
+  const [selectedFlavor, setSelectedFlavor] = useState(
+    flavorOptions[0] ? String(flavorOptions[0]) : "",
+  );
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("idle");
   const { addItem, getItemQuantity } = useCart();
@@ -43,6 +47,7 @@ export function MenuOrderForm({
   const selectedUnitPrice = hasPortionOptions
     ? pricing[portionSize] ?? pricing.medium
     : pricing.medium;
+  const hasFlavorOptions = flavorOptions.length > 0;
   const portionLabels = {
     small: "Pequena",
     medium: "Media",
@@ -66,6 +71,10 @@ export function MenuOrderForm({
     hasStockControl &&
     safeStockQuantity > 0 &&
     safeStockQuantity <= Math.max(0, safeLowStockThreshold);
+
+  useEffect(() => {
+    setSelectedFlavor(flavorOptions[0] ? String(flavorOptions[0]) : "");
+  }, [flavorOptions]);
 
   useEffect(() => {
     if (maxSelectableQuantity <= 0) {
@@ -99,6 +108,11 @@ export function MenuOrderForm({
       return;
     }
 
+    if (hasFlavorOptions && !selectedFlavor) {
+      setStatus("missing-flavor");
+      return;
+    }
+
     const requestedQuantity = Number(quantity);
     const safeRequestedQuantity = Number.isFinite(requestedQuantity)
       ? Math.max(1, Math.floor(requestedQuantity))
@@ -106,16 +120,21 @@ export function MenuOrderForm({
     const quantityToAdd = hasStockControl
       ? Math.min(safeRequestedQuantity, maxSelectableQuantity)
       : safeRequestedQuantity;
+    const normalizedNotes = String(notes ?? "").trim();
+    const flavorNote = hasFlavorOptions ? `Sabor: ${selectedFlavor}` : "";
+    const finalNotes = [flavorNote, normalizedNotes].filter(Boolean).join(" | ");
+
     const addResult = addItem({
       menuItemId,
       name,
       price: selectedUnitPrice,
       portionSize: hasPortionOptions ? portionSize : "medium",
+      variantKey: hasFlavorOptions ? selectedFlavor : "",
       hasPortionOptions,
       prepTime,
       signature,
       quantity: quantityToAdd,
-      notes,
+      notes: finalNotes,
       stockQuantity: safeStockQuantity,
       lowStockThreshold: safeLowStockThreshold,
     });
@@ -159,8 +178,10 @@ export function MenuOrderForm({
       <div
         className={cn(
           "grid gap-4",
-          hasPortionOptions
-            ? "md:grid-cols-[120px_minmax(0,1fr)_minmax(0,210px)]"
+          hasPortionOptions && hasFlavorOptions
+            ? "md:grid-cols-2 xl:grid-cols-[120px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,210px)]"
+            : hasPortionOptions || hasFlavorOptions
+              ? "md:grid-cols-[120px_minmax(0,1fr)_minmax(0,210px)]"
             : "md:grid-cols-[120px_minmax(0,1fr)]",
         )}
       >
@@ -205,6 +226,23 @@ export function MenuOrderForm({
           </label>
         ) : null}
 
+        {hasFlavorOptions ? (
+          <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
+            Sabor do suco
+            <select
+              value={selectedFlavor}
+              onChange={(event) => setSelectedFlavor(event.target.value)}
+              className="w-full min-w-0 rounded-2xl border border-[rgba(20,35,29,0.12)] bg-white px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            >
+              {flavorOptions.map((flavor) => (
+                <option key={flavor} value={flavor}>
+                  {flavor}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+
         <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
           Observacao para a equipe
           <input
@@ -236,7 +274,7 @@ export function MenuOrderForm({
             ? `${portionLabels[portionSize]} selecionada por ${Intl.NumberFormat("pt-BR", {
                 style: "currency",
                 currency: "BRL",
-              }).format(selectedUnitPrice)}.`
+              }).format(selectedUnitPrice)}${hasFlavorOptions && selectedFlavor ? ` | sabor: ${selectedFlavor}` : ""}.`
             : `Preco unitario: ${Intl.NumberFormat("pt-BR", {
                 style: "currency",
                 currency: "BRL",
@@ -272,6 +310,10 @@ export function MenuOrderForm({
             <span className="inline-flex items-center gap-2 font-semibold">
               <CheckCircle2 size={16} />
               Item adicionado ao carrinho com sucesso.
+            </span>
+          ) : status === "missing-flavor" ? (
+            <span className="font-semibold">
+              Selecione um sabor para adicionar este suco ao carrinho.
             </span>
           ) : (
             <span className="font-semibold">
