@@ -3,7 +3,6 @@ import { AlertTriangle, ChefHat, Sparkles, Trash2 } from "lucide-react";
 import {
   deleteMenuItemAction,
   toggleMenuItemAvailabilityAction,
-  updateMenuItemStockAction,
   updateMenuItemAction,
 } from "@/app/operacao/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
@@ -58,71 +57,6 @@ function getStockState(item) {
   };
 }
 
-function getStockAlertTone(item) {
-  const isOutOfStock = Number(item.stockQuantity ?? 0) <= 0;
-  const isLowStock =
-    !isOutOfStock &&
-    Number(item.stockQuantity ?? 0) <= Math.max(0, Number(item.lowStockThreshold ?? 0));
-
-  return {
-    isOutOfStock,
-    isLowStock,
-    badgeClass: isOutOfStock
-      ? "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]"
-      : isLowStock
-        ? "bg-[rgba(182,135,66,0.12)] text-[var(--gold)]"
-        : "bg-[rgba(95,123,109,0.12)] text-[var(--sage)]",
-    badgeLabel: isOutOfStock ? "Esgotado" : "Reposicao recomendada",
-  };
-}
-
-function groupStockAlertsByCategory(stockAlerts = []) {
-  const groupedMap = new Map();
-
-  stockAlerts.forEach((stockItem) => {
-    const categoryName = stockItem.categoryName || "Sem categoria";
-
-    if (!groupedMap.has(categoryName)) {
-      groupedMap.set(categoryName, []);
-    }
-
-    groupedMap.get(categoryName).push(stockItem);
-  });
-
-  return Array.from(groupedMap.entries())
-    .map(([categoryName, items]) => {
-      const orderedItems = items
-        .slice()
-        .sort((left, right) => String(left.name ?? "").localeCompare(String(right.name ?? ""), "pt-BR"));
-      const outOfStockCount = orderedItems.filter(
-        (menuItem) => Number(menuItem.stockQuantity ?? 0) <= 0,
-      ).length;
-      const lowStockCount = orderedItems.filter((menuItem) => {
-        const currentStock = Number(menuItem.stockQuantity ?? 0);
-        const alertLimit = Math.max(0, Number(menuItem.lowStockThreshold ?? 0));
-        return currentStock > 0 && currentStock <= alertLimit;
-      }).length;
-
-      return {
-        categoryName,
-        items: orderedItems,
-        total: orderedItems.length,
-        outOfStockCount,
-        lowStockCount,
-      };
-    })
-    .sort((left, right) => {
-      const leftCritical = left.outOfStockCount + left.lowStockCount;
-      const rightCritical = right.outOfStockCount + right.lowStockCount;
-
-      if (rightCritical !== leftCritical) {
-        return rightCritical - leftCritical;
-      }
-
-      return left.categoryName.localeCompare(right.categoryName, "pt-BR");
-    });
-}
-
 export default async function OperacaoMenuPage({ searchParams }) {
   await requireRole(["manager", "owner"]);
   const board = await getMenuManagementBoard();
@@ -137,7 +71,26 @@ export default async function OperacaoMenuPage({ searchParams }) {
     (sum, category) => sum + category.items.length,
     0,
   );
-  const stockAlertGroups = groupStockAlertsByCategory(board.stockAlerts ?? []);
+  const stockAlerts = [...(board.stockAlerts ?? [])].sort((left, right) => {
+    const leftStock = Math.max(0, Number(left.stockQuantity ?? 0));
+    const rightStock = Math.max(0, Number(right.stockQuantity ?? 0));
+    const leftOut = leftStock <= 0;
+    const rightOut = rightStock <= 0;
+
+    if (leftOut !== rightOut) {
+      return leftOut ? -1 : 1;
+    }
+
+    if (leftStock !== rightStock) {
+      return leftStock - rightStock;
+    }
+
+    return String(left.name ?? "").localeCompare(String(right.name ?? ""), "pt-BR");
+  });
+  const outOfStockCount = stockAlerts.filter(
+    (item) => Number(item.stockQuantity ?? 0) <= 0,
+  ).length;
+  const lowStockCount = stockAlerts.length - outOfStockCount;
   const maxVisibleOperationalItems = 4;
 
   function renderOperationalItem(item, categoryId) {
@@ -504,152 +457,71 @@ export default async function OperacaoMenuPage({ searchParams }) {
         <MenuFeedbackBanner notice={menuNotice} error={menuError} />
       </section>
 
-      {stockAlertGroups.length ? (
+      {stockAlerts.length ? (
         <section className="pt-8">
           <div className="luxury-card rounded-[2.2rem] p-6">
             <SectionHeading
               eyebrow="Controle de estoque"
               title="Avisos de estoque baixo em tempo real"
-              description="Esta area aparece somente quando houver item em alerta ou esgotado."
+              description="Ajuste de estoque segue na edicao do item abaixo. Aqui fica apenas o alerta rapido."
               compact
             />
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {stockAlertGroups.map((group) => (
-                <article
-                  key={`stock-group-resume-${group.categoryName}`}
-                  className="rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.78)] px-4 py-3"
-                >
-                  <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                    {group.categoryName}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--forest)]">
-                    {group.total} item(ns)
-                  </p>
-                  <p className="mt-1 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
-                    {group.outOfStockCount} esgotado(s) - {group.lowStockCount} em alerta
-                  </p>
-                </article>
-              ))}
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--clay)]">
+                {outOfStockCount} esgotado(s)
+              </span>
+              <span className="rounded-full border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--gold)]">
+                {lowStockCount} em alerta
+              </span>
+              <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--forest)]">
+                {stockAlerts.length} no total
+              </span>
             </div>
 
-            <div className="mt-6 space-y-4">
-              {stockAlertGroups.map((group, index) => (
-                <details
-                  key={`stock-group-${group.categoryName}`}
-                  open={index === 0}
-                  className="rounded-[1.6rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.7)] p-4"
-                >
-                  <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-[var(--sage)]">
-                          Categoria
-                        </p>
-                        <h3 className="mt-1 text-xl font-semibold text-[var(--forest)]">
-                          {group.categoryName}
-                        </h3>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--clay)]">
-                          {group.outOfStockCount} esgotado(s)
-                        </span>
-                        <span className="rounded-full border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--gold)]">
-                          {group.lowStockCount} em alerta
-                        </span>
-                        <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--forest)]">
-                          {group.total} no total
-                        </span>
-                      </div>
-                    </div>
-                  </summary>
+            <div className="mt-5 max-h-[22rem] overflow-y-auto pr-1">
+              <div className="space-y-3">
+                {stockAlerts.map((alertItem) => {
+                  const currentStock = Math.max(0, Number(alertItem.stockQuantity ?? 0));
+                  const alertLimit = Math.max(0, Number(alertItem.lowStockThreshold ?? 0));
+                  const isOutOfStock = currentStock <= 0;
 
-                  <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                    {group.items.map((alertItem) => {
-                      const stockTone = getStockAlertTone(alertItem);
-
-                      return (
-                        <article
-                          key={`stock-alert-${alertItem.id}`}
-                          className="rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.78)] p-4"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <h4 className="text-lg font-semibold text-[var(--forest)]">
-                                {alertItem.name}
-                              </h4>
-                              <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.7)]">
-                                Estoque atual:{" "}
-                                <span className="font-semibold text-[var(--forest)]">
-                                  {alertItem.stockQuantity}
-                                </span>{" "}
-                                | alerta em{" "}
-                                <span className="font-semibold text-[var(--forest)]">
-                                  {alertItem.lowStockThreshold}
-                                </span>
-                                .
-                              </p>
-                            </div>
-                            <span
-                              className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] ${stockTone.badgeClass}`}
-                            >
-                              <AlertTriangle size={14} />
-                              {stockTone.badgeLabel}
+                  return (
+                    <article
+                      key={`stock-alert-${alertItem.id}`}
+                      className="rounded-[1.4rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.78)] px-4 py-3"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--sage)]">
+                            {alertItem.categoryName || "Sem categoria"}
+                          </p>
+                          <h4 className="mt-1 text-base font-semibold text-[var(--forest)] break-words">
+                            {alertItem.name}
+                          </h4>
+                          <p className="mt-1 text-sm text-[rgba(21,35,29,0.72)]">
+                            Estoque atual:{" "}
+                            <span className="font-semibold text-[var(--forest)]">
+                              {currentStock}
                             </span>
-                          </div>
-
-                          <form
-                            action={updateMenuItemStockAction}
-                            className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
-                          >
-                            <input type="hidden" name="itemId" value={alertItem.id} />
-
-                            <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                              Novo estoque
-                              <input
-                                name="stockQuantity"
-                                type="number"
-                                min="0"
-                                required
-                                defaultValue={Math.max(0, Number(alertItem.stockQuantity ?? 0))}
-                                className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.86)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                              />
-                            </label>
-
-                            <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                              Limite de alerta
-                              <input
-                                name="lowStockThreshold"
-                                type="number"
-                                min="0"
-                                required
-                                defaultValue={Math.max(0, Number(alertItem.lowStockThreshold ?? 0))}
-                                className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.86)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                              />
-                            </label>
-
-                            <label className="sm:col-span-2 inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
-                              <input
-                                type="checkbox"
-                                name="reactivateWhenRestocked"
-                                className="accent-[var(--gold)]"
-                              />
-                              Reativar item ao repor
-                            </label>
-
-                            <button
-                              type="submit"
-                              className="sm:col-span-2 pill-wrap-safe inline-flex w-full items-center justify-center rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
-                            >
-                              Salvar estoque
-                            </button>
-                          </form>
-                        </article>
-                      );
-                    })}
-                  </div>
-                </details>
-              ))}
+                            {isOutOfStock ? " | reposicao urgente." : ` | alerta em ${alertLimit}.`}
+                          </p>
+                        </div>
+                        <span
+                          className={`inline-flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] ${
+                            isOutOfStock
+                              ? "bg-[rgba(138,93,59,0.12)] text-[var(--clay)]"
+                              : "bg-[rgba(182,135,66,0.12)] text-[var(--gold)]"
+                          }`}
+                        >
+                          <AlertTriangle size={14} />
+                          {isOutOfStock ? "Esgotado" : "Estoque baixo"}
+                        </span>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
