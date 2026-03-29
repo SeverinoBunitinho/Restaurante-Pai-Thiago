@@ -639,7 +639,7 @@ export async function SiteHeader() {
         { href: "/reservas", label: "Reservas", exact: true, icon: CalendarRange },
         { href: "/login", label: "Entrar", exact: true, icon: LogIn },
       ];
-  const showMobileBottomNav = !customerSession;
+  const showMobileBottomNav = !session;
 
   const dashboardHref = session ? getRouteForRole(session.role) : "/login";
 
@@ -806,10 +806,64 @@ export async function SiteHeader() {
               <div
                 className={`site-header-actions flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-2${
                   customerSession ? " site-header-actions-customer" : ""
+                }${
+                  staffSession ? " site-header-actions-staff" : ""
                 }`}
               >
                 {session ? (
                   <>
+                    {staffSession ? (
+                      <details className="header-dropdown site-header-menu-dropdown lg:hidden">
+                        <summary className="header-dropdown-trigger">
+                          <span>Menu</span>
+                          <ChevronDown className="header-dropdown-chevron" size={16} />
+                        </summary>
+                        <div className="header-dropdown-panel">
+                          <div className="header-dropdown-head">
+                            <p className="header-dropdown-head-eyebrow">acesso interno</p>
+                            <p className="header-dropdown-head-title">
+                              Navegue por painel, pedidos, reservas, central e modulos do seu cargo.
+                            </p>
+                          </div>
+                          {staffDropdownSections.map((section) => (
+                            <section key={`mobile-staff-${section.title}`} className="header-dropdown-section">
+                              <p className="header-dropdown-section-title">{section.title}</p>
+                              <div className="header-dropdown-section-list">
+                                {section.items.map((item) => (
+                                  <ActiveLink
+                                    key={`mobile-staff-${item.href}`}
+                                    href={item.href}
+                                    exact={item.exact}
+                                    className="header-dropdown-link"
+                                    activeClassName="header-dropdown-link-active"
+                                  >
+                                    <span className="header-dropdown-link-main">
+                                      <span className="header-dropdown-link-icon">
+                                        <item.icon size={14} />
+                                      </span>
+                                      <span className="header-dropdown-link-title">{item.label}</span>
+                                    </span>
+                                    <span className="header-dropdown-link-side">
+                                      {item.badgeCount && item.badgeKind ? (
+                                        <NotificationCountBadge
+                                          count={item.badgeCount}
+                                          latestAt={item.badgeLatestAt}
+                                          kind={item.badgeKind}
+                                          staffSession={staffSession}
+                                          className="nav-link-badge"
+                                          ariaLabel={`${item.badgeCount} notificacoes`}
+                                        />
+                                      ) : null}
+                                      <ChevronRight size={14} className="header-dropdown-link-arrow" />
+                                    </span>
+                                  </ActiveLink>
+                                ))}
+                              </div>
+                            </section>
+                          ))}
+                        </div>
+                      </details>
+                    ) : null}
                     {session.role === "customer" ? (
                       <>
                         <CartHeaderLink compact className="site-mobile-cart-link" />
