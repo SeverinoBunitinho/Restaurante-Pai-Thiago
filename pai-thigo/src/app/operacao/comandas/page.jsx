@@ -506,6 +506,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
               method="get"
               className="mt-8 grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
             >
+              <input type="hidden" name="view" value={activeView} />
               <label className="grid gap-2">
                 <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[rgba(217,185,122,0.88)]">
                   Buscar por mesa
@@ -1079,6 +1080,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
             </p>
 
             <form method="get" className="mt-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
+              <input type="hidden" name="view" value="pedidos" />
               {activeStatus !== "all" ? (
                 <input type="hidden" name="status" value={activeStatus} />
               ) : null}
