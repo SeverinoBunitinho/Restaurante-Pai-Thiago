@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  ChevronDown,
   Clock3,
   CreditCard,
   Printer,
@@ -1309,8 +1310,14 @@ export default async function OperacaoComandasPage({ searchParams }) {
                       </span>
                     </div>
 
-                    <div className="mt-6 space-y-4">
-                      {sectionOrderGroups.map((orderGroup) => {
+                    <div
+                      className={`mt-6 space-y-4 ${
+                        selectedOrderGroup
+                          ? ""
+                          : "max-h-[72vh] overflow-y-auto pr-1 md:pr-2"
+                      }`}
+                    >
+                      {sectionOrderGroups.map((orderGroup, orderIndex) => {
                         const statusView =
                           orderStatusMeta[orderGroup.status] ?? orderStatusMeta.received;
                         const actions = getOrderActions(
@@ -1318,32 +1325,53 @@ export default async function OperacaoComandasPage({ searchParams }) {
                           orderGroup.fulfillmentType,
                         );
                         const timingControl = getOrderTimingControl(orderGroup);
+                        const isOperationalSection = !["delivered", "cancelled"].includes(
+                          section.key,
+                        );
+                        const shouldOpenByDefault =
+                          Boolean(selectedOrderGroup) ||
+                          (isOperationalSection && orderIndex === 0);
 
                         return (
-                          <div
+                          <details
                             key={orderGroup.id}
                             className="rounded-[1.6rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.72)] p-5"
+                            open={shouldOpenByDefault}
                           >
-                            <div className="flex flex-wrap items-start justify-between gap-4">
-                              <div>
-                                <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
-                                  Pedido {orderGroup.checkoutReference}
-                                </p>
-                                <h4 className="mt-2 text-xl font-semibold text-[var(--forest)]">
-                                  {orderGroup.guestName || "Cliente identificado no checkout"}
-                                </h4>
-                                <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                                  Recebido em {formatDateTime(orderGroup.createdAt)}
-                                </p>
+                            <summary className="list-none cursor-pointer [&::-webkit-details-marker]:hidden">
+                              <div className="flex flex-wrap items-start justify-between gap-4">
+                                <div>
+                                  <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
+                                    Pedido {orderGroup.checkoutReference}
+                                  </p>
+                                  <h4 className="mt-2 text-xl font-semibold text-[var(--forest)]">
+                                    {orderGroup.guestName || "Cliente identificado no checkout"}
+                                  </h4>
+                                  <p className="mt-2 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
+                                    Recebido em {formatDateTime(orderGroup.createdAt)}
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                  <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.76)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
+                                    {orderGroup.totalItems} item(ns)
+                                  </span>
+                                  <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.76)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
+                                    {formatCurrency(orderGroup.totalPrice)}
+                                  </span>
+                                  <span
+                                    className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${statusView.badge}`}
+                                  >
+                                    {statusView.label}
+                                  </span>
+                                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.76)] text-[var(--forest)]">
+                                    <ChevronDown size={16} />
+                                  </span>
+                                </div>
                               </div>
-                              <span
-                                className={`rounded-full px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] ${statusView.badge}`}
-                              >
-                                {statusView.label}
-                              </span>
-                            </div>
+                            </summary>
 
-                            <div className="mt-5 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+                            <div className="mt-4 border-t border-[rgba(20,35,29,0.08)] pt-4">
+                              <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
                               <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.76)] p-4">
                                 <p className="text-xs uppercase tracking-[0.22em] text-[var(--sage)]">
                                   Itens do pedido
@@ -1466,6 +1494,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
                                 ) : null}
                               </div>
                             </div>
+                            </div>
 
                             {actions.length ? (
                               <div className="mt-5 flex flex-wrap gap-3">
@@ -1501,7 +1530,7 @@ export default async function OperacaoComandasPage({ searchParams }) {
                                 ))}
                               </div>
                             ) : null}
-                          </div>
+                          </details>
                         );
                       })}
                     </div>
