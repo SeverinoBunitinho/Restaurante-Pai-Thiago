@@ -7,6 +7,7 @@ import {
   updateMenuItemAction,
 } from "@/app/operacao/actions";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { MenuFeedbackBanner } from "@/components/menu-feedback-banner";
 import { MenuStockLiveSync } from "@/components/menu-stock-live-sync";
 import { MenuItemComposer } from "@/components/menu-item-composer";
 import { SectionHeading } from "@/components/section-heading";
@@ -500,17 +501,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
           ))}
         </div>
 
-        {menuNotice ? (
-          <div className="mt-4 rounded-[1.5rem] border border-[rgba(95,123,109,0.22)] bg-[rgba(95,123,109,0.08)] px-4 py-3 text-sm leading-6 text-[var(--forest)]">
-            {menuNotice}
-          </div>
-        ) : null}
-
-        {menuError ? (
-          <div className="mt-4 rounded-[1.5rem] border border-[rgba(138,93,59,0.22)] bg-[rgba(138,93,59,0.08)] px-4 py-3 text-sm leading-6 text-[var(--clay)]">
-            {menuError}
-          </div>
-        ) : null}
+        <MenuFeedbackBanner notice={menuNotice} error={menuError} />
       </section>
 
       {stockAlertGroups.length ? (
