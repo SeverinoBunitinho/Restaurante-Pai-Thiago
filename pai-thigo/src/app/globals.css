@@ -3005,6 +3005,33 @@ textarea {
   }
 }
 
+@media (min-width: 1024px) {
+  .site-header-top-row {
+    flex-wrap: nowrap !important;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .site-header-desktop-nav {
+    margin-left: auto;
+    margin-right: 0.15rem;
+  }
+
+  .site-header-actions {
+    width: auto !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-end;
+    gap: 0.42rem;
+  }
+
+  .site-header-actions .site-header-role-badge,
+  .site-header-actions .header-search-trigger,
+  .site-header-actions .notification-center-trigger,
+  .site-header-actions .site-header-logout {
+    min-height: 2.22rem;
+  }
+}
+
 @media (min-width: 640px) {
   .module-switch {
     width: fit-content;

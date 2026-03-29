@@ -648,7 +648,7 @@ export async function SiteHeader() {
       <header className="site-header-fixed">
         <div className="site-header-shell shell">
           <div className="site-header-card nav-pill rounded-[1.75rem] px-3 py-2.5 sm:rounded-[2.2rem] sm:px-6 sm:py-4">
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="site-header-top-row flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <Link href="/" className="flex w-full min-w-0 items-center gap-3 sm:w-auto sm:gap-4">
                 <div className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(217,185,122,0.18)] bg-[linear-gradient(135deg,var(--forest),#223a31)] text-[var(--cream)] shadow-[0_18px_34px_rgba(20,35,29,0.22)] sm:h-13 sm:w-13">
                   <span className="display-title text-[1.32rem] font-semibold sm:text-2xl">P</span>
@@ -666,7 +666,7 @@ export async function SiteHeader() {
                 </div>
               </Link>
 
-              <nav className="hidden items-center lg:flex">
+              <nav className="site-header-desktop-nav hidden items-center lg:flex">
                 {staffSession ? (
                   <details className="header-dropdown">
                     <summary className="header-dropdown-trigger">
