@@ -565,8 +565,8 @@ export default async function OperacaoMenuPage({ searchParams }) {
       ) : null}
 
       <section className="pt-14">
-        <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="luxury-card-dark rounded-[2.2rem] p-6 text-[var(--cream)]">
+        <div className="grid auto-rows-min items-start gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="luxury-card-dark h-fit self-start rounded-[2.2rem] p-6 text-[var(--cream)]">
             <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
               Edicao do cardapio
             </p>
@@ -606,26 +606,28 @@ export default async function OperacaoMenuPage({ searchParams }) {
               </article>
             </div>
 
-            <div className="mt-8 grid gap-3">
+            <div className="mt-8 grid content-start gap-3">
               {board.categories.length ? (
-                board.categories.map((category) => (
-                  <div
-                    key={category.id}
-                    className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {category.name}
-                        </p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[rgba(255,247,232,0.64)]">
-                          {category.items.length} item(ns)
-                        </p>
+                <div className="max-h-[26rem] space-y-3 overflow-y-auto pr-1">
+                  {board.categories.map((category) => (
+                    <div
+                      key={category.id}
+                      className="rounded-[1.4rem] border border-[rgba(217,185,122,0.16)] bg-[rgba(255,255,255,0.04)] px-4 py-3"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {category.name}
+                          </p>
+                          <p className="mt-1 text-xs uppercase tracking-[0.2em] text-[rgba(255,247,232,0.64)]">
+                            {category.items.length} item(ns)
+                          </p>
+                        </div>
+                        <Sparkles className="text-[var(--gold-soft)]" size={16} />
                       </div>
-                      <Sparkles className="text-[var(--gold-soft)]" size={16} />
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               ) : (
                 <div className="rounded-[1.4rem] border border-dashed border-[rgba(217,185,122,0.18)] bg-[rgba(255,255,255,0.04)] px-4 py-4 text-sm leading-6 text-[rgba(255,247,232,0.72)]">
                   O cardapio interno fica visivel aqui assim que a leitura do
