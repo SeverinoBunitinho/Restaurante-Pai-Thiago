@@ -106,6 +106,24 @@ function parseNonNegativeInteger(value) {
   return parsed;
 }
 
+function resolveBasePriceFromSizes(basePrice, portionPricesInput = {}) {
+  if (Number.isFinite(basePrice) && basePrice >= 0) {
+    return Number(basePrice);
+  }
+
+  const fallbackOrder = ["medium", "small", "large"];
+
+  for (const size of fallbackOrder) {
+    const candidatePrice = Number(portionPricesInput[size] ?? NaN);
+
+    if (Number.isFinite(candidatePrice) && candidatePrice >= 0) {
+      return Number(candidatePrice);
+    }
+  }
+
+  return NaN;
+}
+
 function normalizeStaffIdentifier(value) {
   return String(value ?? "")
     .trim()
@@ -1816,6 +1834,19 @@ export async function createMenuItemAction(_previousState, formData) {
   const isSignature = formData.has("isSignature");
   const isAvailable = formData.has("isAvailable");
   const price = parseCurrencyValue(formData.get("price"));
+  const definedPortionPrices = normalizeDefinedPortionPricing({
+    small: Number.isFinite(portionSmallPrice) && portionSmallPrice >= 0
+      ? portionSmallPrice
+      : undefined,
+    medium: Number.isFinite(portionMediumPrice) && portionMediumPrice >= 0
+      ? portionMediumPrice
+      : undefined,
+    large: Number.isFinite(portionLargePrice) && portionLargePrice >= 0
+      ? portionLargePrice
+      : undefined,
+  });
+  const hasPortionPricing = hasDefinedPortionPricing(definedPortionPrices);
+  const resolvedPrice = resolveBasePriceFromSizes(price, definedPortionPrices);
 
   if (!categoryId || !name || !description) {
     return {
@@ -1824,10 +1855,11 @@ export async function createMenuItemAction(_previousState, formData) {
     };
   }
 
-  if (!Number.isFinite(price) || price < 0) {
+  if (!Number.isFinite(resolvedPrice) || resolvedPrice < 0) {
     return {
       status: "error",
-      message: "Informe um preco valido para o prato.",
+      message:
+        "Informe um preco base valido ou preencha ao menos um valor de tamanho (P/M/G).",
     };
   }
 
@@ -1916,19 +1948,8 @@ export async function createMenuItemAction(_previousState, formData) {
     uploadedImagePath = uploadResult.path;
   }
 
-  const definedPortionPrices = normalizeDefinedPortionPricing({
-    small: Number.isFinite(portionSmallPrice) && portionSmallPrice >= 0
-      ? portionSmallPrice
-      : undefined,
-    medium: Number.isFinite(portionMediumPrice) && portionMediumPrice >= 0
-      ? portionMediumPrice
-      : undefined,
-    large: Number.isFinite(portionLargePrice) && portionLargePrice >= 0
-      ? portionLargePrice
-      : undefined,
-  });
-  const portionPrices = hasDefinedPortionPricing(definedPortionPrices)
-    ? buildPortionPricing(price, definedPortionPrices)
+  const portionPrices = hasPortionPricing
+    ? buildPortionPricing(resolvedPrice, definedPortionPrices)
     : null;
 
   const insertPayload = {
@@ -1936,7 +1957,7 @@ export async function createMenuItemAction(_previousState, formData) {
     name,
     description,
     image_url: resolvedImageUrl || null,
-    price,
+    price: resolvedPrice,
     prep_time: prepTime || null,
     spice_level: spiceLevel || null,
     tags,
@@ -2048,6 +2069,19 @@ export async function updateMenuItemAction(formData) {
   const isSignature = formData.has("isSignature");
   const isAvailable = formData.has("isAvailable");
   const price = parseCurrencyValue(formData.get("price"));
+  const definedPortionPrices = normalizeDefinedPortionPricing({
+    small: Number.isFinite(portionSmallPrice) && portionSmallPrice >= 0
+      ? portionSmallPrice
+      : undefined,
+    medium: Number.isFinite(portionMediumPrice) && portionMediumPrice >= 0
+      ? portionMediumPrice
+      : undefined,
+    large: Number.isFinite(portionLargePrice) && portionLargePrice >= 0
+      ? portionLargePrice
+      : undefined,
+  });
+  const hasPortionPricing = hasDefinedPortionPricing(definedPortionPrices);
+  const resolvedPrice = resolveBasePriceFromSizes(price, definedPortionPrices);
 
   if (!itemId) {
     redirect(
@@ -2065,10 +2099,11 @@ export async function updateMenuItemAction(formData) {
     );
   }
 
-  if (!Number.isFinite(price) || price < 0) {
+  if (!Number.isFinite(resolvedPrice) || resolvedPrice < 0) {
     redirect(
       buildMenuRedirectPath({
-        menuError: "Informe um preco valido para atualizar o prato.",
+        menuError:
+          "Informe um preco base valido ou preencha ao menos um valor de tamanho (P/M/G).",
       }),
     );
   }
@@ -2133,19 +2168,8 @@ export async function updateMenuItemAction(formData) {
     );
   }
 
-  const definedPortionPrices = normalizeDefinedPortionPricing({
-    small: Number.isFinite(portionSmallPrice) && portionSmallPrice >= 0
-      ? portionSmallPrice
-      : undefined,
-    medium: Number.isFinite(portionMediumPrice) && portionMediumPrice >= 0
-      ? portionMediumPrice
-      : undefined,
-    large: Number.isFinite(portionLargePrice) && portionLargePrice >= 0
-      ? portionLargePrice
-      : undefined,
-  });
-  const portionPrices = hasDefinedPortionPricing(definedPortionPrices)
-    ? buildPortionPricing(price, definedPortionPrices)
+  const portionPrices = hasPortionPricing
+    ? buildPortionPricing(resolvedPrice, definedPortionPrices)
     : null;
 
   const updatePayload = {
@@ -2153,7 +2177,7 @@ export async function updateMenuItemAction(formData) {
     name,
     description,
     image_url: urlImage || null,
-    price,
+    price: resolvedPrice,
     prep_time: prepTime || null,
     spice_level: spiceLevel || null,
     tags,

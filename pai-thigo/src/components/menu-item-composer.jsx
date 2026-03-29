@@ -39,6 +39,7 @@ export function MenuItemComposer({ categories = [] }) {
 
   const selectedSizePresetCopy =
     sizePresetCopy[sizePreset] ?? sizePresetCopy.default;
+  const isDrinkPreset = sizePreset === "drink";
 
   if (!categories.length) {
     return (
@@ -158,16 +159,22 @@ export function MenuItemComposer({ categories = [] }) {
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
-          Preco
+          {isDrinkPreset ? "Preco base (opcional)" : "Preco"}
           <input
             name="price"
             type="number"
             min="0"
             step="0.01"
-            required
+            required={!isDrinkPreset}
             placeholder="79.90"
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           />
+          {isDrinkPreset ? (
+            <span className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+              Para bebida por ml/L, voce pode deixar o preco base em branco e
+              informar apenas os tamanhos.
+            </span>
+          ) : null}
         </label>
 
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
