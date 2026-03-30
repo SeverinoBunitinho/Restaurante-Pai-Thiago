@@ -1445,11 +1445,10 @@ export default async function OperacaoRelatoriosPage({ searchParams }) {
                     <select
                       name="waiter"
                       defaultValue={selectedWaiter?.userId ?? ""}
-                      required={board.waiterCommissions.length > 0}
                       className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 text-sm text-[var(--forest)] outline-none"
                     >
                       {board.waiterCommissions.length ? (
-                        <option value="" disabled>
+                        <option value="">
                           Selecione um garcom
                         </option>
                       ) : null}
