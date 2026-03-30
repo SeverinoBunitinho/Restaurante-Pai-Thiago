@@ -104,7 +104,8 @@ function getStockState(item) {
 }
 
 export default async function OperacaoMenuPage({ searchParams }) {
-  await requireRole(["manager", "owner"]);
+  const session = await requireRole(["waiter", "manager", "owner"]);
+  const canManageCatalog = ["manager", "owner"].includes(session.role);
   const board = await getMenuManagementBoard();
   const resolvedSearchParams = await searchParams;
   const menuNotice = Array.isArray(resolvedSearchParams?.menuNotice)
@@ -140,7 +141,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
   const visibleStockAlerts = stockAlerts.slice(0, 8);
   const maxVisibleOperationalItems = 4;
 
-  function renderOperationalItem(item, categoryId, categoryName) {
+  function renderOperationalItem(item, categoryId, categoryName, canManageItem) {
     const stockState = getStockState(item);
 
     return (
@@ -255,225 +256,235 @@ export default async function OperacaoMenuPage({ searchParams }) {
                   ? "ativo"
                   : "pausado"}
           </span>
-          <form action={toggleMenuItemAvailabilityAction}>
-            <input type="hidden" name="itemId" value={item.id} />
-            <input
-              type="hidden"
-              name="currentAvailability"
-              value={String(item.available)}
-            />
-            <button
-              type="submit"
-              className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
-            >
-              {item.available ? "Pausar item" : "Reativar item"}
-            </button>
-          </form>
-          <form action={deleteMenuItemAction}>
-            <input type="hidden" name="itemId" value={item.id} />
-            <ConfirmSubmitButton
-              message={`Tem certeza que deseja retirar o prato ${item.name} do cardapio?`}
-              className="pill-wrap-safe inline-flex items-center gap-2 rounded-full border border-[rgba(138,93,59,0.16)] bg-[rgba(138,93,59,0.06)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--clay)] transition hover:-translate-y-0.5"
-            >
-              <Trash2 size={14} />
-              Retirar prato
-            </ConfirmSubmitButton>
-          </form>
+          {canManageItem ? (
+            <>
+              <form action={toggleMenuItemAvailabilityAction}>
+                <input type="hidden" name="itemId" value={item.id} />
+                <input
+                  type="hidden"
+                  name="currentAvailability"
+                  value={String(item.available)}
+                />
+                <button
+                  type="submit"
+                  className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
+                >
+                  {item.available ? "Pausar item" : "Reativar item"}
+                </button>
+              </form>
+              <form action={deleteMenuItemAction}>
+                <input type="hidden" name="itemId" value={item.id} />
+                <ConfirmSubmitButton
+                  message={`Tem certeza que deseja retirar o prato ${item.name} do cardapio?`}
+                  className="pill-wrap-safe inline-flex items-center gap-2 rounded-full border border-[rgba(138,93,59,0.16)] bg-[rgba(138,93,59,0.06)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--clay)] transition hover:-translate-y-0.5"
+                >
+                  <Trash2 size={14} />
+                  Retirar prato
+                </ConfirmSubmitButton>
+              </form>
+            </>
+          ) : (
+            <span className="rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--sage)]">
+              Somente leitura
+            </span>
+          )}
         </div>
 
-        <details className="mt-4 rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
-          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
-            Editar item e estoque
-          </summary>
+        {canManageItem ? (
+          <details className="mt-4 rounded-[1.3rem] border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.62)] px-4 py-3">
+            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)]">
+              Editar item e estoque
+            </summary>
 
-          <form action={updateMenuItemAction} className="mt-4 grid gap-3">
-            <input type="hidden" name="itemId" value={item.id} />
+            <form action={updateMenuItemAction} className="mt-4 grid gap-3">
+              <input type="hidden" name="itemId" value={item.id} />
 
-            <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Categoria
+                  <select
+                    name="categoryId"
+                    defaultValue={categoryId}
+                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm font-medium text-[var(--forest)] outline-none"
+                  >
+                    {board.categories.map((categoryOption) => (
+                      <option key={categoryOption.id} value={categoryOption.id}>
+                        {categoryOption.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Nome
+                  <input
+                    name="name"
+                    required
+                    defaultValue={item.name}
+                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
+              </div>
+
               <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Categoria
-                <select
-                  name="categoryId"
-                  defaultValue={categoryId}
-                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm font-medium text-[var(--forest)] outline-none"
-                >
-                  {board.categories.map((categoryOption) => (
-                    <option key={categoryOption.id} value={categoryOption.id}>
-                      {categoryOption.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Nome
-                <input
-                  name="name"
+                Descricao
+                <textarea
+                  name="description"
+                  rows={3}
                   required
-                  defaultValue={item.name}
+                  defaultValue={item.description}
                   className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
                 />
               </label>
-            </div>
 
-            <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-              Descricao
-              <textarea
-                name="description"
-                rows={3}
-                required
-                defaultValue={item.description}
-                className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-              />
-            </label>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Preco
+                  <input
+                    name="price"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    required
+                    defaultValue={item.price}
+                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Preco
-                <input
-                  name="price"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  required
-                  defaultValue={item.price}
-                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                />
-              </label>
+                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Preparo
+                  <input
+                    name="prepTime"
+                    defaultValue={item.prepTime ?? ""}
+                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
+              </div>
 
               <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Preparo
+                Imagem (URL)
                 <input
-                  name="prepTime"
-                  defaultValue={item.prepTime ?? ""}
-                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                />
-              </label>
-            </div>
-
-            <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-              Imagem (URL)
-              <input
-                name="imageUrl"
-                defaultValue={item.imageUrl ?? ""}
-                placeholder="https://... ou /images/prato.jpg"
-                className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-              />
-            </label>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Estoque
-                <input
-                  name="stockQuantity"
-                  type="number"
-                  min="0"
-                  defaultValue={item.stockQuantity ?? ""}
-                  className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                />
-              </label>
-
-              <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Alerta
-                <input
-                  name="lowStockThreshold"
-                  type="number"
-                  min="0"
-                  defaultValue={item.lowStockThreshold ?? 0}
-                  className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                />
-              </label>
-
-              <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Pequeno / 350ml (opcional)
-                <input
-                  name="portionSmallPrice"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  defaultValue={item.portionPrices?.small ?? ""}
-                  className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                />
-              </label>
-
-              <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Medio / 1000ml (opcional)
-                <input
-                  name="portionMediumPrice"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  defaultValue={item.portionPrices?.medium ?? ""}
-                  className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                />
-              </label>
-
-              <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Grande / 2000ml (opcional)
-                <input
-                  name="portionLargePrice"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  defaultValue={item.portionPrices?.large ?? ""}
-                  className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                />
-              </label>
-            </div>
-
-            <p className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
-              Para bebida ou item com preco unico, deixe os campos de tamanho em branco.
-            </p>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Tags
-                <input
-                  name="tags"
-                  defaultValue={item.tags.join(", ")}
+                  name="imageUrl"
+                  defaultValue={item.imageUrl ?? ""}
+                  placeholder="https://... ou /images/prato.jpg"
                   className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
                 />
               </label>
 
-              <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                Alergenicos
-                <input
-                  name="allergens"
-                  defaultValue={item.allergens.join(", ")}
-                  className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                />
-              </label>
-            </div>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Estoque
+                  <input
+                    name="stockQuantity"
+                    type="number"
+                    min="0"
+                    defaultValue={item.stockQuantity ?? ""}
+                    className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
 
-            <div className="flex flex-wrap gap-3">
-              <label className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
-                <input
-                  type="checkbox"
-                  name="isSignature"
-                  defaultChecked={item.signature}
-                  className="accent-[var(--gold)]"
-                />
-                Assinatura
-              </label>
-              <label className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
-                <input
-                  type="checkbox"
-                  name="isAvailable"
-                  defaultChecked={item.available}
-                  className="accent-[var(--gold)]"
-                />
-                Ativo
-              </label>
-            </div>
+                <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Alerta
+                  <input
+                    name="lowStockThreshold"
+                    type="number"
+                    min="0"
+                    defaultValue={item.lowStockThreshold ?? 0}
+                    className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
 
-            <button
-              type="submit"
-              className="pill-wrap-safe inline-flex w-full items-center justify-center rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5 md:w-auto"
-            >
-              Salvar edicao
-            </button>
-          </form>
-        </details>
+                <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Pequeno / 350ml (opcional)
+                  <input
+                    name="portionSmallPrice"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    defaultValue={item.portionPrices?.small ?? ""}
+                    className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
+
+                <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Medio / 1000ml (opcional)
+                  <input
+                    name="portionMediumPrice"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    defaultValue={item.portionPrices?.medium ?? ""}
+                    className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
+
+                <label className="grid min-w-0 gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Grande / 2000ml (opcional)
+                  <input
+                    name="portionLargePrice"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    defaultValue={item.portionPrices?.large ?? ""}
+                    className="w-full min-w-0 rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
+              </div>
+
+              <p className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+                Para bebida ou item com preco unico, deixe os campos de tamanho em branco.
+              </p>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Tags
+                  <input
+                    name="tags"
+                    defaultValue={item.tags.join(", ")}
+                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
+
+                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Alergenicos
+                  <input
+                    name="allergens"
+                    defaultValue={item.allergens.join(", ")}
+                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <label className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
+                  <input
+                    type="checkbox"
+                    name="isSignature"
+                    defaultChecked={item.signature}
+                    className="accent-[var(--gold)]"
+                  />
+                  Assinatura
+                </label>
+                <label className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--forest)]">
+                  <input
+                    type="checkbox"
+                    name="isAvailable"
+                    defaultChecked={item.available}
+                    className="accent-[var(--gold)]"
+                  />
+                  Ativo
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                className="pill-wrap-safe inline-flex w-full items-center justify-center rounded-full border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.88)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5 md:w-auto"
+              >
+                Salvar edicao
+              </button>
+            </form>
+          </details>
+        ) : null}
       </article>
     );
   }
@@ -503,19 +514,25 @@ export default async function OperacaoMenuPage({ searchParams }) {
       </section>
 
       <section className="pt-14">
-        <div className="grid auto-rows-min items-start gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+        <div
+          className={`grid auto-rows-min items-start gap-5 ${
+            canManageCatalog ? "lg:grid-cols-[0.95fr_1.05fr]" : ""
+          }`}
+        >
           <div className="grid auto-rows-min gap-5">
             <div className="luxury-card-dark h-fit self-start rounded-[2.2rem] p-6 text-[var(--cream)]">
               <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
-                Edicao do cardapio
+                {canManageCatalog ? "Edicao do cardapio" : "Leitura do cardapio"}
               </p>
               <h2 className="display-title page-section-title mt-4 text-white">
-                Adicione pratos com padrao de casa e retire itens quando o turno pedir
+                {canManageCatalog
+                  ? "Adicione pratos com padrao de casa e retire itens quando o turno pedir"
+                  : "Visualize cardapio, estoque e disponibilidade sem alterar dados"}
               </h2>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-[rgba(255,247,232,0.76)]">
-                Esta camada foi desenhada para gerente e dono atualizarem o
-                catalogo sem sair da operacao. O que entra aqui reflete no
-                cardapio do cliente em fluxo real.
+                {canManageCatalog
+                  ? "Esta camada foi desenhada para gerente e dono atualizarem o catalogo sem sair da operacao. O que entra aqui reflete no cardapio do cliente em fluxo real."
+                  : "O garcom acompanha o catalogo interno em tempo real para orientar atendimento, sem acesso para cadastrar, pausar, retirar ou editar itens."}
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -579,10 +596,14 @@ export default async function OperacaoMenuPage({ searchParams }) {
             <div className="luxury-card rounded-[2.2rem] p-6">
               <SectionHeading
                 eyebrow="Controle de estoque"
-                title="Alertas rapidos da reposicao"
-                description="Painel compacto para ver itens em alerta e ajustar estoque na edicao de cada prato."
-                compact
-              />
+                  title="Alertas rapidos da reposicao"
+                  description={
+                    canManageCatalog
+                      ? "Painel compacto para ver itens em alerta e ajustar estoque na edicao de cada prato."
+                      : "Painel compacto para leitura rapida dos itens em alerta durante o atendimento."
+                  }
+                  compact
+                />
 
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-[rgba(138,93,59,0.2)] bg-[rgba(138,93,59,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--clay)]">
@@ -655,20 +676,22 @@ export default async function OperacaoMenuPage({ searchParams }) {
             </div>
           </div>
 
-          <div className="grid gap-5">
-            <div className="luxury-card rounded-[2.2rem] p-6">
-              <SectionHeading
-                eyebrow="Novo prato"
-                title="Cadastrar item com acabamento profissional"
-                description="Preencha os campos para incluir um prato novo no cardapio da casa com categoria, descricao, preco e leitura operacional."
-                compact
-              />
+          {canManageCatalog ? (
+            <div className="grid gap-5">
+              <div className="luxury-card rounded-[2.2rem] p-6">
+                <SectionHeading
+                  eyebrow="Novo prato"
+                  title="Cadastrar item com acabamento profissional"
+                  description="Preencha os campos para incluir um prato novo no cardapio da casa com categoria, descricao, preco e leitura operacional."
+                  compact
+                />
 
-              <div className="mt-8">
-                <MenuItemComposer categories={board.categories} />
+                <div className="mt-8">
+                  <MenuItemComposer categories={board.categories} />
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </section>
 
@@ -676,8 +699,16 @@ export default async function OperacaoMenuPage({ searchParams }) {
         <div className="luxury-card rounded-[2.2rem] p-6">
           <SectionHeading
             eyebrow="Catalogo operacional"
-            title="Ativar, pausar ou retirar pratos da casa"
-            description="Gerente e dono conseguem manter o menu vivo com mais clareza visual, sem misturar cadastro novo com manutencao do que ja existe."
+            title={
+              canManageCatalog
+                ? "Ativar, pausar ou retirar pratos da casa"
+                : "Cardapio interno em tempo real para atendimento"
+            }
+            description={
+              canManageCatalog
+                ? "Gerente e dono conseguem manter o menu vivo com mais clareza visual, sem misturar cadastro novo com manutencao do que ja existe."
+                : "Garcom tem leitura completa de itens, preco, estoque e disponibilidade para orientar o cliente."
+            }
             compact
           />
 
@@ -718,7 +749,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
                         <>
                           <div className="grid gap-4 lg:grid-cols-2">
                           {visibleItems.map((item) =>
-                            renderOperationalItem(item, category.id, category.name),
+                            renderOperationalItem(item, category.id, category.name, canManageCatalog),
                           )}
                           </div>
 
@@ -729,7 +760,7 @@ export default async function OperacaoMenuPage({ searchParams }) {
                               </summary>
                               <div className="mt-4 grid gap-4 lg:grid-cols-2">
                                   {hiddenItems.map((item) =>
-                                    renderOperationalItem(item, category.id, category.name),
+                                    renderOperationalItem(item, category.id, category.name, canManageCatalog),
                                   )}
                               </div>
                             </details>

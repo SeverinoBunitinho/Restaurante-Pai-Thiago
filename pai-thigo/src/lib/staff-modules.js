@@ -62,9 +62,9 @@ const allModules = [
     href: "/operacao/menu",
     title: "Cardapio interno",
     description:
-      "Ativar ou pausar pratos para alinhar o salao com a producao da cozinha.",
+      "Consultar disponibilidade e leitura operacional do cardapio interno da casa.",
     icon: ChefHat,
-    roles: ["manager", "owner"],
+    roles: ["waiter", "manager", "owner"],
   },
   {
     key: "escala",
@@ -176,6 +176,7 @@ const rolePanels = {
     focusKeys: [
       "comandas",
       "cozinha",
+      "menu",
       "mesas",
       "reservas",
       "incidentes",
