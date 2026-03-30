@@ -359,7 +359,7 @@ export function RestaurantSettingsPanel({ settings, preview, deliveryZones }) {
         </form>
       </section>
 
-      <section className="grid gap-5 lg:grid-cols-[1.02fr_0.98fr]">
+      <section className="grid items-start gap-5 lg:grid-cols-[1.02fr_0.98fr]">
         <div className="luxury-card rounded-[2.2rem] p-6">
           <p className="text-xs uppercase tracking-[0.24em] text-[var(--gold)]">
             Zonas de delivery
@@ -465,7 +465,7 @@ export function RestaurantSettingsPanel({ settings, preview, deliveryZones }) {
           </div>
         </div>
 
-        <div className="luxury-card-dark rounded-[2.2rem] p-6 text-[var(--cream)]">
+        <div className="luxury-card-dark h-fit self-start rounded-[2.2rem] p-6 text-[var(--cream)]">
           <p className="text-xs uppercase tracking-[0.28em] text-[rgba(217,185,122,0.92)]">
             Nova cobertura
           </p>
