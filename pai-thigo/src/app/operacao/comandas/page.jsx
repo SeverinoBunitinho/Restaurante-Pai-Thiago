@@ -1293,6 +1293,18 @@ export default async function OperacaoComandasPage({ searchParams }) {
                     key={section.key}
                     className="rounded-[1.8rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.54)] p-5"
                   >
+                    {(() => {
+                      const isHistoricalSection = ["delivered", "cancelled"].includes(
+                        section.key,
+                      );
+                      const listContainerClass = selectedOrderGroup
+                        ? ""
+                        : isHistoricalSection
+                          ? "max-h-[24rem] overflow-y-auto pr-1 md:pr-2"
+                          : "max-h-[58vh] overflow-y-auto pr-1 md:pr-2";
+
+                      return (
+                        <>
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div>
                         <p className="text-xs uppercase tracking-[0.22em] text-[var(--gold)]">
@@ -1310,12 +1322,14 @@ export default async function OperacaoComandasPage({ searchParams }) {
                       </span>
                     </div>
 
+                    {!selectedOrderGroup && isHistoricalSection ? (
+                      <p className="mt-3 text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+                        Historico compacto: os registros antigos ficam em rolagem interna para a tela nao crescer.
+                      </p>
+                    ) : null}
+
                     <div
-                      className={`mt-6 space-y-4 ${
-                        selectedOrderGroup
-                          ? ""
-                          : "max-h-[72vh] overflow-y-auto pr-1 md:pr-2"
-                      }`}
+                      className={`mt-6 space-y-4 ${listContainerClass}`}
                     >
                       {sectionOrderGroups.map((orderGroup, orderIndex) => {
                         const statusView =
@@ -1534,6 +1548,9 @@ export default async function OperacaoComandasPage({ searchParams }) {
                         );
                       })}
                     </div>
+                        </>
+                      );
+                    })()}
                   </article>
                 );
               })
