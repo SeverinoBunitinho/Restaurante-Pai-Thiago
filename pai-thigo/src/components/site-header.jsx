@@ -37,7 +37,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 const staffDropdownSectionsTemplate = [
   {
     title: "Principal",
-    hrefs: ["/painel", "/operacao"],
+    hrefs: ["/painel", "/operacao", "/cardapio"],
   },
   {
     title: "Atendimento",
@@ -96,6 +96,10 @@ function buildStaffDropdownSections({ role, notifications }) {
     [
       "/painel",
       { href: "/painel", label: "Painel", exact: true, icon: LayoutDashboard },
+    ],
+    [
+      "/cardapio",
+      { href: "/cardapio", label: "Cardapio da casa", exact: true, icon: UtensilsCrossed },
     ],
     [
       "/operacao/comandas",
@@ -553,6 +557,7 @@ export async function SiteHeader() {
   const navItems = staffSession
       ? [
         { href: "/painel", label: "Painel", exact: true },
+        { href: "/cardapio", label: "Cardapio", exact: true },
         {
           href: "/operacao/comandas",
           label: "Pedidos",
@@ -593,6 +598,7 @@ export async function SiteHeader() {
     ? staffSession
       ? [
           { href: "/painel", label: "Painel", exact: true, icon: LayoutDashboard },
+          { href: "/cardapio", label: "Cardapio", exact: true, icon: UtensilsCrossed },
           {
             href: "/operacao/comandas",
             label: "Pedidos",

@@ -64,6 +64,14 @@ const CUSTOMER_ENTRY_CATALOG = [
 
 const STAFF_ENTRY_CATALOG = [
   {
+    id: "staff:cardapio",
+    title: "Cardapio da casa",
+    description: "Visualizar o cardapio normal como cliente, sem editar itens.",
+    href: "/cardapio",
+    group: "Operacao",
+    roles: ["waiter", "manager", "owner"],
+  },
+  {
     id: "staff:painel",
     title: "Painel do turno",
     description: "Visao rapida da operacao da equipe.",
