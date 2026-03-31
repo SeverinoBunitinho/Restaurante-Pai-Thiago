@@ -125,7 +125,7 @@ const STAFF_ENTRY_CATALOG = [
     description: "Ativar, pausar e ajustar pratos no sistema.",
     href: "/operacao/menu",
     group: "Gestao interna",
-    roles: ["manager", "owner"],
+    roles: ["waiter", "manager", "owner"],
   },
   {
     id: "staff:checklists",

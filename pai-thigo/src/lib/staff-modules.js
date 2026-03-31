@@ -89,7 +89,7 @@ const allModules = [
     href: "/operacao/campanhas",
     title: "Campanhas e cupons",
     description:
-      "Criar campanhas sazonais e cupons para ativar demanda sem baguncar a operacao.",
+      "Criar campanhas sazonais e cupons para ativar demanda sem comprometer a operacao.",
     icon: BellRing,
     roles: ["manager", "owner"],
   },
