@@ -15,16 +15,16 @@ export default async function LoginPage() {
       </div>
 
       <div className="relative flex min-h-screen flex-col px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 sm:flex-nowrap">
           <Link
             href="/cadastro"
-            className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.66)] px-4 py-2 text-sm font-semibold text-[var(--forest)] backdrop-blur-xl"
+            className="inline-flex items-center gap-2 rounded-full border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.66)] px-4 py-2 text-xs font-semibold text-[var(--forest)] backdrop-blur-xl sm:text-sm"
           >
             <UserPlus size={16} />
             Criar conta
           </Link>
 
-          <div className="rounded-full border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.66)] px-5 py-2 text-sm font-semibold text-[var(--forest)] backdrop-blur-xl">
+          <div className="rounded-full border border-[rgba(20,35,29,0.1)] bg-[rgba(255,255,255,0.66)] px-4 py-2 text-xs font-semibold text-[var(--forest)] backdrop-blur-xl sm:px-5 sm:text-sm">
             Pai Thiago
           </div>
         </div>

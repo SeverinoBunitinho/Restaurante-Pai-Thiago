@@ -35,7 +35,7 @@ export function LoginPortal() {
           <p className="text-xs uppercase tracking-[0.28em] text-[var(--gold)]">
             Login do sistema
           </p>
-          <h2 className="mt-4 text-3xl font-semibold text-[var(--forest)]">
+          <h2 className="mt-4 text-2xl font-semibold text-[var(--forest)] sm:text-3xl">
             Entrar com e-mail e senha
           </h2>
           <p className="mt-3 text-sm leading-7 text-[rgba(21,35,29,0.68)]">
