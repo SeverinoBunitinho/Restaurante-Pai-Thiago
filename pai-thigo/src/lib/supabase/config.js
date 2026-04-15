@@ -7,14 +7,23 @@ function trimValue(value) {
 
 export function resolveSupabasePublicConfig() {
   const envUrl = trimValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const envAnonKey = trimValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  const envLooksComplete = Boolean(envUrl && envAnonKey);
-  const envMatchesExpectedProject = envUrl === fallbackSupabaseUrl;
+  const envAnonKeyRaw = trimValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
-  if (envLooksComplete && envMatchesExpectedProject) {
+  // Mantem o runtime fixo no projeto oficial, evitando mismatch entre URL e API key.
+  if (envUrl === fallbackSupabaseUrl) {
+    return {
+      supabaseUrl: fallbackSupabaseUrl,
+      supabaseAnonKey: fallbackSupabaseAnonKey,
+      usingFallback: true,
+    };
+  }
+
+  const envLooksComplete = Boolean(envUrl && envAnonKeyRaw);
+
+  if (envLooksComplete) {
     return {
       supabaseUrl: envUrl,
-      supabaseAnonKey: envAnonKey,
+      supabaseAnonKey: envAnonKeyRaw,
       usingFallback: false,
     };
   }
@@ -25,4 +34,3 @@ export function resolveSupabasePublicConfig() {
     usingFallback: true,
   };
 }
-

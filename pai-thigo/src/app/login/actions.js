@@ -7,6 +7,10 @@ import { getRouteForRole, isStaffRole } from "@/lib/auth";
 import { getSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 function normalizeAuthMailError(message = "") {
+  if (/invalid api key/i.test(message)) {
+    return "Falha de autenticacao no Supabase. Atualize a pagina (Ctrl+F5) e tente novamente. Se continuar, limpe o cache do navegador e reabra o site.";
+  }
+
   if (/email address not authorized/i.test(message)) {
     return "O Supabase ainda nao esta autorizado a enviar esse e-mail de confirmacao. Configure um SMTP proprio no painel do Supabase ou desative a confirmacao de e-mail temporariamente.";
   }
