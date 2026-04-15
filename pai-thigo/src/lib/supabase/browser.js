@@ -1,11 +1,10 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { resolveSupabasePublicConfig } from "@/lib/supabase/config";
 
 let browserClient = null;
+const { supabaseUrl, supabaseAnonKey } = resolveSupabasePublicConfig();
 
 export function getSupabaseBrowserClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   if (!supabaseUrl || !supabaseAnonKey) {
     return null;
   }

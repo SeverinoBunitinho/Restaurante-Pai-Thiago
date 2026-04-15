@@ -2,8 +2,9 @@ import "server-only";
 
 import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
+import { resolveSupabasePublicConfig } from "@/lib/supabase/config";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const { supabaseUrl } = resolveSupabasePublicConfig();
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export function isSupabaseAdminConfigured() {
