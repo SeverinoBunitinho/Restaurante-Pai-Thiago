@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { getSiteUrl } from "@/lib/site-url";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 function trimEnvValue(value) {
@@ -238,7 +239,7 @@ export const getProductionReadinessReport = cache(
     });
 
     if (supabaseConfigured) {
-      const supabase = await getSupabaseServerClient();
+      const supabase = getSupabaseAdminClient() ?? (await getSupabaseServerClient());
 
       if (supabase) {
         const [

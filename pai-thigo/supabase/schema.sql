@@ -318,11 +318,31 @@ alter table public.orders
 add column if not exists delivery_eta_minutes integer;
 
 alter table public.orders
+add column if not exists source text not null default 'website';
+
+alter table public.reservations
+add column if not exists source text not null default 'website';
+
+alter table public.orders
 drop constraint if exists orders_status_check;
 
 alter table public.orders
 add constraint orders_status_check
 check (status in ('received', 'preparing', 'ready', 'dispatching', 'delivered', 'cancelled'));
+
+alter table public.orders
+drop constraint if exists orders_source_check;
+
+alter table public.orders
+add constraint orders_source_check
+check (source in ('website', 'customer', 'staff'));
+
+alter table public.reservations
+drop constraint if exists reservations_source_check;
+
+alter table public.reservations
+add constraint reservations_source_check
+check (source in ('website', 'customer', 'staff', 'phone', 'whatsapp'));
 
 alter table public.orders
 drop constraint if exists orders_fulfillment_type_check;
