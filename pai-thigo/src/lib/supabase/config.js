@@ -11,15 +11,22 @@ function looksLikeSupabaseKey(value) {
 }
 
 export function resolveSupabasePublicConfig() {
+  const canonicalUrl = "https://gxrdmnjvazoxlyudczmx.supabase.co";
+  const canonicalAnonKey = "sb_publishable_FL2wUOj13gYs4CQIu2ZlTw_wfvUlvmm";
   const envUrl = trimValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const envAnonKey = trimValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   const validUrl = looksLikeSupabaseUrl(envUrl);
   const validAnonKey = looksLikeSupabaseKey(envAnonKey);
+  const envMatchesCanonical =
+    validUrl &&
+    validAnonKey &&
+    envUrl === canonicalUrl &&
+    envAnonKey === canonicalAnonKey;
 
   return {
-    supabaseUrl: validUrl ? envUrl : "",
-    supabaseAnonKey: validAnonKey ? envAnonKey : "",
-    usingFallback: false,
-    envHasMismatch: false,
+    supabaseUrl: envMatchesCanonical ? envUrl : canonicalUrl,
+    supabaseAnonKey: envMatchesCanonical ? envAnonKey : canonicalAnonKey,
+    usingFallback: !envMatchesCanonical,
+    envHasMismatch: !envMatchesCanonical,
   };
 }

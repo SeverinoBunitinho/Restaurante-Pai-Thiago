@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 
 import { getSiteUrl } from "@/lib/site-url";
+import { resolveSupabasePublicConfig } from "@/lib/supabase/config";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
@@ -100,6 +101,8 @@ function resolvePaymentReadiness() {
 
 export const getProductionReadinessReport = cache(
   async function getProductionReadinessReport() {
+    const { supabaseUrl, supabaseAnonKey, envHasMismatch } =
+      resolveSupabasePublicConfig();
     const configuredSiteUrl =
       trimEnvValue(process.env.NEXT_PUBLIC_SITE_URL) ||
       trimEnvValue(process.env.SITE_URL);
@@ -115,8 +118,13 @@ export const getProductionReadinessReport = cache(
         ? createCheck({
             key: "supabase_public_env",
             label: "Conexao publica com Supabase",
-            status: "ok",
-            detail: "NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY estao definidos.",
+            status: envHasMismatch ? "warning" : "ok",
+            detail: envHasMismatch
+              ? "O runtime usou a configuracao canonica porque encontrou divergencia nas variaveis publicas."
+              : "NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY estao definidos.",
+            recommendation: envHasMismatch
+              ? "Confirme as variaveis publicas no Vercel para apontar para o mesmo projeto canonico."
+              : "",
             category: "infra",
           })
         : createCheck({
@@ -129,6 +137,58 @@ export const getProductionReadinessReport = cache(
             category: "infra",
           }),
     );
+
+    if (supabaseUrl && supabaseAnonKey) {
+      try {
+        const response = await fetch(`${supabaseUrl}/auth/v1/settings`, {
+          headers: {
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`,
+          },
+          cache: "no-store",
+        });
+
+        if (response.ok) {
+          checks.push(
+            createCheck({
+              key: "supabase_public_key_runtime",
+              label: "Chave publica em runtime",
+              status: "ok",
+              detail: "A chave publica foi validada na API de autenticacao do Supabase.",
+              category: "infra",
+            }),
+          );
+        } else {
+          const responseText = await response.text();
+          checks.push(
+            createCheck({
+              key: "supabase_public_key_runtime",
+              label: "Chave publica em runtime",
+              status: "error",
+              detail: `A chave publica falhou na validacao (HTTP ${response.status}).`,
+              recommendation: responseText
+                ? `Detalhe retornado pelo Supabase: ${responseText}`
+                : "Atualize NEXT_PUBLIC_SUPABASE_ANON_KEY com a chave publishable correta.",
+              category: "infra",
+            }),
+          );
+        }
+      } catch (error) {
+        checks.push(
+          createCheck({
+            key: "supabase_public_key_runtime",
+            label: "Chave publica em runtime",
+            status: "warning",
+            detail: "Nao foi possivel validar a chave publica na API do Supabase nesta execucao.",
+            recommendation:
+              error instanceof Error && error.message
+                ? error.message
+                : "Valide novamente em alguns instantes.",
+            category: "infra",
+          }),
+        );
+      }
+    }
 
     checks.push(
       serviceRoleConfigured
