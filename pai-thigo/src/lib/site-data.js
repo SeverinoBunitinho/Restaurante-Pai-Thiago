@@ -37,6 +37,10 @@ const portionSizeOptions = ["small", "medium", "large"];
 const profileSelectFields =
   "user_id, full_name, email, phone, role, loyalty_points, preferred_room";
 
+function getSupabaseDataClient(serverClient) {
+  return getSupabaseAdminClient() ?? serverClient;
+}
+
 function sanitizeMenuItemImageUrl(value) {
   const rawValue = String(value ?? "").trim();
 
@@ -819,11 +823,13 @@ export async function getMenuCategories(options = {}) {
     return buildFallbackMenuCategories(includeUnavailable);
   }
 
+  const dataClient = getSupabaseDataClient(supabase);
+
   const newColumnsSelect =
     "id, name, slug, description, highlight_color, sort_order, menu_items(id, name, description, image_url, price, prep_time, spice_level, tags, allergens, is_signature, is_available, sort_order, stock_quantity, low_stock_threshold, portion_prices)";
   const legacyColumnsSelect =
     "id, name, slug, description, highlight_color, sort_order, menu_items(id, name, description, image_url, price, prep_time, spice_level, tags, allergens, is_signature, is_available, sort_order)";
-  let queryResult = await supabase
+  let queryResult = await dataClient
     .from("menu_categories")
     .select(newColumnsSelect)
     .order("sort_order", { ascending: true });
@@ -836,7 +842,7 @@ export async function getMenuCategories(options = {}) {
       message.includes("portion_prices");
 
     if (missingNewColumns) {
-      queryResult = await supabase
+      queryResult = await dataClient
         .from("menu_categories")
         .select(legacyColumnsSelect)
         .order("sort_order", { ascending: true });
@@ -861,7 +867,9 @@ export async function getPublicTestimonials() {
     return fallbackTestimonials;
   }
 
-  const { data, error } = await supabase
+  const dataClient = getSupabaseDataClient(supabase);
+
+  const { data, error } = await dataClient
     .from("customer_testimonials")
     .select("id, customer_name, customer_role, quote, rating, approved, sort_order")
     .eq("approved", true)
@@ -888,7 +896,9 @@ export async function getReservationAreaOptions() {
     return fallbackReservationAreas;
   }
 
-  const { data, error } = await supabase
+  const dataClient = getSupabaseDataClient(supabase);
+
+  const { data, error } = await dataClient
     .from("restaurant_tables")
     .select("area")
     .eq("is_active", true)
@@ -914,6 +924,8 @@ export async function getCustomerDashboard(userId) {
     return buildFallbackCustomerDashboard();
   }
 
+  const dataClient = getSupabaseDataClient(supabase);
+
   const profilePromise = readProfileByUserIdWithAdminFallback(supabase, userId);
   const [
     profile,
@@ -925,7 +937,7 @@ export async function getCustomerDashboard(userId) {
   ] =
     await Promise.all([
       profilePromise,
-      supabase
+      dataClient
         .from("reservations")
         .select(
           "id, guest_name, reservation_date, reservation_time, guests, occasion, status, notes, area_preference, assigned_table:restaurant_tables(name, area)",
@@ -934,7 +946,7 @@ export async function getCustomerDashboard(userId) {
         .order("reservation_date", { ascending: true })
         .order("reservation_time", { ascending: true })
         .limit(6),
-      supabase
+      dataClient
         .from("orders")
         .select(
           "id, reservation_id, checkout_reference, item_name, quantity, unit_price, total_price, notes, payment_method, fulfillment_type, delivery_neighborhood, delivery_address, delivery_reference, delivery_fee, delivery_eta_minutes, status, created_at",
@@ -942,15 +954,15 @@ export async function getCustomerDashboard(userId) {
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(8),
-      supabase
+      dataClient
         .from("reservations")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId),
-      supabase
+      dataClient
         .from("orders")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userId),
-      supabase
+      dataClient
         .from("orders")
         .select(
           "checkout_reference, item_name, quantity, total_price, delivery_fee, status, created_at",
@@ -1115,6 +1127,8 @@ export async function getStaffDashboard(role = "waiter") {
     return buildFallbackStaffDashboard(role);
   }
 
+  const dataClient = getSupabaseDataClient(supabase);
+
   const today = getTodayInBrazil();
 
   const [
@@ -1125,21 +1139,21 @@ export async function getStaffDashboard(role = "waiter") {
     { count: tablesCount, error: tablesCountError },
     reservationQueueResult,
   ] = await Promise.all([
-    supabase.from("reservations").select("*", { head: true, count: "exact" }),
-    supabase
+    dataClient.from("reservations").select("*", { head: true, count: "exact" }),
+    dataClient
       .from("reservations")
       .select("*", { head: true, count: "exact" })
       .eq("status", "pending"),
-    supabase
+    dataClient
       .from("reservations")
       .select("*", { head: true, count: "exact" })
       .eq("reservation_date", today),
-    supabase.from("menu_items").select("*", { head: true, count: "exact" }),
-    supabase
+    dataClient.from("menu_items").select("*", { head: true, count: "exact" }),
+    dataClient
       .from("restaurant_tables")
       .select("*", { head: true, count: "exact" })
       .eq("is_active", true),
-    supabase
+    dataClient
       .from("reservations")
       .select(
         "id, guest_name, reservation_date, reservation_time, guests, occasion, status, notes, area_preference, assigned_table:restaurant_tables(name, area)",
@@ -1422,6 +1436,8 @@ export async function createReservation(input) {
     };
   }
 
+  const reservationWriter = getSupabaseDataClient(supabase);
+
   const profile = await resolveProfileForAuthenticatedUser(supabase, user);
 
   const actingRole = profile?.role ?? "customer";
@@ -1557,7 +1573,7 @@ export async function createReservation(input) {
     source: isStaff ? "staff" : "customer",
   };
 
-  const insertResult = await supabase
+  const insertResult = await reservationWriter
     .from("reservations")
     .insert(payload)
     .select("id, reservation_date, reservation_time, guest_name")
@@ -1613,7 +1629,6 @@ export async function createReservation(input) {
 
 export async function createOrder(input) {
   const supabase = await getSupabaseServerClient();
-  const stockWriter = getSupabaseAdminClient() ?? supabase;
 
   if (!supabase) {
     return {
@@ -1634,6 +1649,9 @@ export async function createOrder(input) {
       message: "Voce precisa entrar como cliente antes de enviar um pedido.",
     };
   }
+
+  const dataClient = getSupabaseDataClient(supabase);
+  const stockWriter = dataClient;
 
   const profile = await resolveProfileForAuthenticatedUser(supabase, user);
   const profileError = profile ? null : new Error("profile_not_found");
@@ -1671,7 +1689,7 @@ export async function createOrder(input) {
     };
   }
 
-  let menuItemResult = await supabase
+  let menuItemResult = await dataClient
     .from("menu_items")
     .select("id, name, price, is_available, stock_quantity, portion_prices")
     .eq("id", menuItemId)
@@ -1683,7 +1701,7 @@ export async function createOrder(input) {
       message.includes("stock_quantity") || message.includes("portion_prices");
 
     if (missingColumns) {
-      menuItemResult = await supabase
+      menuItemResult = await dataClient
         .from("menu_items")
         .select("id, name, price, is_available")
         .eq("id", menuItemId)
@@ -1737,7 +1755,7 @@ export async function createOrder(input) {
     .filter(Boolean)
     .join(" | ");
 
-  const orderInsertResult = await supabase
+  const orderInsertResult = await dataClient
     .from("orders")
     .insert({
     user_id: user.id,
@@ -1785,7 +1803,7 @@ export async function createOrder(input) {
 
     if (stockUpdateFailed) {
       if (insertedOrder?.id) {
-        await stockWriter.from("orders").delete().eq("id", insertedOrder.id);
+        await dataClient.from("orders").delete().eq("id", insertedOrder.id);
       }
 
       return {
@@ -1807,7 +1825,6 @@ export async function createOrder(input) {
 
 export async function createCartOrder(input) {
   const supabase = await getSupabaseServerClient();
-  const stockWriter = getSupabaseAdminClient() ?? supabase;
 
   if (!supabase) {
     return {
@@ -1828,6 +1845,9 @@ export async function createCartOrder(input) {
       message: "Voce precisa entrar como cliente antes de finalizar o carrinho.",
     };
   }
+
+  const dataClient = getSupabaseDataClient(supabase);
+  const stockWriter = dataClient;
 
   const profile = await resolveProfileForAuthenticatedUser(supabase, user);
   const profileError = profile ? null : new Error("profile_not_found");
@@ -1945,7 +1965,7 @@ export async function createCartOrder(input) {
   }
 
   const menuItemIds = cartItems.map((item) => item.menuItemId);
-  let menuItemsResult = await supabase
+  let menuItemsResult = await dataClient
     .from("menu_items")
     .select("id, name, price, is_available, stock_quantity, portion_prices")
     .in("id", menuItemIds);
@@ -1956,7 +1976,7 @@ export async function createCartOrder(input) {
       message.includes("stock_quantity") || message.includes("portion_prices");
 
     if (missingColumns) {
-      menuItemsResult = await supabase
+      menuItemsResult = await dataClient
         .from("menu_items")
         .select("id, name, price, is_available")
         .in("id", menuItemIds);
@@ -2083,7 +2103,7 @@ export async function createCartOrder(input) {
     };
   }
 
-  const { error } = await supabase.from("orders").insert(ordersPayload);
+  const { error } = await dataClient.from("orders").insert(ordersPayload);
 
   if (error) {
     return {

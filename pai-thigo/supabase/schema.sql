@@ -453,6 +453,24 @@ $$;
 grant execute on function public.is_staff_email(text) to anon, authenticated;
 grant execute on function public.current_app_role() to authenticated;
 
+grant usage on schema public to anon, authenticated, service_role;
+
+grant select
+on table public.menu_categories, public.menu_items, public.restaurant_tables, public.restaurant_settings, public.delivery_zones, public.customer_testimonials
+to anon, authenticated;
+
+grant select, insert, update
+on table public.profiles, public.reservations, public.orders, public.service_checks, public.service_check_items
+to authenticated;
+
+grant select, insert, update, delete
+on table public.staff_directory, public.staff_shifts, public.marketing_campaigns, public.marketing_coupons, public.operation_audit_logs
+to authenticated;
+
+grant all privileges on all tables in schema public to service_role;
+grant all privileges on all sequences in schema public to service_role;
+grant all privileges on all routines in schema public to service_role;
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 const PUBLIC_ENTRY_CATALOG = [
@@ -302,10 +303,13 @@ async function resolveSessionContext() {
   if (!supabase) {
     return {
       supabase: null,
+      dataClient: null,
       role: null,
       userId: null,
     };
   }
+
+  const dataClient = getSupabaseAdminClient() ?? supabase;
 
   const {
     data: { user },
@@ -315,12 +319,13 @@ async function resolveSessionContext() {
   if (userError || !user) {
     return {
       supabase,
+      dataClient,
       role: null,
       userId: null,
     };
   }
 
-  const { data: profile } = await supabase
+  const { data: profile } = await dataClient
     .from("profiles")
     .select("role")
     .eq("user_id", user.id)
@@ -328,6 +333,7 @@ async function resolveSessionContext() {
 
   return {
     supabase,
+    dataClient,
     role: profile?.role ?? "customer",
     userId: user.id,
   };
@@ -342,7 +348,7 @@ export async function GET(request) {
     : 12;
 
   try {
-    const { supabase, role, userId } = await resolveSessionContext();
+    const { dataClient, role, userId } = await resolveSessionContext();
     const staffSession = isStaffRole(role);
 
     const baseEntries = [
@@ -358,9 +364,9 @@ export async function GET(request) {
 
     const dynamicEntries = [];
 
-    if (supabase && q.length >= 2) {
+    if (dataClient && q.length >= 2) {
       const likeValue = toLikeQuery(q);
-      const orderBaseQuery = supabase
+      const orderBaseQuery = dataClient
         .from("orders")
         .select("id, checkout_reference, item_name, status, created_at")
         .or(
@@ -368,13 +374,13 @@ export async function GET(request) {
         )
         .order("created_at", { ascending: false })
         .limit(6);
-      const reservationBaseQuery = supabase
+      const reservationBaseQuery = dataClient
         .from("reservations")
         .select("id, guest_name, reservation_date, reservation_time, status")
         .or(`guest_name.ilike.${likeValue}`)
         .order("reservation_date", { ascending: false })
         .limit(6);
-      const menuPromise = supabase
+      const menuPromise = dataClient
         .from("menu_items")
         .select("id, name, is_available")
         .ilike("name", likeValue)
@@ -394,7 +400,7 @@ export async function GET(request) {
         : Promise.resolve({ data: [], error: null });
 
       const tablesPromise = staffSession
-        ? supabase
+        ? dataClient
             .from("restaurant_tables")
             .select("id, name, area")
             .eq("is_active", true)

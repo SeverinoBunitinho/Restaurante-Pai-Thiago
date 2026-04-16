@@ -119,6 +119,7 @@ for (const account of staffAccounts) {
   const existingUser = users.find(
     (user) => user.email?.toLowerCase() === account.email.toLowerCase(),
   );
+  let resolvedUserId = existingUser?.id ?? null;
 
   if (existingUser) {
     const { error } = await supabase.auth.admin.updateUserById(existingUser.id, {
@@ -134,25 +135,51 @@ for (const account of staffAccounts) {
       continue;
     }
 
+    resolvedUserId = existingUser.id;
     console.log(`Senha atualizada para ${account.email}`);
+  } else {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: account.email,
+      password: account.password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: account.full_name,
+      },
+    });
+
+    if (error) {
+      console.error(`Erro ao criar ${account.email}: ${error.message}`);
+      continue;
+    }
+
+    resolvedUserId = data.user?.id ?? null;
+    console.log(`Usuario criado: ${account.email}`);
+  }
+
+  if (!resolvedUserId) {
+    console.error(`Nao foi possivel resolver user_id para ${account.email}.`);
     continue;
   }
 
-  const { error } = await supabase.auth.admin.createUser({
-    email: account.email,
-    password: account.password,
-    email_confirm: true,
-    user_metadata: {
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      user_id: resolvedUserId,
+      email: account.email.toLowerCase(),
       full_name: account.full_name,
+      phone: null,
+      role: account.role,
+      loyalty_points: 0,
+      preferred_room: "Salao principal",
     },
-  });
+    { onConflict: "user_id" },
+  );
 
-  if (error) {
-    console.error(`Erro ao criar ${account.email}: ${error.message}`);
+  if (profileError) {
+    console.error(`Erro ao sincronizar perfil de ${account.email}: ${profileError.message}`);
     continue;
   }
 
-  console.log(`Usuario criado: ${account.email}`);
+  console.log(`Perfil sincronizado: ${account.email} (${account.role})`);
 }
 
 console.log("\nFuncionarios preparados com senha 123123.");
