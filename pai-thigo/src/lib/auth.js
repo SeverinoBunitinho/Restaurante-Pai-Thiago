@@ -3,6 +3,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 export function getRouteForRole(role) {
@@ -27,6 +28,50 @@ export function getStaffRoleLabel(role) {
 
 export function isStaffRole(role) {
   return ["waiter", "manager", "owner"].includes(role);
+}
+
+async function ensureStaffProfileConsistency(user, profile) {
+  const role = profile?.role ?? "customer";
+  const userEmail = user.email?.toLowerCase() ?? "";
+
+  if (isStaffRole(role) || !userEmail || !userEmail.endsWith("@paithiago.com.br")) {
+    return profile;
+  }
+
+  const admin = getSupabaseAdminClient();
+
+  if (!admin) {
+    return profile;
+  }
+
+  const { data: staffRecord } = await admin
+    .from("staff_directory")
+    .select("role, full_name, phone, active")
+    .eq("email", userEmail)
+    .maybeSingle();
+
+  if (!staffRecord || !staffRecord.active || !isStaffRole(staffRecord.role)) {
+    return profile;
+  }
+
+  const syncedProfile = {
+    user_id: user.id,
+    email: userEmail,
+    full_name:
+      staffRecord.full_name ||
+      profile?.full_name ||
+      user.user_metadata?.full_name ||
+      user.email?.split("@")[0] ||
+      "Equipe",
+    phone: staffRecord.phone ?? profile?.phone ?? "",
+    role: staffRecord.role,
+    loyalty_points: profile?.loyalty_points ?? 0,
+    updated_at: new Date().toISOString(),
+  };
+
+  await admin.from("profiles").upsert(syncedProfile, { onConflict: "user_id" });
+
+  return syncedProfile;
 }
 
 export const getCurrentSession = cache(async function getCurrentSession() {
@@ -55,8 +100,10 @@ export const getCurrentSession = cache(async function getCurrentSession() {
     .eq("user_id", user.id)
     .maybeSingle();
 
+  const profileWithStaffSync = await ensureStaffProfileConsistency(user, profile);
+
   const resolvedProfile =
-    profile ??
+    profileWithStaffSync ??
     {
       user_id: user.id,
       full_name:

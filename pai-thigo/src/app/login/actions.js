@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { getSiteUrl } from "@/lib/site-url";
 import { getRouteForRole, isStaffRole } from "@/lib/auth";
+import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
 function normalizeAuthMailError(message = "") {
@@ -20,6 +21,57 @@ function normalizeAuthMailError(message = "") {
   }
 
   return message;
+}
+
+async function resolveRoleFromProfileOrStaffDirectory({
+  supabase,
+  user,
+  email,
+}) {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, full_name, phone")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (profile?.role && profile.role !== "customer") {
+    return profile.role;
+  }
+
+  const admin = getSupabaseAdminClient();
+
+  if (!admin || !email) {
+    return profile?.role ?? "customer";
+  }
+
+  const { data: staffRecord } = await admin
+    .from("staff_directory")
+    .select("role, full_name, phone, active")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (!staffRecord || !staffRecord.active || !isStaffRole(staffRecord.role)) {
+    return profile?.role ?? "customer";
+  }
+
+  await admin.from("profiles").upsert(
+    {
+      user_id: user.id,
+      email,
+      full_name:
+        staffRecord.full_name ||
+        profile?.full_name ||
+        user.user_metadata?.full_name ||
+        user.email?.split("@")[0] ||
+        "Equipe",
+      phone: staffRecord.phone ?? profile?.phone ?? null,
+      role: staffRecord.role,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+
+  return staffRecord.role;
 }
 
 export async function submitLoginAction(_previousState, formData) {
@@ -90,13 +142,11 @@ export async function submitLoginAction(_previousState, formData) {
     };
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("user_id", data.user.id)
-    .maybeSingle();
-
-  const resolvedRole = profile?.role ?? "customer";
+  const resolvedRole = await resolveRoleFromProfileOrStaffDirectory({
+    supabase,
+    user: data.user,
+    email,
+  });
 
   if (role === "staff" && !isStaffRole(resolvedRole)) {
     await supabase.auth.signOut();

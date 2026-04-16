@@ -34,6 +34,8 @@ const ANY_AREA_PREFERENCE_VALUES = new Set([
 const DEFAULT_MENU_ITEM_IMAGE = "/images/menu-placeholder.svg";
 const RESERVATION_CONFIRMATION_PREFIX = "RSV";
 const portionSizeOptions = ["small", "medium", "large"];
+const profileSelectFields =
+  "user_id, full_name, email, phone, role, loyalty_points, preferred_room";
 
 function sanitizeMenuItemImageUrl(value) {
   const rawValue = String(value ?? "").trim();
@@ -92,6 +94,88 @@ function resolveMenuItemImage(itemId, itemName, imageUrl) {
     sanitizeMenuItemImageUrl(fallbackMenuImageByName.get(normalizeMenuImageKey(itemName))) ||
     DEFAULT_MENU_ITEM_IMAGE
   );
+}
+
+function isStaffRoleValue(value) {
+  return ["waiter", "manager", "owner"].includes(String(value ?? ""));
+}
+
+async function readProfileByUserIdWithAdminFallback(supabase, userId) {
+  if (!supabase || !userId) {
+    return null;
+  }
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select(profileSelectFields)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!error && profile) {
+    return profile;
+  }
+
+  const admin = getSupabaseAdminClient();
+
+  if (!admin) {
+    return profile ?? null;
+  }
+
+  const { data: adminProfile } = await admin
+    .from("profiles")
+    .select(profileSelectFields)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  return adminProfile ?? profile ?? null;
+}
+
+async function resolveProfileForAuthenticatedUser(supabase, user) {
+  if (!supabase || !user?.id) {
+    return null;
+  }
+
+  const baseProfile = await readProfileByUserIdWithAdminFallback(supabase, user.id);
+
+  if (baseProfile) {
+    return baseProfile;
+  }
+
+  const admin = getSupabaseAdminClient();
+  const userEmail = String(user.email ?? "").trim().toLowerCase();
+
+  if (!admin || !userEmail) {
+    return null;
+  }
+
+  const { data: staffRecord } = await admin
+    .from("staff_directory")
+    .select("role, full_name, phone, active")
+    .eq("email", userEmail)
+    .maybeSingle();
+
+  if (!staffRecord || !staffRecord.active || !isStaffRoleValue(staffRecord.role)) {
+    return null;
+  }
+
+  const patchedProfile = {
+    user_id: user.id,
+    full_name:
+      staffRecord.full_name ||
+      user.user_metadata?.full_name ||
+      user.email?.split("@")[0] ||
+      "Equipe",
+    email: userEmail,
+    phone: staffRecord.phone ?? "",
+    role: staffRecord.role,
+    loyalty_points: 0,
+    preferred_room: "Salao principal",
+    updated_at: new Date().toISOString(),
+  };
+
+  await admin.from("profiles").upsert(patchedProfile, { onConflict: "user_id" });
+
+  return patchedProfile;
 }
 
 function normalizePortionSize(value) {
@@ -830,8 +914,9 @@ export async function getCustomerDashboard(userId) {
     return buildFallbackCustomerDashboard();
   }
 
+  const profilePromise = readProfileByUserIdWithAdminFallback(supabase, userId);
   const [
-    { data: profile },
+    profile,
     { data: reservations, error: reservationsError },
     { data: orders, error: ordersError },
     reservationsCountResult,
@@ -839,11 +924,7 @@ export async function getCustomerDashboard(userId) {
     orderHistoryResult,
   ] =
     await Promise.all([
-      supabase
-        .from("profiles")
-        .select("full_name, email, phone, loyalty_points, preferred_room")
-        .eq("user_id", userId)
-        .maybeSingle(),
+      profilePromise,
       supabase
         .from("reservations")
         .select(
@@ -1341,11 +1422,7 @@ export async function createReservation(input) {
     };
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, email, phone, role")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const profile = await resolveProfileForAuthenticatedUser(supabase, user);
 
   const actingRole = profile?.role ?? "customer";
   const isStaff = ["waiter", "manager", "owner"].includes(actingRole);
@@ -1558,11 +1635,8 @@ export async function createOrder(input) {
     };
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("full_name, email, role")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const profile = await resolveProfileForAuthenticatedUser(supabase, user);
+  const profileError = profile ? null : new Error("profile_not_found");
 
   if (profileError || !profile) {
     return {
@@ -1755,11 +1829,8 @@ export async function createCartOrder(input) {
     };
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("full_name, email, role")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const profile = await resolveProfileForAuthenticatedUser(supabase, user);
+  const profileError = profile ? null : new Error("profile_not_found");
 
   if (profileError || !profile) {
     return {

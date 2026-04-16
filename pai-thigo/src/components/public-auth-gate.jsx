@@ -30,13 +30,24 @@ export function PublicAuthGate() {
         return;
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      let resolvedRole = "customer";
 
-      const targetRoute = getRouteForRole(profile?.role ?? "customer");
+      try {
+        const response = await fetch("/api/auth/role", { cache: "no-store" });
+
+        if (response.ok) {
+          const payload = await response.json();
+          resolvedRole = String(payload?.role ?? "customer");
+        } else if (String(user.email ?? "").toLowerCase().endsWith("@paithiago.com.br")) {
+          resolvedRole = "waiter";
+        }
+      } catch {
+        if (String(user.email ?? "").toLowerCase().endsWith("@paithiago.com.br")) {
+          resolvedRole = "waiter";
+        }
+      }
+
+      const targetRoute = getRouteForRole(resolvedRole);
 
       if (pathname !== targetRoute) {
         startTransition(() => {
