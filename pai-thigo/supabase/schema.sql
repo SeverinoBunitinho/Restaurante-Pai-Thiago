@@ -262,6 +262,18 @@ create table if not exists public.marketing_campaigns (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create table if not exists public.customer_testimonials (
+  id uuid primary key default gen_random_uuid(),
+  customer_name text not null,
+  customer_role text not null default 'Cliente da casa',
+  quote text not null,
+  rating integer not null default 5 check (rating between 1 and 5),
+  approved boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now())
+);
+
 create table if not exists public.marketing_coupons (
   id uuid primary key default gen_random_uuid(),
   campaign_id uuid references public.marketing_campaigns(id) on delete set null,
@@ -401,6 +413,12 @@ execute procedure public.touch_updated_at();
 drop trigger if exists touch_delivery_zones_updated_at on public.delivery_zones;
 create trigger touch_delivery_zones_updated_at
 before update on public.delivery_zones
+for each row
+execute procedure public.touch_updated_at();
+
+drop trigger if exists touch_customer_testimonials_updated_at on public.customer_testimonials;
+create trigger touch_customer_testimonials_updated_at
+before update on public.customer_testimonials
 for each row
 execute procedure public.touch_updated_at();
 
@@ -599,6 +617,7 @@ alter table public.menu_categories enable row level security;
 alter table public.menu_items enable row level security;
 alter table public.restaurant_settings enable row level security;
 alter table public.delivery_zones enable row level security;
+alter table public.customer_testimonials enable row level security;
 alter table public.reservations enable row level security;
 alter table public.orders enable row level security;
 alter table public.service_checks enable row level security;
@@ -703,6 +722,24 @@ using (true);
 drop policy if exists "Managers and owners can manage delivery zones" on public.delivery_zones;
 create policy "Managers and owners can manage delivery zones"
 on public.delivery_zones
+for all
+to authenticated
+using (public.current_app_role() in ('manager', 'owner'))
+with check (public.current_app_role() in ('manager', 'owner'));
+
+drop policy if exists "Public can read approved testimonials" on public.customer_testimonials;
+create policy "Public can read approved testimonials"
+on public.customer_testimonials
+for select
+to anon, authenticated
+using (
+  approved = true
+  or public.current_app_role() in ('manager', 'owner')
+);
+
+drop policy if exists "Managers and owners can manage testimonials" on public.customer_testimonials;
+create policy "Managers and owners can manage testimonials"
+on public.customer_testimonials
 for all
 to authenticated
 using (public.current_app_role() in ('manager', 'owner'))
@@ -882,6 +919,7 @@ alter table public.menu_categories replica identity full;
 alter table public.menu_items replica identity full;
 alter table public.restaurant_settings replica identity full;
 alter table public.delivery_zones replica identity full;
+alter table public.customer_testimonials replica identity full;
 alter table public.reservations replica identity full;
 alter table public.orders replica identity full;
 alter table public.service_checks replica identity full;
@@ -962,6 +1000,16 @@ begin
         and tablename = 'delivery_zones'
     ) then
       execute 'alter publication supabase_realtime add table public.delivery_zones';
+    end if;
+
+    if not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'customer_testimonials'
+    ) then
+      execute 'alter publication supabase_realtime add table public.customer_testimonials';
     end if;
 
     if not exists (
@@ -1283,3 +1331,42 @@ set description = excluded.description,
     allergens = excluded.allergens,
     is_signature = excluded.is_signature,
     sort_order = excluded.sort_order;
+
+insert into public.customer_testimonials (
+  customer_name,
+  customer_role,
+  quote,
+  rating,
+  approved,
+  sort_order
+)
+select 'Marina Duarte', 'Cliente frequente', 'Atendimento impecavel e cozinha muito consistente do inicio ao fim.', 5, true, 1
+where not exists (
+  select 1 from public.customer_testimonials where customer_name = 'Marina Duarte'
+);
+
+insert into public.customer_testimonials (
+  customer_name,
+  customer_role,
+  quote,
+  rating,
+  approved,
+  sort_order
+)
+select 'Carlos Nunes', 'Empresario', 'Usei para jantar com clientes e a experiencia foi elegante e sem falhas.', 5, true, 2
+where not exists (
+  select 1 from public.customer_testimonials where customer_name = 'Carlos Nunes'
+);
+
+insert into public.customer_testimonials (
+  customer_name,
+  customer_role,
+  quote,
+  rating,
+  approved,
+  sort_order
+)
+select 'Ana Paula Rocha', 'Moradora da regiao', 'Reserva simples pelo site e pratos com entrega de qualidade no salao.', 4, true, 3
+where not exists (
+  select 1 from public.customer_testimonials where customer_name = 'Ana Paula Rocha'
+);
