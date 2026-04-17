@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "check": "npm run lint && npm run build",
-    "staff:seed": "node scripts/create-staff-users.mjs"
+    "staff:seed": "node scripts/create-staff-users.mjs",
+    "restore:data": "node scripts/restore-site-data.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

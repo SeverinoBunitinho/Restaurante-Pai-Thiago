@@ -90,6 +90,16 @@ Esse comando cria ou atualiza:
 
 Todos com senha `123123`.
 
+## Restaurar cardapio completo e depoimentos
+
+Se o projeto do Supabase resetar e voce perder os itens cadastrados, rode:
+
+```bash
+npm run restore:data
+```
+
+Esse comando recompõe categorias, pratos, bebidas com tamanhos e depoimentos da casa.
+
 ## Fluxo de acesso
 
 - `/login`
