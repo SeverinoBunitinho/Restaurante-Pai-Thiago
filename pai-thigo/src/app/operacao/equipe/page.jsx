@@ -53,6 +53,7 @@ export default async function OperacaoEquipePage({ searchParams }) {
     ? resolvedSearchParams.staffError[0]
     : resolvedSearchParams?.staffError;
   const roleOptions = getRoleOptions(session.role);
+  const isManagerUser = session.role === "manager";
   const filteredStaff =
     roleFilter === "all"
       ? board.staff
@@ -208,20 +209,30 @@ export default async function OperacaoEquipePage({ searchParams }) {
                   />
                 </label>
 
-                <label className="grid gap-2">
-                  <span className="text-sm font-semibold text-[var(--forest)]">Cargo</span>
-                  <select
-                    name="role"
-                    defaultValue={roleOptions[0]?.value}
-                    className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
-                  >
-                    {roleOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {isManagerUser ? (
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-[var(--forest)]">Cargo</span>
+                    <input type="hidden" name="role" value="waiter" />
+                    <div className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 text-sm font-medium text-[var(--forest)]">
+                      Garcom
+                    </div>
+                  </label>
+                ) : (
+                  <label className="grid gap-2">
+                    <span className="text-sm font-semibold text-[var(--forest)]">Cargo</span>
+                    <select
+                      name="role"
+                      defaultValue={roleOptions[0]?.value}
+                      className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.78)] px-4 py-3 outline-none"
+                    >
+                      {roleOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
