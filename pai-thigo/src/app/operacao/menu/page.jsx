@@ -14,6 +14,13 @@ import { requireRole } from "@/lib/auth";
 import { getMenuManagementBoard } from "@/lib/staff-data";
 import { formatCurrency } from "@/lib/utils";
 
+const flavorPresetOptions = {
+  none: "Sem sabores adicionais",
+  juices: "Lista completa de sucos",
+  sodas: "Refrigerantes (sabores comuns)",
+  custom: "Personalizado",
+};
+
 function formatPortionLabel(size) {
   if (size === "small") {
     return "P";
@@ -31,6 +38,38 @@ function normalizePortionLabelSource(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+}
+
+function resolveFlavorPresetForItem(item, categoryName) {
+  const flavorOptions = Array.isArray(item?.flavorOptions) ? item.flavorOptions : [];
+
+  if (!flavorOptions.length) {
+    return "none";
+  }
+
+  const source = [
+    normalizePortionLabelSource(categoryName),
+    normalizePortionLabelSource(item?.name),
+    ...(Array.isArray(item?.tags) ? item.tags : []).map((tag) =>
+      normalizePortionLabelSource(tag),
+    ),
+  ].join(" ");
+
+  if (source.includes("suco")) {
+    return "juices";
+  }
+
+  if (
+    source.includes("refrigerante") ||
+    source.includes("fanta") ||
+    source.includes("coca") ||
+    source.includes("guarana") ||
+    source.includes("soda")
+  ) {
+    return "sodas";
+  }
+
+  return "custom";
 }
 
 function isDrinkContext({ categoryName, tags = [] }) {
@@ -143,6 +182,14 @@ export default async function OperacaoMenuPage({ searchParams }) {
 
   function renderOperationalItem(item, categoryId, categoryName, canManageItem) {
     const stockState = getStockState(item);
+    const flavorOptions = Array.isArray(item.flavorOptions)
+      ? item.flavorOptions
+          .map((entry) => String(entry ?? "").trim())
+          .filter(Boolean)
+      : [];
+    const flavorPreview = flavorOptions.slice(0, 6).join(" | ");
+    const hiddenFlavorCount = Math.max(0, flavorOptions.length - 6);
+    const flavorPresetDefault = resolveFlavorPresetForItem(item, categoryName);
 
     return (
       <article
@@ -233,6 +280,14 @@ export default async function OperacaoMenuPage({ searchParams }) {
                   )
                   .join(" | ")
               : "Preco unico (sem tamanhos)"}
+          </p>
+          <p>
+            <span className="font-semibold text-[var(--forest)]">
+              Sabores:
+            </span>{" "}
+            {flavorOptions.length
+              ? `${flavorPreview}${hiddenFlavorCount ? ` | +${hiddenFlavorCount}` : ""}`
+              : "sem variacoes cadastradas"}
           </p>
         </div>
 
@@ -434,6 +489,32 @@ export default async function OperacaoMenuPage({ searchParams }) {
               <p className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
                 Para bebida ou item com preco unico, deixe os campos de tamanho em branco.
               </p>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Selecao de sabores (opcional)
+                  <select
+                    name="flavorPreset"
+                    defaultValue={flavorPresetDefault}
+                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  >
+                    <option value="none">{flavorPresetOptions.none}</option>
+                    <option value="juices">{flavorPresetOptions.juices}</option>
+                    <option value="sodas">{flavorPresetOptions.sodas}</option>
+                    <option value="custom">{flavorPresetOptions.custom}</option>
+                  </select>
+                </label>
+
+                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                  Sabores (opcional)
+                  <input
+                    name="flavorOptions"
+                    defaultValue={flavorOptions.join(", ")}
+                    placeholder="Ex.: Laranja, Maracuja, Uva..."
+                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                  />
+                </label>
+              </div>
 
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">

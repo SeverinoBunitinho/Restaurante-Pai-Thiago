@@ -8,6 +8,69 @@ import { MenuCategoryComposer } from "@/components/menu-category-composer";
 import { SubmitButton } from "@/components/submit-button";
 import { cn } from "@/lib/utils";
 
+const flavorPresetOptions = {
+  none: {
+    label: "Sem sabores adicionais",
+    options: [],
+    helper: "Use para prato comum ou bebida com sabor unico.",
+  },
+  juices: {
+    label: "Lista completa de sucos",
+    options: [
+      "Laranja",
+      "Limao",
+      "Abacaxi",
+      "Maracuja",
+      "Acerola",
+      "Goiaba",
+      "Manga",
+      "Melancia",
+      "Melao",
+      "Caju",
+      "Uva",
+      "Graviola",
+      "Mangaba",
+      "Seriguela",
+      "Cupuacu",
+      "Abacaxi com hortela",
+      "Abacaxi com gengibre",
+      "Abacaxi com limao",
+      "Laranja com acerola",
+      "Laranja com cenoura",
+      "Laranja com lima",
+      "Laranja com morango",
+      "Maracuja com manga",
+      "Manga com limao",
+      "Acerola com laranja",
+      "Detox (couve e limao)",
+      "Acai com banana",
+      "Vitamina de banana",
+      "Vitamina de mamao",
+      "Goiaba com leite",
+    ],
+    helper: "Aplicacao rapida para sucos com varios sabores.",
+  },
+  sodas: {
+    label: "Refrigerantes (sabores comuns)",
+    options: [
+      "Cola",
+      "Cola Zero",
+      "Guarana",
+      "Guarana Zero",
+      "Laranja",
+      "Uva",
+      "Limao",
+      "Tonica",
+    ],
+    helper: "Sugestao para itens como Fanta, Guarana e similares.",
+  },
+  custom: {
+    label: "Personalizado",
+    options: [],
+    helper: "Informe manualmente os sabores separados por virgula.",
+  },
+};
+
 export function MenuItemComposer({ categories = [] }) {
   const [state, formAction] = useActionState(
     createMenuItemAction,
@@ -15,6 +78,8 @@ export function MenuItemComposer({ categories = [] }) {
   );
   const [isCategoryComposerOpen, setIsCategoryComposerOpen] = useState(false);
   const [sizePreset, setSizePreset] = useState("default");
+  const [flavorPreset, setFlavorPreset] = useState("none");
+  const [flavorOptionsText, setFlavorOptionsText] = useState("");
 
   const sizePresetCopy = {
     default: {
@@ -40,6 +105,22 @@ export function MenuItemComposer({ categories = [] }) {
   const selectedSizePresetCopy =
     sizePresetCopy[sizePreset] ?? sizePresetCopy.default;
   const isDrinkPreset = sizePreset === "drink";
+  const selectedFlavorPreset =
+    flavorPresetOptions[flavorPreset] ?? flavorPresetOptions.none;
+
+  function handleFlavorPresetChange(nextPreset) {
+    const normalizedPreset = flavorPresetOptions[nextPreset]
+      ? nextPreset
+      : "none";
+    setFlavorPreset(normalizedPreset);
+
+    if (normalizedPreset === "custom") {
+      return;
+    }
+
+    const presetOptions = flavorPresetOptions[normalizedPreset].options;
+    setFlavorOptionsText(presetOptions.join(", "));
+  }
 
   if (!categories.length) {
     return (
@@ -198,6 +279,41 @@ export function MenuItemComposer({ categories = [] }) {
             <option value="drink">Bebida (350ml/1000ml/2000ml)</option>
           </select>
         </label>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
+            Selecao de sabores (opcional)
+            <select
+              name="flavorPreset"
+              value={flavorPreset}
+              onChange={(event) => handleFlavorPresetChange(event.target.value)}
+              className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            >
+              <option value="none">{flavorPresetOptions.none.label}</option>
+              <option value="juices">{flavorPresetOptions.juices.label}</option>
+              <option value="sodas">{flavorPresetOptions.sodas.label}</option>
+              <option value="custom">{flavorPresetOptions.custom.label}</option>
+            </select>
+            <span className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+              {selectedFlavorPreset.helper}
+            </span>
+          </label>
+
+          <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
+            Lista de sabores (opcional)
+            <textarea
+              name="flavorOptions"
+              rows={3}
+              value={flavorOptionsText}
+              onChange={(event) => setFlavorOptionsText(event.target.value)}
+              placeholder="Ex.: Laranja, Maracuja, Abacaxi com hortela..."
+              className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+            />
+            <span className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+              Quando houver varios sabores, o cliente escolhe no cardapio antes de adicionar ao carrinho.
+            </span>
+          </label>
+        </div>
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">

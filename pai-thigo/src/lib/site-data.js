@@ -645,6 +645,9 @@ function mapMenuCategory(category, includeUnavailable = false) {
           spiceLevel: item.spice_level ?? "suave",
           tags: item.tags ?? [],
           allergens: item.allergens ?? [],
+          flavorOptions: Array.isArray(item.flavor_options)
+            ? item.flavor_options
+            : [],
           signature: Boolean(item.is_signature),
           available: item.is_available ?? true,
           stockQuantity:
@@ -826,7 +829,7 @@ export async function getMenuCategories(options = {}) {
   const dataClient = getSupabaseDataClient(supabase);
 
   const newColumnsSelect =
-    "id, name, slug, description, highlight_color, sort_order, menu_items(id, name, description, image_url, price, prep_time, spice_level, tags, allergens, is_signature, is_available, sort_order, stock_quantity, low_stock_threshold, portion_prices)";
+    "id, name, slug, description, highlight_color, sort_order, menu_items(id, name, description, image_url, price, prep_time, spice_level, tags, allergens, flavor_options, is_signature, is_available, sort_order, stock_quantity, low_stock_threshold, portion_prices)";
   const legacyColumnsSelect =
     "id, name, slug, description, highlight_color, sort_order, menu_items(id, name, description, image_url, price, prep_time, spice_level, tags, allergens, is_signature, is_available, sort_order)";
   let queryResult = await dataClient
@@ -839,7 +842,8 @@ export async function getMenuCategories(options = {}) {
     const missingNewColumns =
       message.includes("stock_quantity") ||
       message.includes("low_stock_threshold") ||
-      message.includes("portion_prices");
+      message.includes("portion_prices") ||
+      message.includes("flavor_options");
 
     if (missingNewColumns) {
       queryResult = await dataClient

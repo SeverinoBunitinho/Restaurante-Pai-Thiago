@@ -105,6 +105,50 @@ const menuCategories = [
   },
 ];
 
+const juiceFlavorPreset = [
+  "Laranja",
+  "Limao",
+  "Abacaxi",
+  "Maracuja",
+  "Acerola",
+  "Goiaba",
+  "Manga",
+  "Melancia",
+  "Melao",
+  "Caju",
+  "Uva",
+  "Graviola",
+  "Mangaba",
+  "Seriguela",
+  "Cupuacu",
+  "Abacaxi com hortela",
+  "Abacaxi com gengibre",
+  "Abacaxi com limao",
+  "Laranja com acerola",
+  "Laranja com cenoura",
+  "Laranja com lima",
+  "Laranja com morango",
+  "Maracuja com manga",
+  "Manga com limao",
+  "Acerola com laranja",
+  "Detox (couve e limao)",
+  "Acai com banana",
+  "Vitamina de banana",
+  "Vitamina de mamao",
+  "Goiaba com leite",
+];
+
+const sodaFlavorPreset = [
+  "Cola",
+  "Cola Zero",
+  "Guarana",
+  "Guarana Zero",
+  "Laranja",
+  "Uva",
+  "Limao",
+  "Tonica",
+];
+
 const menuItems = [
   {
     categorySlug: "da-brasa",
@@ -373,6 +417,7 @@ const menuItems = [
     stock_quantity: 40,
     low_stock_threshold: 8,
     portion_prices: { small: 5, medium: 8, large: 13 },
+    flavor_options: ["Tradicional", "Zero"],
   },
   {
     categorySlug: "bebidas",
@@ -389,6 +434,7 @@ const menuItems = [
     stock_quantity: 36,
     low_stock_threshold: 8,
     portion_prices: { small: 5, medium: 7.9, large: 13 },
+    flavor_options: ["Tradicional", "Zero"],
   },
   {
     categorySlug: "bebidas",
@@ -404,6 +450,7 @@ const menuItems = [
     stock_quantity: 32,
     low_stock_threshold: 7,
     portion_prices: { small: 5, medium: 7.9, large: 13 },
+    flavor_options: ["Tradicional", "Zero"],
   },
   {
     categorySlug: "bebidas",
@@ -420,6 +467,7 @@ const menuItems = [
     stock_quantity: 30,
     low_stock_threshold: 7,
     portion_prices: { small: 5.5, medium: 8.5, large: 13.5 },
+    flavor_options: ["Laranja", "Uva", "Guarana"],
   },
   {
     categorySlug: "bebidas",
@@ -436,6 +484,7 @@ const menuItems = [
     stock_quantity: 28,
     low_stock_threshold: 6,
     portion_prices: { small: 7.5, medium: 11.5, large: 16.5 },
+    flavor_options: juiceFlavorPreset,
   },
   {
     categorySlug: "bebidas",
@@ -451,6 +500,7 @@ const menuItems = [
     stock_quantity: 50,
     low_stock_threshold: 10,
     portion_prices: { small: 4.5, medium: 6, large: 9 },
+    flavor_options: ["Sem gas", "Com gas"],
   },
 ];
 
@@ -507,6 +557,7 @@ function canTryCompatibilityFallback(error) {
     message.includes("stock_quantity") ||
     message.includes("low_stock_threshold") ||
     message.includes("portion_prices") ||
+    message.includes("flavor_options") ||
     error?.code === "PGRST204"
   );
 }
@@ -541,6 +592,7 @@ function buildCompatibilityPayloads(payload) {
   delete withoutStock.stock_quantity;
   delete withoutStock.low_stock_threshold;
   delete withoutStock.portion_prices;
+  delete withoutStock.flavor_options;
 
   const withoutImageAndStock = { ...withoutStock };
   delete withoutImageAndStock.image_url;
@@ -572,6 +624,13 @@ async function upsertMenuItems() {
       spice_level: item.spice_level ?? null,
       tags: Array.isArray(item.tags) ? item.tags : [],
       allergens: Array.isArray(item.allergens) ? item.allergens : [],
+      flavor_options: Array.isArray(item.flavor_options)
+        ? item.flavor_options
+        : item.tags?.includes("sucos")
+          ? juiceFlavorPreset
+          : item.tags?.includes("refrigerantes")
+            ? sodaFlavorPreset
+            : [],
       is_signature: Boolean(item.is_signature),
       is_available: true,
       sort_order: Number(item.sort_order ?? 0),

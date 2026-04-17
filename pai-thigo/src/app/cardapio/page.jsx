@@ -34,6 +34,13 @@ function isDrinkItem(item) {
 }
 
 function extractFlavorOptions(item) {
+  if (Array.isArray(item?.flavorOptions) && item.flavorOptions.length) {
+    return item.flavorOptions
+      .map((entry) => String(entry ?? "").trim())
+      .filter(Boolean)
+      .slice(0, 60);
+  }
+
   if (!isDrinkItem(item)) {
     return [];
   }

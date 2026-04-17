@@ -59,6 +59,52 @@ const MENU_IMAGE_ALLOWED_MIME_TYPES = [
   "image/avif",
 ];
 const portionSizeOptions = ["small", "medium", "large"];
+const flavorPresetOptions = {
+  none: [],
+  juices: [
+    "Laranja",
+    "Limao",
+    "Abacaxi",
+    "Maracuja",
+    "Acerola",
+    "Goiaba",
+    "Manga",
+    "Melancia",
+    "Melao",
+    "Caju",
+    "Uva",
+    "Graviola",
+    "Mangaba",
+    "Seriguela",
+    "Cupuacu",
+    "Abacaxi com hortela",
+    "Abacaxi com gengibre",
+    "Abacaxi com limao",
+    "Laranja com acerola",
+    "Laranja com cenoura",
+    "Laranja com lima",
+    "Laranja com morango",
+    "Maracuja com manga",
+    "Manga com limao",
+    "Acerola com laranja",
+    "Detox (couve e limao)",
+    "Acai com banana",
+    "Vitamina de banana",
+    "Vitamina de mamao",
+    "Goiaba com leite",
+  ],
+  sodas: [
+    "Cola",
+    "Cola Zero",
+    "Guarana",
+    "Guarana Zero",
+    "Laranja",
+    "Uva",
+    "Limao",
+    "Tonica",
+  ],
+  custom: [],
+};
 
 function normalizeLines(value) {
   return String(value ?? "")
@@ -104,6 +150,79 @@ function parseNonNegativeInteger(value) {
   }
 
   return parsed;
+}
+
+function normalizeFlavorKey(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeFlavorLabel(value) {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function sanitizeFlavorOptions(value) {
+  const list = Array.isArray(value) ? value : [];
+  const uniqueByKey = new Map();
+
+  for (const entry of list) {
+    const label = normalizeFlavorLabel(entry);
+    const key = normalizeFlavorKey(label);
+
+    if (!key || label.length < 2 || label.length > 48 || uniqueByKey.has(key)) {
+      continue;
+    }
+
+    uniqueByKey.set(key, label);
+
+    if (uniqueByKey.size >= 60) {
+      break;
+    }
+  }
+
+  return Array.from(uniqueByKey.values());
+}
+
+function parseFlavorOptionsInput(value) {
+  return sanitizeFlavorOptions(
+    String(value ?? "")
+      .split(/[\n,;|]/)
+      .map((entry) => entry.trim())
+      .filter(Boolean),
+  );
+}
+
+function normalizeFlavorPreset(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(flavorPresetOptions, normalized)
+    ? normalized
+    : "none";
+}
+
+function resolveFlavorOptions(formData) {
+  const preset = normalizeFlavorPreset(formData.get("flavorPreset"));
+  const manualOptions = parseFlavorOptionsInput(formData.get("flavorOptions"));
+  const presetOptions = sanitizeFlavorOptions(flavorPresetOptions[preset] ?? []);
+
+  if (preset === "custom") {
+    return manualOptions;
+  }
+
+  if (!manualOptions.length) {
+    return presetOptions;
+  }
+
+  if (preset === "none") {
+    return manualOptions;
+  }
+
+  return sanitizeFlavorOptions([...presetOptions, ...manualOptions]);
 }
 
 function resolveBasePriceFromSizes(basePrice, portionPricesInput = {}) {
@@ -1842,6 +1961,7 @@ export async function createMenuItemAction(_previousState, formData) {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
+  const flavorOptions = resolveFlavorOptions(formData);
   const stockQuantity = parseNonNegativeInteger(formData.get("stockQuantity"));
   const lowStockThreshold = parseNonNegativeInteger(formData.get("lowStockThreshold"));
   const portionSmallPrice = parseCurrencyValue(formData.get("portionSmallPrice"));
@@ -1978,6 +2098,7 @@ export async function createMenuItemAction(_previousState, formData) {
     spice_level: spiceLevel || null,
     tags,
     allergens,
+    flavor_options: flavorOptions,
     is_signature: isSignature,
     is_available: isAvailable,
     sort_order: nextSortOrder,
@@ -1995,6 +2116,7 @@ export async function createMenuItemAction(_previousState, formData) {
       delete withoutStock.stock_quantity;
       delete withoutStock.low_stock_threshold;
       delete withoutStock.portion_prices;
+      delete withoutStock.flavor_options;
       return withoutStock;
     })(),
   ]);
@@ -2012,7 +2134,8 @@ export async function createMenuItemAction(_previousState, formData) {
       stockColumnsMissing =
         payload.stock_quantity === undefined ||
         payload.low_stock_threshold === undefined ||
-        payload.portion_prices === undefined;
+        payload.portion_prices === undefined ||
+        payload.flavor_options === undefined;
       break;
     }
 
@@ -2022,6 +2145,7 @@ export async function createMenuItemAction(_previousState, formData) {
       errorMessage.includes("stock_quantity") ||
       errorMessage.includes("low_stock_threshold") ||
       errorMessage.includes("portion_prices") ||
+      errorMessage.includes("flavor_options") ||
       error.code === "PGRST204";
 
     if (!canTryNext) {
@@ -2049,11 +2173,11 @@ export async function createMenuItemAction(_previousState, formData) {
     status: "success",
     message:
       imageColumnMissing && stockColumnsMissing
-        ? "Prato cadastrado. O banco ainda nao tem colunas de imagem/estoque/porcoes, mas o item ja entrou no cardapio."
+        ? "Prato cadastrado. O banco ainda nao tem colunas de imagem/estoque/porcoes/sabores, mas o item ja entrou no cardapio."
         : imageColumnMissing
           ? "Prato cadastrado. A imagem nao foi salva porque a coluna image_url ainda nao existe no banco."
           : stockColumnsMissing
-            ? "Prato cadastrado. Os campos de estoque/porcoes nao foram salvos porque o banco ainda nao tem essas colunas."
+            ? "Prato cadastrado. Os campos de estoque/porcoes/sabores nao foram salvos porque o banco ainda nao tem essas colunas."
             : "Prato cadastrado com sucesso. O cardapio ja foi atualizado.",
   };
 }
@@ -2077,6 +2201,10 @@ export async function updateMenuItemAction(formData) {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
+  const hasFlavorInputs = formData.has("flavorPreset") || formData.has("flavorOptions");
+  const flavorOptions = hasFlavorInputs
+    ? resolveFlavorOptions(formData)
+    : null;
   const stockQuantity = parseNonNegativeInteger(formData.get("stockQuantity"));
   const lowStockThreshold = parseNonNegativeInteger(formData.get("lowStockThreshold"));
   const portionSmallPrice = parseCurrencyValue(formData.get("portionSmallPrice"));
@@ -2207,6 +2335,10 @@ export async function updateMenuItemAction(formData) {
     portion_prices: portionPrices,
   };
 
+  if (flavorOptions !== null) {
+    updatePayload.flavor_options = flavorOptions;
+  }
+
   const payloadWithoutImage = { ...updatePayload };
   delete payloadWithoutImage.image_url;
   const compatibilityPayloads = [updatePayload, payloadWithoutImage].flatMap((payload) => [
@@ -2216,6 +2348,7 @@ export async function updateMenuItemAction(formData) {
       delete withoutStock.stock_quantity;
       delete withoutStock.low_stock_threshold;
       delete withoutStock.portion_prices;
+      delete withoutStock.flavor_options;
       return withoutStock;
     })(),
   ]);
@@ -2236,7 +2369,8 @@ export async function updateMenuItemAction(formData) {
       stockColumnsMissing =
         payload.stock_quantity === undefined ||
         payload.low_stock_threshold === undefined ||
-        payload.portion_prices === undefined;
+        payload.portion_prices === undefined ||
+        payload.flavor_options === undefined;
       break;
     }
 
@@ -2246,6 +2380,7 @@ export async function updateMenuItemAction(formData) {
       errorMessage.includes("stock_quantity") ||
       errorMessage.includes("low_stock_threshold") ||
       errorMessage.includes("portion_prices") ||
+      errorMessage.includes("flavor_options") ||
       error.code === "PGRST204";
 
     if (!canTryNext) {
@@ -2265,11 +2400,11 @@ export async function updateMenuItemAction(formData) {
 
   const successMessage =
     imageColumnMissing && stockColumnsMissing
-      ? "Prato atualizado. O banco ainda nao tem colunas de imagem/estoque/porcoes."
+      ? "Prato atualizado. O banco ainda nao tem colunas de imagem/estoque/porcoes/sabores."
       : imageColumnMissing
         ? "Prato atualizado. A imagem nao foi salva porque a coluna image_url ainda nao existe."
         : stockColumnsMissing
-          ? "Prato atualizado. Campos de estoque/porcoes nao foram salvos porque o banco nao tem essas colunas."
+          ? "Prato atualizado. Campos de estoque/porcoes/sabores nao foram salvos porque o banco nao tem essas colunas."
           : "Prato atualizado com sucesso.";
 
   redirect(

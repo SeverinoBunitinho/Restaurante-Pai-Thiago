@@ -79,6 +79,7 @@ create table if not exists public.menu_items (
   spice_level text,
   tags text[] not null default '{}',
   allergens text[] not null default '{}',
+  flavor_options text[] not null default '{}',
   is_signature boolean not null default false,
   is_available boolean not null default true,
   sort_order integer not null default 0,
@@ -88,6 +89,9 @@ create table if not exists public.menu_items (
 
 alter table public.menu_items
 add column if not exists allergens text[] not null default '{}';
+
+alter table public.menu_items
+add column if not exists flavor_options text[] not null default '{}';
 
 alter table public.menu_items
 add column if not exists image_url text;
