@@ -12,13 +12,6 @@ const initialCategoryState = {
   message: "",
 };
 
-const accentOptions = [
-  { value: "gold", label: "Dourado" },
-  { value: "sage", label: "Verde" },
-  { value: "clay", label: "Terracota" },
-  { value: "cream", label: "Creme" },
-];
-
 export function MenuCategoryComposer({ onSuccess }) {
   const [state, formAction] = useActionState(
     createMenuCategoryAction,
@@ -68,23 +61,6 @@ export function MenuCategoryComposer({ onSuccess }) {
           placeholder="Resumo rapido da proposta desta categoria."
           className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
         />
-      </label>
-
-      <label className="grid gap-2">
-        <span className="text-sm font-semibold text-[var(--forest)]">
-          Tom visual
-        </span>
-        <select
-          name="accent"
-          defaultValue="gold"
-          className="rounded-[1.2rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none"
-        >
-          {accentOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
       </label>
 
       <SubmitButton
