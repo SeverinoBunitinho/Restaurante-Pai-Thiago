@@ -100,6 +100,24 @@ npm run restore:data
 
 Esse comando recompõe categorias, pratos, bebidas com tamanhos e depoimentos da casa.
 
+## Restaurar historico antigo do backup
+
+Se quiser recuperar perfis de clientes e pedidos antigos (exportados antes do reset), rode:
+
+```bash
+npm run restore:history
+```
+
+Por padrao, o comando usa o backup em:
+
+`../backups/pai-thiago-tecnico-2026-03-21_14-40-58/supabase-export`
+
+Se seu backup estiver em outro local:
+
+```bash
+node scripts/restore-history-from-backup.mjs --backup-dir "CAMINHO\\supabase-export"
+```
+
 ## Fluxo de acesso
 
 - `/login`

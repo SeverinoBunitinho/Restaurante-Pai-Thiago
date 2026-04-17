@@ -14,7 +14,7 @@ Use este guia quando o Supabase resetar ou perder dados.
 ## 2) Restaurar estrutura do banco
 
 1. Abrir `Supabase > SQL Editor`.
-2. Executar o arquivo [`supabase/schema.sql`](/Users/Windows Lite BR/Documents/New project 2/pai-thigo/supabase/schema.sql).
+2. Executar `supabase/schema.sql`.
 3. Confirmar que nao houve erro bloqueante.
 
 ## 3) Restaurar contas internas
@@ -30,7 +30,7 @@ Isso garante:
 - `gerente@paithiago.com.br` (manager)
 - `dono@paithiago.com.br` (owner)
 
-## 4) Restaurar cardapio completo e depoimentos
+## 4) Restaurar cardapio base e depoimentos
 
 1. Rodar:
 
@@ -45,7 +45,27 @@ Esse comando recompõe:
 - Depoimentos aprovados
 - Estoque e alerta de estoque iniciais
 
-## 5) Validacao tecnica
+## 5) Restaurar historico antigo do backup
+
+1. Rodar:
+
+```bash
+npm run restore:history
+```
+
+Esse comando recompõe (sem apagar dados atuais):
+- Perfis antigos de clientes
+- Pedidos historicos
+- Configuracoes da casa
+- Zonas de delivery do backup
+
+Se o backup estiver em outro local, use:
+
+```bash
+node scripts/restore-history-from-backup.mjs --backup-dir "CAMINHO\\supabase-export"
+```
+
+## 6) Validacao tecnica
 
 1. Rodar:
 
@@ -57,7 +77,7 @@ npm run check
    - `/api/health`
    - `/api/readiness`
 
-## 6) Validacao funcional (manual)
+## 7) Validacao funcional (manual)
 
 1. Login cliente.
 2. Login funcionario (garcom, gerente, dono).
@@ -72,7 +92,7 @@ npm run check
    - Ajustar estoque de item esgotado
    - Conferir reserva recebida
 
-## 7) Itens opcionais de producao
+## 8) Itens opcionais de producao
 
 1. Configurar SMTP no Supabase Auth (confirmacao e recuperacao de senha).
 2. Configurar gateway de pagamento (se quiser checkout online automatico).
