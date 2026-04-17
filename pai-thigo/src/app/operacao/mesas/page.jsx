@@ -606,6 +606,34 @@ export default async function OperacaoMesasPage({ searchParams }) {
               <div className="mt-6 space-y-4">
                 {tablesByArea.map((group, index) => {
                   const counters = getTableStatusCounters(group.tables);
+                  const freeTables = group.tables
+                    .filter((table) => table.state === "livre")
+                    .sort((left, right) =>
+                      String(left.name ?? "").localeCompare(
+                        String(right.name ?? ""),
+                        "pt-BR",
+                      ),
+                    );
+                  const occupiedTables = group.tables
+                    .filter((table) => table.state !== "livre")
+                    .sort((left, right) => {
+                      const statePriority = {
+                        ocupada: 0,
+                        reservada: 1,
+                        pausada: 2,
+                      };
+                      const leftPriority = statePriority[left.state] ?? 99;
+                      const rightPriority = statePriority[right.state] ?? 99;
+
+                      if (leftPriority !== rightPriority) {
+                        return leftPriority - rightPriority;
+                      }
+
+                      return String(left.name ?? "").localeCompare(
+                        String(right.name ?? ""),
+                        "pt-BR",
+                      );
+                    });
 
                   return (
                     <details
@@ -637,56 +665,144 @@ export default async function OperacaoMesasPage({ searchParams }) {
                         </div>
                       </summary>
 
-                      <div className="mt-4 grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-                        {group.tables.map((table) => (
-                          <article
-                            key={table.id}
-                            className="rounded-[1.4rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.78)] p-4"
-                          >
-                            <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <h4 className="text-lg font-semibold text-[var(--forest)]">
-                                  {table.name}
-                                </h4>
-                                <p className="mt-1 text-sm text-[rgba(21,35,29,0.7)]">
-                                  Capacidade para {table.capacity} pessoa(s)
-                                </p>
-                              </div>
-                              <span
-                                className={`pill-wrap-safe rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${tableStateStyles[table.state] ?? tableStateStyles.livre}`}
-                              >
-                                {table.state}
-                              </span>
-                            </div>
-
-                            <p className="content-copy-safe mt-3 text-sm leading-6 text-[rgba(21,35,29,0.72)]">
-                              {table.detail}
+                      <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                        <article className="rounded-[1.4rem] border border-[rgba(95,123,109,0.2)] bg-[rgba(95,123,109,0.06)] p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+                              Mesas livres
                             </p>
+                            <span className="rounded-full border border-[rgba(95,123,109,0.24)] bg-[rgba(95,123,109,0.12)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--sage)]">
+                              {freeTables.length}
+                            </span>
+                          </div>
 
-                            <div className="mt-4">
-                              {canManageTables ? (
-                                <form action={toggleRestaurantTableActiveAction} className="max-w-full">
-                                  <input type="hidden" name="tableId" value={table.id} />
-                                  <input
-                                    type="hidden"
-                                    name="currentActive"
-                                    value={String(table.isActive)}
-                                  />
-                                  <button
-                                    type="submit"
-                                    className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
-                                  >
-                                    {table.isActive ? "Pausar mesa" : "Reativar mesa"}
-                                  </button>
-                                </form>
-                              ) : (
-                                <span className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[rgba(21,35,29,0.56)]">
-                                  Controle do gerente ou dono
-                                </span>
-                              )}
+                          {freeTables.length ? (
+                            <div className="mt-3 grid max-h-[24rem] gap-3 overflow-y-auto pr-1">
+                              {freeTables.map((table) => (
+                                <article
+                                  key={table.id}
+                                  className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.86)] p-4"
+                                >
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <h4 className="text-base font-semibold text-[var(--forest)]">
+                                        {table.name}
+                                      </h4>
+                                      <p className="mt-1 text-xs text-[rgba(21,35,29,0.7)]">
+                                        Capacidade para {table.capacity} pessoa(s)
+                                      </p>
+                                    </div>
+                                    <span
+                                      className={`pill-wrap-safe rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${tableStateStyles[table.state] ?? tableStateStyles.livre}`}
+                                    >
+                                      {table.state}
+                                    </span>
+                                  </div>
+
+                                  <p className="content-copy-safe mt-3 text-xs leading-5 text-[rgba(21,35,29,0.72)]">
+                                    {table.detail}
+                                  </p>
+
+                                  <div className="mt-4">
+                                    {canManageTables ? (
+                                      <form action={toggleRestaurantTableActiveAction} className="max-w-full">
+                                        <input type="hidden" name="tableId" value={table.id} />
+                                        <input
+                                          type="hidden"
+                                          name="currentActive"
+                                          value={String(table.isActive)}
+                                        />
+                                        <button
+                                          type="submit"
+                                          className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
+                                        >
+                                          {table.isActive ? "Pausar mesa" : "Reativar mesa"}
+                                        </button>
+                                      </form>
+                                    ) : (
+                                      <span className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(21,35,29,0.56)]">
+                                        Controle do gerente ou dono
+                                      </span>
+                                    )}
+                                  </div>
+                                </article>
+                              ))}
                             </div>
-                          </article>
-                        ))}
+                          ) : (
+                            <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                              Nenhuma mesa livre neste setor agora.
+                            </p>
+                          )}
+                        </article>
+
+                        <article className="rounded-[1.4rem] border border-[rgba(182,135,66,0.2)] bg-[rgba(182,135,66,0.06)] p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--gold)]">
+                              Ocupadas, reservadas e pausadas
+                            </p>
+                            <span className="rounded-full border border-[rgba(182,135,66,0.24)] bg-[rgba(182,135,66,0.1)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--gold)]">
+                              {occupiedTables.length}
+                            </span>
+                          </div>
+
+                          {occupiedTables.length ? (
+                            <div className="mt-3 grid max-h-[24rem] gap-3 overflow-y-auto pr-1">
+                              {occupiedTables.map((table) => (
+                                <article
+                                  key={table.id}
+                                  className="rounded-[1.2rem] border border-[rgba(20,35,29,0.08)] bg-[rgba(255,255,255,0.86)] p-4"
+                                >
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                      <h4 className="text-base font-semibold text-[var(--forest)]">
+                                        {table.name}
+                                      </h4>
+                                      <p className="mt-1 text-xs text-[rgba(21,35,29,0.7)]">
+                                        Capacidade para {table.capacity} pessoa(s)
+                                      </p>
+                                    </div>
+                                    <span
+                                      className={`pill-wrap-safe rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${tableStateStyles[table.state] ?? tableStateStyles.livre}`}
+                                    >
+                                      {table.state}
+                                    </span>
+                                  </div>
+
+                                  <p className="content-copy-safe mt-3 text-xs leading-5 text-[rgba(21,35,29,0.72)]">
+                                    {table.detail}
+                                  </p>
+
+                                  <div className="mt-4">
+                                    {canManageTables ? (
+                                      <form action={toggleRestaurantTableActiveAction} className="max-w-full">
+                                        <input type="hidden" name="tableId" value={table.id} />
+                                        <input
+                                          type="hidden"
+                                          name="currentActive"
+                                          value={String(table.isActive)}
+                                        />
+                                        <button
+                                          type="submit"
+                                          className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--forest)] transition hover:-translate-y-0.5"
+                                        >
+                                          {table.isActive ? "Pausar mesa" : "Reativar mesa"}
+                                        </button>
+                                      </form>
+                                    ) : (
+                                      <span className="pill-wrap-safe rounded-full border border-[rgba(20,35,29,0.12)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(21,35,29,0.56)]">
+                                        Controle do gerente ou dono
+                                      </span>
+                                    )}
+                                  </div>
+                                </article>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="mt-3 text-sm leading-6 text-[rgba(21,35,29,0.68)]">
+                              Nenhuma mesa ocupada, reservada ou pausada neste setor.
+                            </p>
+                          )}
+                        </article>
                       </div>
                     </details>
                   );

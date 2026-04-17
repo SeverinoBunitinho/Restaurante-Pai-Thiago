@@ -187,6 +187,10 @@ export default async function OperacaoMenuPage({ searchParams }) {
           .map((entry) => String(entry ?? "").trim())
           .filter(Boolean)
       : [];
+    const showFlavorControls = isDrinkContext({
+      categoryName,
+      tags: item?.tags ?? [],
+    });
     const flavorPreview = flavorOptions.slice(0, 6).join(" | ");
     const hiddenFlavorCount = Math.max(0, flavorOptions.length - 6);
     const flavorPresetDefault = resolveFlavorPresetForItem(item, categoryName);
@@ -281,14 +285,16 @@ export default async function OperacaoMenuPage({ searchParams }) {
                   .join(" | ")
               : "Preco unico (sem tamanhos)"}
           </p>
-          <p>
-            <span className="font-semibold text-[var(--forest)]">
-              Sabores:
-            </span>{" "}
-            {flavorOptions.length
-              ? `${flavorPreview}${hiddenFlavorCount ? ` | +${hiddenFlavorCount}` : ""}`
-              : "sem variacoes cadastradas"}
-          </p>
+          {showFlavorControls ? (
+            <p>
+              <span className="font-semibold text-[var(--forest)]">
+                Sabores:
+              </span>{" "}
+              {flavorOptions.length
+                ? `${flavorPreview}${hiddenFlavorCount ? ` | +${hiddenFlavorCount}` : ""}`
+                : "sem variacoes cadastradas"}
+            </p>
+          ) : null}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -490,31 +496,33 @@ export default async function OperacaoMenuPage({ searchParams }) {
                 Para bebida ou item com preco unico, deixe os campos de tamanho em branco.
               </p>
 
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                  Selecao de sabores (opcional)
-                  <select
-                    name="flavorPreset"
-                    defaultValue={flavorPresetDefault}
-                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                  >
-                    <option value="none">{flavorPresetOptions.none}</option>
-                    <option value="juices">{flavorPresetOptions.juices}</option>
-                    <option value="sodas">{flavorPresetOptions.sodas}</option>
-                    <option value="custom">{flavorPresetOptions.custom}</option>
-                  </select>
-                </label>
+              {showFlavorControls ? (
+                <div className="grid gap-3 rounded-[1.2rem] border border-[rgba(95,123,109,0.16)] bg-[rgba(95,123,109,0.06)] p-3 md:grid-cols-2">
+                  <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                    Selecao de sabores (opcional)
+                    <select
+                      name="flavorPreset"
+                      defaultValue={flavorPresetDefault}
+                      className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                    >
+                      <option value="none">{flavorPresetOptions.none}</option>
+                      <option value="juices">{flavorPresetOptions.juices}</option>
+                      <option value="sodas">{flavorPresetOptions.sodas}</option>
+                      <option value="custom">{flavorPresetOptions.custom}</option>
+                    </select>
+                  </label>
 
-                <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
-                  Sabores (opcional)
-                  <input
-                    name="flavorOptions"
-                    defaultValue={flavorOptions.join(", ")}
-                    placeholder="Ex.: Laranja, Maracuja, Uva..."
-                    className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
-                  />
-                </label>
-              </div>
+                  <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">
+                    Sabores (opcional)
+                    <input
+                      name="flavorOptions"
+                      defaultValue={flavorOptions.join(", ")}
+                      placeholder="Ex.: Laranja, Maracuja, Uva..."
+                      className="rounded-[1rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-sm text-[var(--forest)] outline-none"
+                    />
+                  </label>
+                </div>
+              ) : null}
 
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="grid gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--sage)]">

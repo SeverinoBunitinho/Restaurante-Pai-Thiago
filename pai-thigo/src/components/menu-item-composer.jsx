@@ -272,7 +272,15 @@ export function MenuItemComposer({ categories = [] }) {
           Modelo de tamanho
           <select
             value={sizePreset}
-            onChange={(event) => setSizePreset(event.target.value)}
+            onChange={(event) => {
+              const nextPreset = event.target.value;
+              setSizePreset(nextPreset);
+
+              if (nextPreset !== "drink") {
+                setFlavorPreset("none");
+                setFlavorOptionsText("");
+              }
+            }}
             className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
           >
             <option value="default">Padrao (pequeno/medio/grande)</option>
@@ -280,40 +288,48 @@ export function MenuItemComposer({ categories = [] }) {
           </select>
         </label>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
-            Selecao de sabores (opcional)
-            <select
-              name="flavorPreset"
-              value={flavorPreset}
-              onChange={(event) => handleFlavorPresetChange(event.target.value)}
-              className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
-            >
-              <option value="none">{flavorPresetOptions.none.label}</option>
-              <option value="juices">{flavorPresetOptions.juices.label}</option>
-              <option value="sodas">{flavorPresetOptions.sodas.label}</option>
-              <option value="custom">{flavorPresetOptions.custom.label}</option>
-            </select>
-            <span className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
-              {selectedFlavorPreset.helper}
-            </span>
-          </label>
+        {isDrinkPreset ? (
+          <div className="rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.62)] p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--sage)]">
+              Sabores da bebida
+            </p>
 
-          <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
-            Lista de sabores (opcional)
-            <textarea
-              name="flavorOptions"
-              rows={3}
-              value={flavorOptionsText}
-              onChange={(event) => setFlavorOptionsText(event.target.value)}
-              placeholder="Ex.: Laranja, Maracuja, Abacaxi com hortela..."
-              className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
-            />
-            <span className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
-              Quando houver varios sabores, o cliente escolhe no cardapio antes de adicionar ao carrinho.
-            </span>
-          </label>
-        </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
+                Selecao de sabores (opcional)
+                <select
+                  name="flavorPreset"
+                  value={flavorPreset}
+                  onChange={(event) => handleFlavorPresetChange(event.target.value)}
+                  className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+                >
+                  <option value="none">{flavorPresetOptions.none.label}</option>
+                  <option value="juices">{flavorPresetOptions.juices.label}</option>
+                  <option value="sodas">{flavorPresetOptions.sodas.label}</option>
+                  <option value="custom">{flavorPresetOptions.custom.label}</option>
+                </select>
+                <span className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+                  {selectedFlavorPreset.helper}
+                </span>
+              </label>
+
+              <label className="grid min-w-0 gap-2 text-sm font-medium text-[var(--forest)]">
+                Lista de sabores (opcional)
+                <textarea
+                  name="flavorOptions"
+                  rows={3}
+                  value={flavorOptionsText}
+                  onChange={(event) => setFlavorOptionsText(event.target.value)}
+                  placeholder="Ex.: Laranja, Maracuja, Abacaxi com hortela..."
+                  className="w-full min-w-0 rounded-[1.4rem] border border-[rgba(20,35,29,0.12)] bg-[rgba(255,255,255,0.82)] px-4 py-3 outline-none transition focus:border-[var(--gold)]"
+                />
+                <span className="text-xs leading-5 text-[rgba(21,35,29,0.66)]">
+                  Quando houver varios sabores, o cliente escolhe no cardapio antes de adicionar ao carrinho.
+                </span>
+              </label>
+            </div>
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <label className="grid min-w-0 gap-2 text-[0.82rem] font-medium text-[var(--forest)] sm:text-sm">
