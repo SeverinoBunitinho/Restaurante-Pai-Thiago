@@ -2155,13 +2155,15 @@ export async function updateMenuItemAction(formData) {
     );
   }
 
+  const dataClient = getSupabaseAdminClient() ?? supabase;
+
   const [categoryResult, itemResult] = await Promise.all([
-    supabase
+    dataClient
       .from("menu_categories")
       .select("id")
       .eq("id", categoryId)
       .maybeSingle(),
-    supabase
+    dataClient
       .from("menu_items")
       .select("id")
       .eq("id", itemId)
@@ -2223,7 +2225,7 @@ export async function updateMenuItemAction(formData) {
   let stockColumnsMissing = false;
 
   for (const payload of compatibilityPayloads) {
-    const result = await supabase
+    const result = await dataClient
       .from("menu_items")
       .update(payload)
       .eq("id", itemId);
@@ -2313,7 +2315,9 @@ export async function updateMenuItemStockAction(formData) {
     );
   }
 
-  let itemResult = await supabase
+  const dataClient = getSupabaseAdminClient() ?? supabase;
+
+  let itemResult = await dataClient
     .from("menu_items")
     .select("id, name, is_available, low_stock_threshold")
     .eq("id", itemId)
@@ -2324,7 +2328,7 @@ export async function updateMenuItemStockAction(formData) {
     const missingLowStockColumn = message.includes("low_stock_threshold");
 
     if (missingLowStockColumn) {
-      itemResult = await supabase
+      itemResult = await dataClient
         .from("menu_items")
         .select("id, name, is_available")
         .eq("id", itemId)
@@ -2354,7 +2358,7 @@ export async function updateMenuItemStockAction(formData) {
           : currentItem.is_available,
   };
 
-  let updateResult = await supabase
+  let updateResult = await dataClient
     .from("menu_items")
     .update(updatePayload)
     .eq("id", itemId);
@@ -2381,7 +2385,7 @@ export async function updateMenuItemStockAction(formData) {
     );
   }
 
-  await writeOperationAuditLog(supabase, session, {
+  await writeOperationAuditLog(dataClient, session, {
     eventType: "menu_item_stock_updated",
     entityType: "menu_item",
     entityId: itemId,
