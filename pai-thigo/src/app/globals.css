@@ -1318,13 +1318,13 @@ textarea {
   align-items: center;
   gap: 0.14rem;
   border-radius: 999px;
-  border: 1px solid rgba(217, 185, 122, 0.34);
+  border: 1px solid rgba(20, 35, 29, 0.1);
   background:
-    linear-gradient(180deg, rgba(28, 21, 15, 0.82), rgba(17, 13, 9, 0.74)),
-    rgba(15, 12, 9, 0.7);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(247, 239, 227, 0.56)),
+    rgba(255, 255, 255, 0.48);
   box-shadow:
-    0 22px 40px rgba(7, 6, 5, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    0 20px 36px rgba(39, 30, 18, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.64);
   backdrop-filter: blur(14px);
   padding: 0.28rem 0.38rem;
 }
@@ -1339,8 +1339,7 @@ textarea {
   padding: 0.46rem 0.94rem;
   font-size: 1.06rem;
   font-weight: 600;
-  color: rgba(255, 247, 236, 0.9);
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.32);
+  color: rgba(21, 35, 29, 0.84);
   transition:
     color 180ms ease,
     background 180ms ease,
@@ -1355,7 +1354,7 @@ textarea {
   bottom: 0.46rem;
   height: 1.6px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(255, 218, 165, 0.86), rgba(217, 185, 122, 0.96));
+  background: linear-gradient(90deg, rgba(182, 135, 66, 0.88), rgba(95, 123, 109, 0.52));
   opacity: 0;
   transform: scaleX(0.42);
   transform-origin: center;
@@ -1365,8 +1364,9 @@ textarea {
 }
 
 .public-desktop-nav-link-active {
-  color: rgba(255, 209, 142, 0.98);
-  background: rgba(255, 208, 144, 0.08);
+  color: var(--forest);
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 10px 22px rgba(39, 30, 18, 0.08);
 }
 
 .public-desktop-nav-link-active::after {
@@ -1380,21 +1380,20 @@ textarea {
 
 .public-desktop-menu-trigger {
   min-height: 2.75rem;
-  border: 0;
+  border: 1px solid transparent;
   background: transparent;
   border-radius: 999px;
   padding: 0.46rem 0.92rem;
   font-size: 1.06rem;
   font-weight: 600;
-  color: rgba(255, 247, 236, 0.9);
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.32);
+  color: rgba(21, 35, 29, 0.84);
 }
 
 .public-desktop-menu-dropdown[open] .public-desktop-menu-trigger {
-  background: rgba(255, 206, 137, 0.11);
-  color: rgba(255, 209, 142, 0.98);
-  border: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 230, 194, 0.22);
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--forest);
+  border-color: rgba(182, 135, 66, 0.24);
+  box-shadow: 0 10px 22px rgba(39, 30, 18, 0.07);
 }
 
 .public-desktop-menu-panel {
@@ -1405,14 +1404,14 @@ textarea {
   min-width: 19.8rem;
   width: min(22rem, 76vw);
   max-height: min(66vh, 24rem);
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 208, 140, 0.46);
+  border-radius: 1.1rem;
+  border: 1px solid rgba(20, 35, 29, 0.12);
   background:
-    linear-gradient(164deg, rgba(38, 29, 21, 0.96), rgba(22, 16, 11, 0.9)),
-    rgba(14, 10, 8, 0.88);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 239, 227, 0.92)),
+    rgba(255, 255, 255, 0.9);
   box-shadow:
-    0 24px 56px rgba(3, 3, 2, 0.44),
-    inset 0 1px 0 rgba(255, 231, 200, 0.18);
+    0 24px 56px rgba(18, 25, 21, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.76);
   padding: 0.68rem;
 }
 
@@ -1422,7 +1421,7 @@ textarea {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 207, 140, 0.84);
+  color: var(--gold);
 }
 
 .public-desktop-menu-list {
@@ -1437,9 +1436,9 @@ textarea {
   justify-content: space-between;
   gap: 0.85rem;
   border-radius: 0.86rem;
-  border: 1px solid rgba(255, 212, 151, 0.24);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 246, 232, 0.92);
+  border: 1px solid rgba(20, 35, 29, 0.1);
+  background: rgba(255, 255, 255, 0.76);
+  color: rgba(21, 35, 29, 0.86);
   padding: 0.66rem 0.82rem;
   transition:
     transform 180ms ease,
@@ -1448,8 +1447,9 @@ textarea {
 }
 
 .public-desktop-menu-link-active {
-  border-color: rgba(255, 219, 170, 0.42);
-  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(182, 135, 66, 0.24);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 10px 20px rgba(39, 30, 18, 0.08);
 }
 
 .public-desktop-menu-link-copy {
@@ -1469,12 +1469,12 @@ textarea {
 }
 
 .public-desktop-menu-link-highlight {
-  color: rgba(255, 207, 140, 0.98);
+  color: var(--gold);
   font-weight: 600;
 }
 
 .public-desktop-menu-link-arrow {
-  color: rgba(255, 207, 140, 0.82);
+  color: rgba(95, 123, 109, 0.82);
   flex-shrink: 0;
   transition:
     transform 180ms ease,
@@ -1484,7 +1484,7 @@ textarea {
 .public-desktop-nav-link:focus-visible,
 .public-desktop-menu-trigger:focus-visible,
 .public-desktop-menu-link:focus-visible {
-  outline: 2px solid rgba(255, 223, 174, 0.9);
+  outline: 2px solid rgba(217, 185, 122, 0.82);
   outline-offset: 2px;
 }
 
@@ -2538,8 +2538,8 @@ textarea {
   }
 
   .public-desktop-nav-link:hover {
-    color: rgba(255, 214, 153, 0.98);
-    background: rgba(255, 214, 153, 0.08);
+    color: var(--forest);
+    background: rgba(255, 255, 255, 0.52);
     transform: translateY(-1px);
   }
 
@@ -2555,20 +2555,21 @@ textarea {
   }
 
   .public-desktop-menu-trigger:hover {
-    border-color: transparent;
-    background: rgba(255, 206, 137, 0.1);
-    color: rgba(255, 214, 153, 0.98);
+    border-color: rgba(182, 135, 66, 0.22);
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--forest);
   }
 
   .public-desktop-menu-link:hover {
     transform: translateY(-1px);
-    border-color: rgba(255, 219, 170, 0.4);
-    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(182, 135, 66, 0.2);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 12px 22px rgba(39, 30, 18, 0.08);
   }
 
   .public-desktop-menu-link:hover .public-desktop-menu-link-arrow {
     transform: translateX(1px);
-    color: rgba(255, 223, 174, 0.94);
+    color: var(--forest);
   }
 
   .header-dropdown-link:hover {
