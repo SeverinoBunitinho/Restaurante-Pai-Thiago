@@ -535,10 +535,6 @@ export async function SiteHeader() {
         },
       })
     : [];
-  const staffDropdownItemCount = staffDropdownSections.reduce(
-    (total, section) => total + section.items.length,
-    0,
-  );
   const customerSession = session?.role === "customer";
   const customerDropdownSections = customerSession
     ? buildCustomerDropdownSections({
@@ -687,24 +683,16 @@ export async function SiteHeader() {
 
               <nav className="site-header-desktop-nav hidden items-center lg:flex">
                 {staffSession ? (
-                  <details className="header-dropdown">
-                    <summary className="header-dropdown-trigger">
-                      <span>Menu</span>
-                      <ChevronDown className="header-dropdown-chevron" size={16} />
-                    </summary>
+                  <div className="staff-desktop-section-nav">
+                    {staffDropdownSections.map((section) => (
+                      <details key={section.title} className="header-dropdown staff-desktop-section-dropdown">
+                        <summary className="header-dropdown-trigger staff-desktop-section-trigger">
+                          <span>{section.title}</span>
+                          <ChevronDown className="header-dropdown-chevron" size={15} />
+                        </summary>
 
-                    <div className="header-dropdown-panel">
-                      <div className="header-dropdown-head">
-                        <p className="header-dropdown-head-eyebrow">navegacao interna</p>
-                        <p className="header-dropdown-head-title">
-                          {staffDropdownItemCount} acesso(s) do{" "}
-                          {getStaffRoleLabel(session.role).toLowerCase()}
-                        </p>
-                      </div>
-
-                      {staffDropdownSections.map((section) => (
-                        <section key={section.title} className="header-dropdown-section">
-                          <p className="header-dropdown-section-title">{section.title}</p>
+                        <div className="header-dropdown-panel staff-desktop-section-panel">
+                          <p className="staff-desktop-section-eyebrow">{section.title}</p>
                           <div className="header-dropdown-section-list">
                             {section.items.map((item) => (
                               <ActiveLink
@@ -736,10 +724,10 @@ export async function SiteHeader() {
                               </ActiveLink>
                             ))}
                           </div>
-                        </section>
-                      ))}
-                    </div>
-                  </details>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
                 ) : (
                   <div className="public-desktop-nav">
                     {publicDesktopNavItems.slice(0, 2).map((item) => (
