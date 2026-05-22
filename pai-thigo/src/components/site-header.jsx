@@ -550,10 +550,6 @@ export async function SiteHeader() {
         },
       })
     : [];
-  const customerDropdownItemCount = customerDropdownSections.reduce(
-    (total, section) => total + section.items.length,
-    0,
-  );
   const navItems = staffSession
       ? [
         { href: "/painel", label: "Painel", exact: true },
@@ -605,6 +601,12 @@ export async function SiteHeader() {
     { href: "/cardapio#categoria-mar", label: "Frutos", highlight: "do mar" },
     { href: "/cardapio#categoria-sobremesas", label: "Sobremesas", highlight: "da casa" },
   ];
+  const customerDesktopMenuItems = customerDropdownSections.flatMap((section) =>
+    section.items.map((item) => ({
+      ...item,
+      key: `${section.title}-${item.href}`,
+    })),
+  );
   const mobileDockItems = session
     ? staffSession
       ? [
@@ -738,59 +740,6 @@ export async function SiteHeader() {
                       ))}
                     </div>
                   </details>
-                ) : customerSession ? (
-                  <details className="header-dropdown">
-                    <summary className="header-dropdown-trigger">
-                      <span>Menu</span>
-                      <ChevronDown className="header-dropdown-chevron" size={16} />
-                    </summary>
-
-                    <div className="header-dropdown-panel">
-                      <div className="header-dropdown-head">
-                        <p className="header-dropdown-head-eyebrow">navegacao do cliente</p>
-                        <p className="header-dropdown-head-title">
-                          {customerDropdownItemCount} acesso(s) para acompanhar pedidos, reservas e perfil
-                        </p>
-                      </div>
-
-                      {customerDropdownSections.map((section) => (
-                        <section key={section.title} className="header-dropdown-section">
-                          <p className="header-dropdown-section-title">{section.title}</p>
-                          <div className="header-dropdown-section-list">
-                            {section.items.map((item) => (
-                              <ActiveLink
-                                key={item.href}
-                                href={item.href}
-                                exact={item.exact}
-                                className="header-dropdown-link"
-                                activeClassName="header-dropdown-link-active"
-                              >
-                                <span className="header-dropdown-link-main">
-                                  <span className="header-dropdown-link-icon">
-                                    <item.icon size={14} />
-                                  </span>
-                                  <span className="header-dropdown-link-title">{item.label}</span>
-                                </span>
-                                <span className="header-dropdown-link-side">
-                                  {item.badgeCount && item.badgeKind ? (
-                                    <NotificationCountBadge
-                                      count={item.badgeCount}
-                                      latestAt={item.badgeLatestAt}
-                                      kind={item.badgeKind}
-                                      staffSession={staffSession}
-                                      className="nav-link-badge"
-                                      ariaLabel={`${item.badgeCount} notificacoes`}
-                                    />
-                                  ) : null}
-                                  <ChevronRight size={14} className="header-dropdown-link-arrow" />
-                                </span>
-                              </ActiveLink>
-                            ))}
-                          </div>
-                        </section>
-                      ))}
-                    </div>
-                  </details>
                 ) : (
                   <div className="public-desktop-nav">
                     {publicDesktopNavItems.slice(0, 2).map((item) => (
@@ -812,22 +761,58 @@ export async function SiteHeader() {
                       </summary>
 
                       <div className="header-dropdown-panel public-desktop-menu-panel">
-                        <p className="public-desktop-menu-eyebrow">Cardapio da casa</p>
-                        <div className="public-desktop-menu-list">
-                          {publicDesktopMenuItems.map((item) => (
-                            <Link
-                              key={item.href}
-                              href={item.href}
-                              className="public-desktop-menu-link"
-                            >
-                              <span className="public-desktop-menu-link-copy">
-                                <span>{item.label}</span>
-                                <span className="public-desktop-menu-link-highlight">{item.highlight}</span>
-                              </span>
-                              <ChevronRight className="public-desktop-menu-link-arrow" size={18} />
-                            </Link>
-                          ))}
-                        </div>
+                        {customerSession ? (
+                          <>
+                            <p className="public-desktop-menu-eyebrow">Navegacao do cliente</p>
+                            <div className="public-desktop-menu-list">
+                              {customerDesktopMenuItems.map((item) => (
+                                <ActiveLink
+                                  key={item.key}
+                                  href={item.href}
+                                  exact={item.exact}
+                                  className="public-desktop-menu-link"
+                                  activeClassName="public-desktop-menu-link-active"
+                                >
+                                  <span className="public-desktop-menu-link-copy">
+                                    <span>{item.label}</span>
+                                  </span>
+                                  <span className="public-desktop-menu-link-meta">
+                                    {item.badgeCount && item.badgeKind ? (
+                                      <NotificationCountBadge
+                                        count={item.badgeCount}
+                                        latestAt={item.badgeLatestAt}
+                                        kind={item.badgeKind}
+                                        staffSession={staffSession}
+                                        className="nav-link-badge"
+                                        ariaLabel={`${item.badgeCount} notificacoes`}
+                                      />
+                                    ) : null}
+                                    <ChevronRight className="public-desktop-menu-link-arrow" size={18} />
+                                  </span>
+                                </ActiveLink>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="public-desktop-menu-eyebrow">Cardapio da casa</p>
+                            <div className="public-desktop-menu-list">
+                              {publicDesktopMenuItems.map((item) => (
+                                <Link
+                                  key={item.href}
+                                  href={item.href}
+                                  className="public-desktop-menu-link"
+                                >
+                                  <span className="public-desktop-menu-link-copy">
+                                    <span>{item.label}</span>
+                                    <span className="public-desktop-menu-link-highlight">{item.highlight}</span>
+                                  </span>
+                                  <ChevronRight className="public-desktop-menu-link-arrow" size={18} />
+                                </Link>
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </details>
 
