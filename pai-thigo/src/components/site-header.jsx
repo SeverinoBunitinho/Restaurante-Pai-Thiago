@@ -594,6 +594,17 @@ export async function SiteHeader() {
         },
         { href: "/area-cliente", label: "Perfil", exact: true },
       ];
+  const publicDesktopNavItems = [
+    { href: "/", label: "Home", exact: true },
+    { href: "/eventos", label: "Eventos", exact: true },
+    { href: "/reservas", label: "Agenda", exact: true },
+    { href: "/contato", label: "Contato", exact: true },
+  ];
+  const publicDesktopMenuItems = [
+    { href: "/cardapio#categoria-brasa", label: "Pratos", highlight: "principais" },
+    { href: "/cardapio#categoria-mar", label: "Frutos", highlight: "do mar" },
+    { href: "/cardapio#categoria-sobremesas", label: "Sobremesas", highlight: "da casa" },
+  ];
   const mobileDockItems = session
     ? staffSession
       ? [
@@ -781,30 +792,60 @@ export async function SiteHeader() {
                     </div>
                   </details>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    {navItems.map((item) => (
+                  <div className="public-desktop-nav">
+                    {publicDesktopNavItems.slice(0, 2).map((item) => (
                       <ActiveLink
                         key={item.href}
                         href={item.href}
                         exact={item.exact}
-                        className="nav-link"
-                        activeClassName="nav-link-active"
+                        className="public-desktop-nav-link"
+                        activeClassName="public-desktop-nav-link-active"
                       >
-                        <span className="nav-link-content">
-                          <span>{item.label}</span>
-                          {item.badgeCount && item.badgeKind ? (
-                            <NotificationCountBadge
-                              count={item.badgeCount}
-                              latestAt={item.badgeLatestAt}
-                              kind={item.badgeKind}
-                              staffSession={staffSession}
-                              className="nav-link-badge"
-                              ariaLabel={`${item.badgeCount} notificacoes`}
-                            />
-                          ) : null}
-                        </span>
+                        {item.label}
                       </ActiveLink>
                     ))}
+
+                    <details className="header-dropdown public-desktop-menu-dropdown">
+                      <summary className="header-dropdown-trigger public-desktop-menu-trigger">
+                        <span>Menu</span>
+                        <ChevronDown className="header-dropdown-chevron" size={18} />
+                      </summary>
+
+                      <div className="header-dropdown-panel public-desktop-menu-panel">
+                        <p className="public-desktop-menu-eyebrow">Cardapio da casa</p>
+                        <div className="public-desktop-menu-list">
+                          {publicDesktopMenuItems.map((item) => (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              className="public-desktop-menu-link"
+                            >
+                              <span className="public-desktop-menu-link-copy">
+                                <span>{item.label}</span>
+                                <span className="public-desktop-menu-link-highlight">{item.highlight}</span>
+                              </span>
+                              <ChevronRight className="public-desktop-menu-link-arrow" size={18} />
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </details>
+
+                    {publicDesktopNavItems.slice(2).map((item) => (
+                      <ActiveLink
+                        key={item.href}
+                        href={item.href}
+                        exact={item.exact}
+                        className="public-desktop-nav-link"
+                        activeClassName="public-desktop-nav-link-active"
+                      >
+                        {item.label}
+                      </ActiveLink>
+                    ))}
+
+                    <Link href="/#sobre" className="public-desktop-nav-link">
+                      Sobre
+                    </Link>
                   </div>
                 )}
               </nav>

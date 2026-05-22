@@ -532,7 +532,7 @@ export default async function Home() {
 
         {!isStaffRole(session.role) ? (
           <>
-            <section className="shell section-frame pt-20">
+            <section id="sobre" className="shell section-frame pt-20">
               <div className="grid gap-5 lg:grid-cols-[1.02fr_0.98fr]">
                 <div className="luxury-card rounded-[2.3rem] p-6">
                   <SectionHeading
